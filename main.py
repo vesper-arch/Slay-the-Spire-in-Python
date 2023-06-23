@@ -38,25 +38,6 @@ def damage(damage, target):
     target.block == 0
   elif damage == target.block:
     target.block -= damage
-class Card:
-  def __init__(self, energy_cost, change, name, definition, debuff=None, debuff_length=0, tags=[]):
-    """
-    Attributes:::
-    energy_cost: The amount of energy required to use it
-    change: The amount of energy, block, damage, ect the card has
-    name: The display name of the card
-    definition: The definition of what the card does
-    debuff:(Optional) The debuff(s) that the card inflicts
-    debuff_length:(Optional) The amount of turns the debuff lasts for
-    tags:(Exhaust, Innate, etc) Special tags for the card
-    """
-    self.energy_cost = energy_cost
-    self.change = change
-    self.name = name
-    self.definition = definition
-    self.debuff = debuff
-    self.debuff_length = debuff_length
-    self.tags = tags
 class Enemy:
   def __init__(self, health, max_health, block, name, debuff_buffs={}):
     '''
@@ -166,33 +147,31 @@ class Player:
     self.discard_pile = discard_pile
     self.debuff_buffs = debuff_buffs
   def use_card(self, card, target):
-    if card == strike:
+    if card == cards["Strike"]:
       self.use_strike(target)
-    elif card == bash:
+    elif card == cards['Bash']:
       self.use_bash(target)
-    elif card == defend:
+    elif card == cards['Defend']:
       self.use_defend()
-    elif card == seeing_red:
-      self.use_seeing_red()
   def use_strike(self, targeted_enemy):
     print()
     # If the enemy has the Vulnerable debuff applied to it, multiply the damage by 1.5 and round it up to the nearest whole number
     if 'Vulnerable' in targeted_enemy.debuff_buffs:
-      damage(math.ceil(strike.change * 1.50), targeted_enemy)
+      damage(math.ceil(cards['Strike']['Damage'] * 1.50), targeted_enemy)
     else:
-      damage(strike.change, targeted_enemy)
+      damage(cards['Strike']['Damage'], targeted_enemy)
     # Prevents the enemy's health from going below 0
     targeted_enemy.health = max(targeted_enemy.health, 0)
     # Displays the damage dealt and the name of the enemy dealt to
     if 'Vulnerable' in targeted_enemy.debuff_buffs:
-      print(f"Player dealt {Green}{strike.change * 1.50:.0f}{End} damage to {targeted_enemy.name}")
+      print(f"Player dealt {Green}{cards['Strike']['Damage'] * 1.50:.0f}{End} damage to {targeted_enemy.name}")
     else:
-      print(f"Player dealt {strike.change} to {targeted_enemy.name}")
+      print(f"Player dealt {cards['Strike']['Damage']} to {targeted_enemy.name}")
     # Takes the card's energy cost away from the player's energy
-    self.energy -= strike.energy_cost
+    self.energy -= cards["Strike"]["Energy"]
     # Removes the card from the player's cards
-    self.hand.remove(strike)
-    self.discard_pile.append(strike)
+    self.hand.remove(cards["Strike"])
+    self.discard_pile.append(cards["Strike"])
     print()
     sleep(1)
     system("clear")
@@ -200,19 +179,19 @@ class Player:
     print()
     # If the enemy has the Vulnerable debuff applied to it, multiply the damage by 1.5 and round it up to the nearest whole number
     if 'Vulnerable' in targeted_enemy.debuff_buffs:
-      damage(math.ceil(bash.change * 1.50), targeted_enemy)
+      damage(math.ceil(cards['Bash']['Damage'] * 1.50), targeted_enemy)
     else:
-      damage(bash.change, targeted_enemy)
+      damage(cards['Bash']['Damage'], targeted_enemy)
     # prevents the enemy's health from going below 0
     targeted_enemy.health = max(targeted_enemy.health, 0)
-    player.energy -= bash.energy_cost
+    player.energy -= cards["Bash"]["Energy"]
     player.energy = max(player.energy, 0)
     if 'Vulnerable' in targeted_enemy.debuff_buffs:
-      print(f"Player dealt {Green}{bash.change * 1.50:.0f}{End} damage to {targeted_enemy.name} and applied 2 {Yellow}Vulnerable{End}.")
+      print(f"Player dealt {Green}{cards['Bash']['Damage'] * 1.50:.0f}{End} damage to {targeted_enemy.name} and applied 2 {Yellow}Vulnerable{End}.")
     elif 'Artifact(Perm)' in targeted_enemy.debuff_buffs and 'Vulnerable' in targeted_enemy.debuff_buffs:
-      print(f"Player dealt {Green}{bash.change * 1.50:.0f}{End} damage to {targeted_enemy.name}. Vulnerable was blocked by Artifact")
+      print(f"Player dealt {Green}{cards['Bash']['Damage'] * 1.50:.0f}{End} damage to {targeted_enemy.name}. Vulnerable was blocked by Artifact")
     else:
-      print(f"Player dealt {bash.change} damage to {targeted_enemy.name} and made them {Yellow}Vulnerable{End}(Recieve 50% more damage from attacks).")
+      print(f"Player dealt {cards['Bash']['Damage']} damage to {targeted_enemy.name} and made them {Yellow}Vulnerable{End}(Recieve 50% more damage from attacks).")
    # Adds 2 vulnerable to the enemy if the enemy does not have the Artifact debuff
     if 'Vulnerable' not in targeted_enemy.debuff_buffs:
       targeted_enemy.debuff_buffs['Vulnerable'] = 2
@@ -221,31 +200,21 @@ class Player:
     else:
       targeted_enemy.debuff_buffs['Vulnerable'] += 2
     # Puts the card in the discard pile
-    player.hand.remove(bash)
-    player.discard_pile.append(bash)
+    player.hand.remove(cards['Bash'])
+    player.discard_pile.append(cards['Bash'])
     print()
     sleep(1.5)
     system("clear")
   def use_defend(self):
     print()
-    player.block += defend.change
-    player.energy -= defend.energy_cost
-    print(f"Player gained {Light_blue}{defend.change} Block{End}")
-    player.hand.remove(defend)
-    player.discard_pile.append(defend)
+    player.block += cards["Defend"]["Block"]
+    player.energy -= cards["Defend"]["Energy"]
+    print(f"Player gained {Light_blue}{cards['Defend']['Block']} Block{End}")
+    player.hand.remove(cards['Defend'])
+    player.discard_pile.append(cards['Defend'])
     print()
     sleep(1.5)
     system("clear")
-  def use_seeing_red(self):
-    print()
-    player.energy += seeing_red.change
-    player.energy -= seeing_red.energy_cost
-    print(f"Player gained {Orange}2 Energy{End}")
-    player.hand.remove(seeing_red)
-    player.discard_pile.append(seeing_red)
-    print()
-    sleep(1)
-    system('clear')
   def draw_cards(self):
     if len(player.draw_pile) < 5:
       player.draw_pile.extend(random.sample(player.discard_pile, len(player.discard_pile)))
@@ -261,11 +230,11 @@ def cards_display():
   # Repeats for every card in the player's hand
   for card in player.hand:
     # Prints in red if the player doesn't have enough energy to use the card
-    if card.energy_cost > player.energy:
-      print(f"{counter}: {Red}{card.name:<15}{card.energy_cost} Energy{Red:<15}{card.definition}{End}")
+    if card["Energy"] > player.energy:
+      print(f"{counter}: {Red}{card['Name']:<15}{card['Energy']} Energy{Red:<15}{card['Info']}{End}")
     # Otherwise, print in full color
     else:
-      print(f"{counter}: {Turquoise}{card.name:<15}{Orange}{card.energy_cost} Energy{Yellow:<30}{card.definition}{End}")
+      print(f"{counter}: {Turquoise}{card['Name']:<15}{Orange}{card['Energy']} Energy{Yellow:<30}{card['Info']}{End}")
     # Adds one to the counter to make a numbered list(Ex. 1: Defend// 2: Strike...)
     counter += 1
 # Function that displays all the relevant info to the player
@@ -288,14 +257,16 @@ def display_ui():
     counter += 1
 def neow_interact():
   print("1: WIP \n2: Enemies in your first 3 combats will have 1 hp \n3:")
-# Creates a card that deals 6 damage to the enemy and costs 1 energy
-strike = Card(1, 6, "Strike", "Deal 6 damage.")
-# Creates a card that deals 8 damage, makes the enemy Vulnerable(Takes 50% more damage) for 2 turns, and costs 2 energy
-bash = Card(2, 8, "Bash", "Deal 8 damage. Apply 2 Vulnerable", 'Vulnerable', 2)
-# Creates a card that gives the player 5 block and costs 1 energy
-defend = Card(1, 5, "Defend", "Gain 5 block")
-# Creates a card that gives the player 2 energy and costs 1 energy but is removed from play for the rest of combat
-seeing_red = Card(1, 2, "Seeing Red", "Gain 2 Energy. Exhaust")
+cards = {
+  "Strike": {"Name": "Strike", "Damage": 6, "Energy": 1, "Rarity": "Starter", "Type": "Attack", "Info": "Deal 6 damage"},
+  "Strike+": {"Name": "Strike+", "Upgraded": True, "Damage": 9, "Energy": 1, "Rarity": "Starter", "Type": "Attack", "Info": f"Deal {Green}9{End} damage"},
+
+  "Defend": {"Name": "Defend", "Block": 5, "Energy": 1, "Rarity": "Starter", "Type": "Skill", "Info": f"Gain 5 {Yellow}Block{End}"},
+  "Defend+": {"Name": "Defend+", "Upgraded": True, "Block": 8, "Energy": 1, "Rarity": "Starter", "Type": "Skill", "Info": f"Gain {Green}8 {Yellow}Block{End}"},
+
+  "Bash": {"Name": "Bash", "Damage": 8, "Vulnerable": 2, "Energy": 2, "Rarity": "Starter", "Type": "Attack", "Info": f"Deal 8 damage. Apply 2 {Yellow}Vulnerable{End}"},
+  "Bash+": {"Name": "Bash+", "Upgraded": True, "Damage": 10, "Vulnerable": 3, "Energy": 2, "Rarity": "Starter", "Type": "Attack", "Info": f"Deal {Green}10{End} damage. Apply {Green}3 {Yellow}Vulnerable{End}"}
+}
 """
 //Player stats//
 health       =  80
@@ -308,7 +279,7 @@ hand         =  [](empty)
 draw_pile    =  [](empty)
 discard_pile =  [](empty)
 """
-player = Player(80, 0, 80, 3, 3, [strike, strike, strike, strike, strike, defend, defend, defend, defend, bash], [], [], [])
+player = Player(80, 0, 80, 3, 3, [cards["Strike"], cards["Strike"], cards["Strike"], cards["Strike"], cards["Strike"], cards["Defend"], cards["Defend"], cards["Defend"], cards["Defend"], cards["Bash"]], [], [], [])
 # Shuffles the player's deck into the draw pile
 player.draw_pile = random.sample(player.deck, len(player.deck))
 # Gives the player 5 cards to start the game(Is only run ONCE in the code)
