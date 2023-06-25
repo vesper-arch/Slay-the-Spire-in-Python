@@ -29,13 +29,14 @@ Light_purple = "\033[1;35m" + Bold
 Light_cyan = "\033[1;36m" + Bold
 Light_white = "\033[1;37m" + Bold
 
+turn = 0
 # Defines a class called Card. This class will give the given variable the energy_cost, damage, and name attributes
 def damage(damage, target):
   if damage < target.block:
     target.block -= damage
   elif damage > target.block:
     target.health -= damage - target.block
-    target.block == 0
+    target.block = 0
   elif damage == target.block:
     target.block -= damage
 class Enemy:
@@ -97,7 +98,7 @@ class Enemy:
         sleep(1.5)
         system("clear")
 # CancerousRodent is an enemy with 50 max health and the name of "Cancerous Rodent"
-Spheric_Guardian = Enemy(20, 20, 5, "Spheric Guardian", {"Barricade(Perm)": 1, "Artifact(Perm)": 3} )
+Spheric_Guardian = Enemy(20, 20, 40, "Spheric Guardian", {"Barricade(Perm)": 1, "Artifact(Perm)": 3} )
 # Creates a list of enemies availible
 encounters = [[Spheric_Guardian]]
 # Chooses a random enemy to spawn
@@ -135,7 +136,7 @@ class Player:
   discard_pile: Cards get put here when they are played
   debuff_buffs: Current debuff_buffs and buffs
   """
-  def __init__(self, health, block, max_health, energy, max_energy, deck, hand, draw_pile, discard_pile, debuff_buffs={}):
+  def __init__(self, health, block, max_health, energy, max_energy, deck, hand, draw_pile = [], discard_pile = [], exhaust_pile = [], debuff_buffs={}):
     self.health = health
     self.block = block
     self.max_health = max_health
@@ -145,7 +146,14 @@ class Player:
     self.hand = hand
     self.draw_pile = draw_pile
     self.discard_pile = discard_pile
+    self.draw_strength = 5
+    self.exhaust_pile = exhaust_pile
     self.debuff_buffs = debuff_buffs
+    self.weak = 0
+    self.frail = 0
+    self.vulnerable = 0
+    self.entangled = False
+
   def use_card(self, card, target):
     if card == cards["Strike"]:
       self.use_strike(target)
@@ -207,7 +215,7 @@ class Player:
     system("clear")
   def use_defend(self):
     print()
-    player.block += cards["Defend"]["Block"]
+    self.blocking(cards["Defend"]["Block"])
     player.energy -= cards["Defend"]["Energy"]
     print(f"Player gained {Light_blue}{cards['Defend']['Block']} Block{End}")
     player.hand.remove(cards['Defend'])
@@ -219,10 +227,34 @@ class Player:
     if len(player.draw_pile) < 5:
       player.draw_pile.extend(random.sample(player.discard_pile, len(player.discard_pile)))
       player.discard_pile = []
-    # Gives the player the top 5 cards in the draw pile
-    player.hand = player.draw_pile[-5:]
-    # Removes those cards
-    player.draw_pile = player.draw_pile[:-5]
+      player.hand = player.draw_pile[-5:]
+      # Removes those cards
+      player.draw_pile = player.draw_pile[:-5]
+  def blocking(self, block):
+    if self.frail > 0:
+      self.block += math.floor(block * 0.75)
+  def heal(self, heal):
+    self.health += heal
+    self.health = min(self.health, self.max_health)
+  def RemoveCardFromDeck(self, card, type):
+    while True:
+      if type == "Remove":
+        counter = 1
+        for card in player.deck:
+          if card.get("Upgraded") != True:
+            print(f"{counter}: {Turquoise}{card['Name']:<15}{Orange}{card['Energy']} Energy{Yellow:<30}{card['Info']}{End}")
+            counter += 1
+        try:
+          remove_index = int(input("What card do you want to remove?")) - 1
+        except ValueError:
+          print("You have to enter a number")
+          sleep(1)
+          system("clear")
+          continue
+        player.deck.remove(card)
+      elif type == 'Upgrade':
+        player.deck.remove(card)
+        player.deck.append(cards[card["Name", '+']])
 # Shows every card in the player's inventory with it's name, defintion, and energy cost
 def cards_display():
   # Puts a number before each card
@@ -285,15 +317,14 @@ player.draw_pile = random.sample(player.deck, len(player.deck))
 # Gives the player 5 cards to start the game(Is only run ONCE in the code)
 player.draw_cards()
 # Outer loop is for the whole game
-turn = 0
 def combat():
   global turn
   turn = 1
-  while len(active_enemies):
+  while len(active_enemies) > 0:
     # Removes the player's block at the beginning of their turn
     player.block = 0
     # Player's turn ends when the their energy is out
-    while player.energy > 0:
+    while True:
       display_ui()
       # Asks the user what card they want to use
       try:
@@ -305,14 +336,14 @@ def combat():
         if card_used == 0:
           break
         # Checks if the number the user inputted is within range of the player.hand list
-        if card_used - 1 in range(0, len(player.hand)) and player.hand[card_used - 1].energy_cost <= player.energy:
+        if card_used - 1 in range(0, len(player.hand)) and player.hand[card_used - 1]["Energy"] <= player.energy:
           player.use_card(player.hand[card_used - 1], active_enemies[target - 1])
           # if the enemy dies, break out of the current loop, therefore going straight to the end_turn function
           if active_enemies[target - 1].health == 0:
             system("clear")
             break
         # prevents from using a card that the player doesn't have enough energy for
-        elif player.hand[card_used - 1].energy_cost > player.energy:
+        elif player.hand[card_used - 1]["Energy"] > player.energy:
           system("clear")
           print(f"{Red}Not enough energy{End}")
           sleep(1.5)
@@ -341,4 +372,19 @@ def combat():
         continue
     # After the player's energy has run out, discard their cards, give them 5 new ones, refil their energy, and make the enemy attack
     end_player_turn()
+def rest():
+  while True:
+    print(f"You come across a {Green}Rest Site{End}")
+    sleep(1)
+    try:
+      action = int(input("1:Rest(Heal for 30 percent of your max health)\nor \n2:Upgrade a card in you deck?"))
+    except ValueError:
+      print("You have to enter a number")
+      sleep(1)
+      system("clear")
+      continue
+    if action == 1:
+      player.heal(math.floor(player.max_health//100 * 0.30))
+    elif action == 2:
+      pass
 combat()
