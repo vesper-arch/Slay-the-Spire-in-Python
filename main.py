@@ -54,6 +54,15 @@ class Enemy:
     self.block = block
     self.name = name
     self.debuff_buffs = debuff_buffs
+    self.barricade = False
+    self.artifact = 0
+    if self.name == "Spheric Guardian":
+      self.barricade = True
+      self.artifact = 3
+    else:
+      self.barricade = False
+      self.artifact = 0
+    self.vulnerable = 0
   def die(self, enemy):
     print(f"{enemy.name} has died.")
     active_enemies.remove(enemy)
@@ -97,8 +106,17 @@ class Enemy:
         print(f"{self.name} dealt 10 damage to player and gained {Blue}15 block{End}")
         sleep(1.5)
         system("clear")
+  def show_status(self):
+    status = f"{self.name} ({Red}{self.health} / {self.max_health}{End} | {Blue}{self.block} Block{End})"
+    if self.barricade is True:
+      status += f" | {Light_cyan}Barricade{End}"
+    if self.artifact > 0:
+      status += f" | {Light_cyan}Artifact {self.artifact}{End}"
+    if self.vulnerable > 0:
+      status += f" | {Light_cyan}Vulnerable {self.vulnerable}{End}"
+    print(status, "\n")
 # CancerousRodent is an enemy with 50 max health and the name of "Cancerous Rodent"
-Spheric_Guardian = Enemy(20, 20, 40, "Spheric Guardian", {"Barricade(Perm)": 1, "Artifact(Perm)": 3} )
+Spheric_Guardian = Enemy(20, 20, 40, "Spheric Guardian")
 # Creates a list of enemies availible
 encounters = [[Spheric_Guardian]]
 # Chooses a random enemy to spawn
@@ -195,19 +213,15 @@ class Player:
     targeted_enemy.health = max(targeted_enemy.health, 0)
     player.energy -= cards["Bash"]["Energy"]
     player.energy = max(player.energy, 0)
-    if 'Vulnerable' in targeted_enemy.debuff_buffs:
-      print(f"Player dealt {Green}{cards['Bash']['Damage'] * 1.50:.0f}{End} damage to {targeted_enemy.name} and applied 2 {Yellow}Vulnerable{End}.")
-    elif 'Artifact(Perm)' in targeted_enemy.debuff_buffs and 'Vulnerable' in targeted_enemy.debuff_buffs:
-      print(f"Player dealt {Green}{cards['Bash']['Damage'] * 1.50:.0f}{End} damage to {targeted_enemy.name}. Vulnerable was blocked by Artifact")
+    if targeted_enemy.artifact > 0:
+      print(f"{self.name} dealt {cards['Bash']['Damage']} damage to {targeted_enemy.name}. {Yellow}Vulnerable{End} was blocked by {targeted_enemy.name}'s {Light_cyan}Artifact{End}")
     else:
-      print(f"Player dealt {cards['Bash']['Damage']} damage to {targeted_enemy.name} and made them {Yellow}Vulnerable{End}(Recieve 50% more damage from attacks).")
-   # Adds 2 vulnerable to the enemy if the enemy does not have the Artifact debuff
-    if 'Vulnerable' not in targeted_enemy.debuff_buffs:
-      targeted_enemy.debuff_buffs['Vulnerable'] = 2
-    elif 'Artifact(Perm)' in targeted_enemy.debuff_buffs:
-      targeted_enemy.debuff_buffs['Artifact(Perm)'] -= 1
+      print(f"{self.name} dealt {cards['Bash']['Damage']} to {targeted_enemy.name} and applied {cards['Bash']['Vulnerable']} {Yellow}Vulnerable{End}")
+    # Adds 2 vulnerable to the enemy if the enemy does not have the Artifact debuff
+    if targeted_enemy.artifact > 0:
+      targeted_enemy.artifact -= 1
     else:
-      targeted_enemy.debuff_buffs['Vulnerable'] += 2
+      targeted_enemy.vulnerable += 2
     # Puts the card in the discard pile
     player.hand.remove(cards['Bash'])
     player.discard_pile.append(cards['Bash'])
@@ -216,9 +230,13 @@ class Player:
     system("clear")
   def use_defend(self):
     print()
-    self.blocking(cards["Defend"]["Block"])
+    if self.frail > 0:
+      self.blocking(math.floor(cards['Defend']['Block']))
+      print(f"{self.name} gained {Red}{math.floor(cards['Defend']['Block'] * 0.75)} {Light_blue}Block{End} | Block was reduced by {Light_cyan}Frail{End}")
+    else:
+      self.blocking(cards['Defend']["Block"])
+      print(f"Player gained {Light_blue}{cards['Defend']['Block']} Block{End}")
     player.energy -= cards["Defend"]["Energy"]
-    print(f"Player gained {Light_blue}{cards['Defend']['Block']} Block{End}")
     player.hand.remove(cards['Defend'])
     player.discard_pile.append(cards['Defend'])
     print()
@@ -234,6 +252,8 @@ class Player:
   def blocking(self, block):
     if self.frail > 0:
       self.block += math.floor(block * 0.75)
+    else:
+      self.block += block
   def heal(self, heal):
     self.health += heal
     self.health = min(self.health, self.max_health)
@@ -256,7 +276,7 @@ class Player:
         player.deck.remove(card)
         player.deck.append(cards[card["Name", '+']])
   def show_status(self):
-    status = f"\n{self.name} ({Red}{self.health} {End}/ {Red}{self.max_health}{End} | {Orange}{self.energy} / {self.max_energy}{End})"
+    status = f"\n{self.name} ({Red}{self.health} {End}/ {Red}{self.max_health}{End} | {Light_blue}{self.block} Block{End} | {Orange}{self.energy} / {self.max_energy}{End})"
     if self.weak > 0:
       status += f" | {Light_cyan}Weak: {self.weak}{End}"
     if self.frail > 0:
@@ -290,12 +310,7 @@ def display_ui():
   print()
   counter = 1
   for enemy in active_enemies:
-    # Displays the active enemy's name and health
-    print(f"{enemy.name}\nHealth: {Red}{enemy.health}{End}  //  {Blue}{enemy.block} Block{End}  //  Debuffs: ", end='')
-    # Prints out all the debuff_buffs the enemy currently has with the amount of turns left
-    for debuff_buffs, debuff_length in enemy.debuff_buffs.items():
-      print(f"{debuff_length} {Light_green}{debuff_buffs}{End}", end=', ')
-    counter += 1
+    enemy.show_status()
 def neow_interact():
   print("1: WIP \n2: Enemies in your first 3 combats will have 1 hp \n3:")
 cards = {
@@ -329,9 +344,15 @@ player.draw_cards()
 def combat():
   global turn
   turn = 1
+
   while len(active_enemies) > 0:
     # Removes the player's block at the beginning of their turn
     player.block = 0
+    for enemy in active_enemies:
+      if enemy.barricade == True:
+        print(f"{enemy.name}'s block was not removed because of {Light_cyan}Barricade{End}")
+      else:
+        enemy.block = 0
     # Player's turn ends when the their energy is out
     while True:
       display_ui()
