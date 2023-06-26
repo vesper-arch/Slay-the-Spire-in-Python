@@ -78,7 +78,7 @@ class Enemy:
         turn += 1
       elif turn == 2:
         damage(10, player)
-        player.debuff_buffs["Frail"] = 5
+        player.frail += 5
         print(f"{self.name} dealt 10 damage to player and inflicted 5 {Yellow}Frail{End}(Recieve 25% less block from cards)")
         sleep(2)
         system("clear")
@@ -136,9 +136,10 @@ class Player:
   discard_pile: Cards get put here when they are played
   debuff_buffs: Current debuff_buffs and buffs
   """
-  def __init__(self, health, block, max_health, energy, max_energy, deck, hand, draw_pile = [], discard_pile = [], exhaust_pile = [], debuff_buffs={}):
+  def __init__(self, health, block, max_health, energy, max_energy, deck, hand, draw_pile, discard_pile, exhaust_pile, debuff_buffs={}):
     self.health = health
     self.block = block
+    self.name = "Ironclad"
     self.max_health = max_health
     self.energy = energy
     self.max_energy = max_energy
@@ -227,9 +228,9 @@ class Player:
     if len(player.draw_pile) < 5:
       player.draw_pile.extend(random.sample(player.discard_pile, len(player.discard_pile)))
       player.discard_pile = []
-      player.hand = player.draw_pile[-5:]
-      # Removes those cards
-      player.draw_pile = player.draw_pile[:-5]
+    player.hand = player.draw_pile[-5:]
+    # Removes those cards
+    player.draw_pile = player.draw_pile[:-5]
   def blocking(self, block):
     if self.frail > 0:
       self.block += math.floor(block * 0.75)
@@ -241,9 +242,8 @@ class Player:
       if type == "Remove":
         counter = 1
         for card in player.deck:
-          if card.get("Upgraded") != True:
-            print(f"{counter}: {Turquoise}{card['Name']:<15}{Orange}{card['Energy']} Energy{Yellow:<30}{card['Info']}{End}")
-            counter += 1
+          print(f"{counter}: {Turquoise}{card['Name']:<15}{Orange}{card['Energy']} Energy{Yellow:<30}{card['Info']}{End}")
+          counter += 1
         try:
           remove_index = int(input("What card do you want to remove?")) - 1
         except ValueError:
@@ -255,6 +255,15 @@ class Player:
       elif type == 'Upgrade':
         player.deck.remove(card)
         player.deck.append(cards[card["Name", '+']])
+  def show_status(self):
+    status = f"\n{self.name} ({Red}{self.health} {End}/ {Red}{self.max_health}{End} | {Orange}{self.energy} / {self.max_energy}{End})"
+    if self.weak > 0:
+      status += f" | {Light_cyan}Weak: {self.weak}{End}"
+    if self.frail > 0:
+      status += f" | {Light_cyan}Frail: {self.frail}{End}"
+    if self.vulnerable > 0:
+      status += f" | {Light_cyan}Vulnerable: {self.vulnerable}{End}"
+    print(status, "\n")
 # Shows every card in the player's inventory with it's name, defintion, and energy cost
 def cards_display():
   # Puts a number before each card
@@ -277,7 +286,7 @@ def display_ui():
   # Displays the number of cards in the draw and discard pile
   print(f"Draw pile: {len(player.draw_pile)}\nDiscard pile: {len(player.discard_pile)}\n")
   # Displays the player's current health, block, and energy
-  print(f"player: \nHealth = {Green}{player.health}/{player.max_health} {End}// {Light_blue}{player.block} Block{End} \nEnergy = {Red}{player.energy}/{player.max_energy}{End}")
+  player.show_status()
   print()
   counter = 1
   for enemy in active_enemies:
@@ -311,7 +320,7 @@ hand         =  [](empty)
 draw_pile    =  [](empty)
 discard_pile =  [](empty)
 """
-player = Player(80, 0, 80, 3, 3, [cards["Strike"], cards["Strike"], cards["Strike"], cards["Strike"], cards["Strike"], cards["Defend"], cards["Defend"], cards["Defend"], cards["Defend"], cards["Bash"]], [], [], [])
+player = Player(80, 0, 80, 3, 3, [cards["Strike"], cards["Strike"], cards["Strike"], cards["Strike"], cards["Strike"], cards["Defend"], cards["Defend"], cards["Defend"], cards["Defend"], cards["Bash"]], [], [], [], [])
 # Shuffles the player's deck into the draw pile
 player.draw_pile = random.sample(player.deck, len(player.deck))
 # Gives the player 5 cards to start the game(Is only run ONCE in the code)
