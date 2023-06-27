@@ -1,37 +1,13 @@
 import random, math
 from os import system
 from time import sleep
-# Text colors and variants
-Faint = "\033[2m"
-Italic = "\033[3m"
-Underline = "\033[4m"
-Blink = "\033[5m"
-Negative = "\033[7m"
-Crossed = "\033[9m"
-End = "\033[0m"
-Bold = "\033[1m"
-Black = "\033[0;30m" + Bold
-Red = "\033[0;31m" + Bold
-Orange = '\033[38;2;255;135;0m' + Bold
-Green = "\033[0;32m" + Bold
-Brown = "\033[0;33m" + Bold
-Blue = "\033[0;34m" + Bold
-Turquoise = '\033[38;2;64;224;208m' + Bold
-Purple = "\033[0;35m" + Bold
-Cyan = "\033[0;36m" + Bold
-Light_gray = "\033[0;37m" + Bold
-Dark_gray = "\033[1;30m" + Bold
-Light_red = "\033[1;31m" + Bold
-Light_green = "\033[1;32m" + Bold
-Yellow = "\033[38;2;255;255;0m" + Bold
-Light_blue = "\033[1;34m" + Bold
-Light_purple = "\033[1;35m" + Bold
-Light_cyan = "\033[1;36m" + Bold
-Light_white = "\033[1;37m" + Bold
+from ansimarkup import parse, ansiprint
 
 turn = 0
 # Defines a class called Card. This class will give the given variable the energy_cost, damage, and name attributes
 def damage(damage, target):
+  if target.vulnerable > 0:
+    damage = math.floor(damage * 1.50)
   if damage < target.block:
     target.block -= damage
   elif damage > target.block:
@@ -63,6 +39,8 @@ class Enemy:
       self.barricade = False
       self.artifact = 0
     self.vulnerable = 0
+    self.weak = 0
+    self.strength = 0
   def die(self, enemy):
     print(f"{enemy.name} has died.")
     active_enemies.remove(enemy)
@@ -79,16 +57,16 @@ class Enemy:
       if turn == 1:
         # Gives the enemy 25 block
         self.block += 25
-        print(f"{Bold}Activate{End}")
+        ansiprint("<reverse>Activate</reverse>")
         sleep(1)
-        print(f"{self.name} gained {Blue}25 block{End}")
+        ansiprint(f"{self.name} gained <light-blue>25 block</light-blue>")
         sleep(1.5)
         system("clear")
         turn += 1
       elif turn == 2:
         damage(10, player)
         player.frail += 5
-        print(f"{self.name} dealt 10 damage to player and inflicted 5 {Yellow}Frail{End}(Recieve 25% less block from cards)")
+        ansiprint(f"{self.name} dealt 10 damage to player and inflicted 5 <yellow>Frail</yellow>(Recieve 25% less block from cards)")
         sleep(2)
         system("clear")
         turn += 1
@@ -103,19 +81,18 @@ class Enemy:
       elif turn % 2 == 1 and turn > 2:
         damage(10, player)
         self.block += 15
-        print(f"{self.name} dealt 10 damage to player and gained {Blue}15 block{End}")
+        ansiprint(f"{self.name} dealt 10 damage to player and gained <light-blue>15 block</light-blue>")
         sleep(1.5)
         system("clear")
   def show_status(self):
-    status = f"{self.name} ({Red}{self.health} / {self.max_health}{End} | {Blue}{self.block} Block{End})"
+    status = f"{self.name} (<red>{self.health} / {self.max_health}</red> | <light-blue>{self.block} Block</light-blue>)"
     if self.barricade is True:
-      status += f" | {Light_cyan}Barricade{End}"
+      status += " | <light-cyan>Barricade</light-cyan>"
     if self.artifact > 0:
-      status += f" | {Light_cyan}Artifact {self.artifact}{End}"
+      status += f" | <light-cyan>Artifact {self.artifact}</light-cyan>"
     if self.vulnerable > 0:
-      status += f" | {Light_cyan}Vulnerable {self.vulnerable}{End}"
-    print(status, "\n")
-# CancerousRodent is an enemy with 50 max health and the name of "Cancerous Rodent"
+      status += f" | <light-cyan>Vulnerable {self.vulnerable}</light-cyan>"
+    ansiprint(status, "\n")
 Spheric_Guardian = Enemy(20, 20, 40, "Spheric Guardian")
 # Creates a list of enemies availible
 encounters = [[Spheric_Guardian]]
@@ -152,9 +129,9 @@ class Player:
   hand: The cards availible to play at any given time
   draw_pile: A randomized instance of the deck, cards are drawn in order from it.(All cards from the discard pile are shuffled into this when the draw pile is empty)
   discard_pile: Cards get put here when they are played
-  debuff_buffs: Current debuff_buffs and buffs
+  exhaust_pile: List of exhausted cards
   """
-  def __init__(self, health, block, max_health, energy, max_energy, deck, hand, draw_pile, discard_pile, exhaust_pile, debuff_buffs={}):
+  def __init__(self, health, block, max_health, energy, max_energy, deck, hand, draw_pile, discard_pile, exhaust_pile):
     self.health = health
     self.block = block
     self.name = "Ironclad"
@@ -167,7 +144,6 @@ class Player:
     self.discard_pile = discard_pile
     self.draw_strength = 5
     self.exhaust_pile = exhaust_pile
-    self.debuff_buffs = debuff_buffs
     self.weak = 0
     self.frail = 0
     self.vulnerable = 0
@@ -183,15 +159,12 @@ class Player:
   def use_strike(self, targeted_enemy):
     print()
     # If the enemy has the Vulnerable debuff applied to it, multiply the damage by 1.5 and round it up to the nearest whole number
-    if 'Vulnerable' in targeted_enemy.debuff_buffs:
-      damage(math.ceil(cards['Strike']['Damage'] * 1.50), targeted_enemy)
-    else:
-      damage(cards['Strike']['Damage'], targeted_enemy)
+    damage(cards['Strike']['Damage'], targeted_enemy)
     # Prevents the enemy's health from going below 0
     targeted_enemy.health = max(targeted_enemy.health, 0)
     # Displays the damage dealt and the name of the enemy dealt to
-    if 'Vulnerable' in targeted_enemy.debuff_buffs:
-      print(f"Player dealt {Green}{cards['Strike']['Damage'] * 1.50:.0f}{End} damage to {targeted_enemy.name}")
+    if targeted_enemy.vulnerable > 0:
+      ansiprint(f"Player dealt <green>{cards['Strike']['Damage'] * 1.50:.0f}</green> damage to {targeted_enemy.name}")
     else:
       print(f"Player dealt {cards['Strike']['Damage']} to {targeted_enemy.name}")
     # Takes the card's energy cost away from the player's energy
@@ -205,23 +178,18 @@ class Player:
   def use_bash(self, targeted_enemy):
     print()
     # If the enemy has the Vulnerable debuff applied to it, multiply the damage by 1.5 and round it up to the nearest whole number
-    if 'Vulnerable' in targeted_enemy.debuff_buffs:
-      damage(math.ceil(cards['Bash']['Damage'] * 1.50), targeted_enemy)
-    else:
-      damage(cards['Bash']['Damage'], targeted_enemy)
+    damage(cards['Bash']['Damage'], targeted_enemy)
     # prevents the enemy's health from going below 0
     targeted_enemy.health = max(targeted_enemy.health, 0)
     player.energy -= cards["Bash"]["Energy"]
     player.energy = max(player.energy, 0)
     if targeted_enemy.artifact > 0:
-      print(f"{self.name} dealt {cards['Bash']['Damage']} damage to {targeted_enemy.name}. {Yellow}Vulnerable{End} was blocked by {targeted_enemy.name}'s {Light_cyan}Artifact{End}")
-    else:
-      print(f"{self.name} dealt {cards['Bash']['Damage']} to {targeted_enemy.name} and applied {cards['Bash']['Vulnerable']} {Yellow}Vulnerable{End}")
-    # Adds 2 vulnerable to the enemy if the enemy does not have the Artifact debuff
-    if targeted_enemy.artifact > 0:
+      ansiprint(f"{self.name} dealt {cards['Bash']['Damage']} damage to {targeted_enemy.name}. <yellow>Vulnerable</yellow> was blocked by {targeted_enemy.name}'s <light-cyan>Artifact</light-cyan>")
       targeted_enemy.artifact -= 1
     else:
+      ansiprint(f"{self.name} dealt {cards['Bash']['Damage']} to {targeted_enemy.name} and applied {cards['Bash']['Vulnerable']} <yellow>Vulnerable</yellow>")
       targeted_enemy.vulnerable += 2
+    # Adds 2 vulnerable to the enemy if the enemy does not have the Artifact debuff
     # Puts the card in the discard pile
     player.hand.remove(cards['Bash'])
     player.discard_pile.append(cards['Bash'])
@@ -232,10 +200,10 @@ class Player:
     print()
     if self.frail > 0:
       self.blocking(math.floor(cards['Defend']['Block']))
-      print(f"{self.name} gained {Red}{math.floor(cards['Defend']['Block'] * 0.75)} {Light_blue}Block{End} | Block was reduced by {Light_cyan}Frail{End}")
+      ansiprint(f"{self.name} gained <red>{math.floor(cards['Defend']['Block'] * 0.75)}</red> <light-cyan>Block</light-cyan> | Block was reduced by <light-cyan>Frail</light-cyan>")
     else:
       self.blocking(cards['Defend']["Block"])
-      print(f"Player gained {Light_blue}{cards['Defend']['Block']} Block{End}")
+      print(f"Player gained <blue>{cards['Defend']['Block']} Block</blue>")
     player.energy -= cards["Defend"]["Energy"]
     player.hand.remove(cards['Defend'])
     player.discard_pile.append(cards['Defend'])
@@ -262,7 +230,7 @@ class Player:
       if type == "Remove":
         counter = 1
         for card in player.deck:
-          print(f"{counter}: {Turquoise}{card['Name']:<15}{Orange}{card['Energy']} Energy{Yellow:<30}{card['Info']}{End}")
+          ansiprint(f"{counter}: <blue>{card['Name']}</blue> | <light-red>{card['Energy']} Energy</light-red> | <yellow>{card['Info']}</yellow>")
           counter += 1
         try:
           remove_index = int(input("What card do you want to remove?")) - 1
@@ -276,14 +244,14 @@ class Player:
         player.deck.remove(card)
         player.deck.append(cards[card["Name", '+']])
   def show_status(self):
-    status = f"\n{self.name} ({Red}{self.health} {End}/ {Red}{self.max_health}{End} | {Light_blue}{self.block} Block{End} | {Orange}{self.energy} / {self.max_energy}{End})"
+    status = f"\n{self.name} (<red>{self.health} </red>/ <red>{self.max_health}</red> | <light-blue>{self.block} Block</light-blue> | <light-red>{self.energy} / {self.max_energy}</light-red>)"
     if self.weak > 0:
-      status += f" | {Light_cyan}Weak: {self.weak}{End}"
+      status += f" | <light-cyan>Weak: {self.weak}</light-cyan>"
     if self.frail > 0:
-      status += f" | {Light_cyan}Frail: {self.frail}{End}"
+      status += f" | <light-cyan>Frail: {self.frail}</light-cyan>"
     if self.vulnerable > 0:
-      status += f" | {Light_cyan}Vulnerable: {self.vulnerable}{End}"
-    print(status, "\n")
+      status += f" | <light-cyan>Vulnerable: {self.vulnerable}</light-cyan>"
+    ansiprint(status, "\n")
 # Shows every card in the player's inventory with it's name, defintion, and energy cost
 def cards_display():
   # Puts a number before each card
@@ -292,10 +260,10 @@ def cards_display():
   for card in player.hand:
     # Prints in red if the player doesn't have enough energy to use the card
     if card["Energy"] > player.energy:
-      print(f"{counter}: {Red}{card['Name']:<15}{card['Energy']} Energy{Red:<15}{card['Info']}{End}")
+      ansiprint(f"{counter}: <red>{card['Name']}</red> | <light-red>{card['Info']}</light-red> | <red>{card['Energy']}</red>")
     # Otherwise, print in full color
     else:
-      print(f"{counter}: {Turquoise}{card['Name']:<15}{Orange}{card['Energy']} Energy{Yellow:<30}{card['Info']}{End}")
+      ansiprint(f"{counter}: <blue>{card['Name']}</blue> | <light-red>{card['Energy']} Energy</light-red> | <yellow>{card['Info']}</yellow>")
     # Adds one to the counter to make a numbered list(Ex. 1: Defend// 2: Strike...)
     counter += 1
 # Function that displays all the relevant info to the player
@@ -315,13 +283,13 @@ def neow_interact():
   print("1: WIP \n2: Enemies in your first 3 combats will have 1 hp \n3:")
 cards = {
   "Strike": {"Name": "Strike", "Damage": 6, "Energy": 1, "Rarity": "Starter", "Type": "Attack", "Info": "Deal 6 damage"},
-  "Strike+": {"Name": "Strike+", "Upgraded": True, "Damage": 9, "Energy": 1, "Rarity": "Starter", "Type": "Attack", "Info": f"Deal {Green}9{End} damage"},
+  "Strike+": {"Name": "<green>Strike+</green>", "Upgraded": True, "Damage": 9, "Energy": 1, "Rarity": "Starter", "Type": "Attack", "Info": "Deal <green>9</green> damage"},
 
-  "Defend": {"Name": "Defend", "Block": 5, "Energy": 1, "Rarity": "Starter", "Type": "Skill", "Info": f"Gain 5 {Yellow}Block{End}"},
-  "Defend+": {"Name": "Defend+", "Upgraded": True, "Block": 8, "Energy": 1, "Rarity": "Starter", "Type": "Skill", "Info": f"Gain {Green}8 {Yellow}Block{End}"},
+  "Defend": {"Name": "Defend", "Block": 5, "Energy": 1, "Rarity": "Starter", "Type": "Skill", "Info": "Gain 5 <yellow>Block</yellow>"},
+  "Defend+": {"Name": "<green>Defend+</green>", "Upgraded": True, "Block": 8, "Energy": 1, "Rarity": "Starter", "Type": "Skill", "Info": "Gain <green>8</green> <yellow>Block</yellow"},
 
-  "Bash": {"Name": "Bash", "Damage": 8, "Vulnerable": 2, "Energy": 2, "Rarity": "Starter", "Type": "Attack", "Info": f"Deal 8 damage. Apply 2 {Yellow}Vulnerable{End}"},
-  "Bash+": {"Name": "Bash+", "Upgraded": True, "Damage": 10, "Vulnerable": 3, "Energy": 2, "Rarity": "Starter", "Type": "Attack", "Info": f"Deal {Green}10{End} damage. Apply {Green}3 {Yellow}Vulnerable{End}"}
+  "Bash": {"Name": "Bash", "Damage": 8, "Vulnerable": 2, "Energy": 2, "Rarity": "Starter", "Type": "Attack", "Info": "Deal 8 damage. Apply 2 <yellow>Vulnerable</yellow>"},
+  "Bash+": {"Name": "<green>Bash+</green>", "Upgraded": True, "Damage": 10, "Vulnerable": 3, "Energy": 2, "Rarity": "Starter", "Type": "Attack", "Info": "Deal <green>10</green> damage. Apply <green>3</green> <yellow>Vulnerable</yellow>"}
 }
 """
 //Player stats//
@@ -350,7 +318,7 @@ def combat():
     player.block = 0
     for enemy in active_enemies:
       if enemy.barricade == True:
-        print(f"{enemy.name}'s block was not removed because of {Light_cyan}Barricade{End}")
+        ansiprint(f"{enemy.name}'s block was not removed because of <light-cyan>Barricade</light-cyan>")
       else:
         enemy.block = 0
     # Player's turn ends when the their energy is out
@@ -358,12 +326,14 @@ def combat():
       display_ui()
       # Asks the user what card they want to use
       try:
-        card_used = int(input(f"\nWhat card do you want to use?({Red}[0] to end turn{End}) > "))
+        ansiprint("What card do you want to use?(<red>[0] to end turn</red>) > ", end='')
+        card_used = int(input(""))
         if len(active_enemies) > 1:
           target = int(input("What enemy do you want to use it on?"))
         else:
           target = 1
         if card_used == 0:
+          system("clear")
           break
         # Checks if the number the user inputted is within range of the player.hand list
         if card_used - 1 in range(0, len(player.hand)) and player.hand[card_used - 1]["Energy"] <= player.energy:
@@ -375,28 +345,28 @@ def combat():
         # prevents from using a card that the player doesn't have enough energy for
         elif player.hand[card_used - 1]["Energy"] > player.energy:
           system("clear")
-          print(f"{Red}Not enough energy{End}")
+          ansiprint("<red>Not enough energy</red>")
           sleep(1.5)
           system("clear")
           continue
         # Numbers less than one will cause problems and this catches it
         else:
           system("clear")
-          print(f"{Red}Card not in inventory.///{End}")
+          ansiprint("<red>Card not in inventory.</red>")
           sleep(1.5)
           system("clear")
           continue
       # Won't crash if the user inputted something that wasn't a number
       except ValueError:
         system("clear")
-        print(f"{Red}Please enter an number{End}")
+        ansiprint("<red>Please enter an number</red>")
         sleep(1.5)
         system("clear")
         continue
       # Won't crash if the user inputted a card that they didn't have
       except IndexError:
         system("clear")
-        print(f"{Red}Card not in inventory{End}")
+        ansiprint("<red>Card not in inventory</red>")
         sleep(1.5)
         system("clear")
         continue
@@ -404,7 +374,7 @@ def combat():
     end_player_turn()
 def rest():
   while True:
-    print(f"You come across a {Green}Rest Site{End}")
+    ansiprint("You come across a <green>Rest Site</green>")
     sleep(1)
     try:
       action = int(input("1:Rest(Heal for 30 percent of your max health)\nor \n2:Upgrade a card in you deck?"))
