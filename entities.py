@@ -3,7 +3,18 @@ import math
 import random
 from time import sleep
 from os import system
-from extras import cards, damage, player
+from utility import damage
+from extras import player, active_enemies, turn
+cards = {
+  "Strike": {"Name": "Strike", "Damage": 6, "Energy": 1, "Rarity": "Starter", "Type": "Attack", "Info": "Deal 6 damage"},
+  "Strike+": {"Name": "<green>Strike+</green>", "Upgraded": True, "Damage": 9, "Energy": 1, "Rarity": "Starter", "Type": "Attack", "Info": "Deal <green>9</green> damage"},
+
+  "Defend": {"Name": "Defend", "Block": 5, "Energy": 1, "Rarity": "Starter", "Type": "Skill", "Info": "Gain 5 <yellow>Block</yellow>"},
+  "Defend+": {"Name": "<green>Defend+</green>", "Upgraded": True, "Block": 8, "Energy": 1, "Rarity": "Starter", "Type": "Skill", "Info": "Gain <green>8</green> <yellow>Block</yellow"},
+
+  "Bash": {"Name": "Bash", "Damage": 8, "Vulnerable": 2, "Energy": 2, "Rarity": "Starter", "Type": "Attack", "Info": "Deal 8 damage. Apply 2 <yellow>Vulnerable</yellow>"},
+  "Bash+": {"Name": "<green>Bash+</green>", "Upgraded": True, "Damage": 10, "Vulnerable": 3, "Energy": 2, "Rarity": "Starter", "Type": "Attack", "Info": "Deal <green>10</green> damage. Apply <green>3</green> <yellow>Vulnerable</yellow>"}
+}
 class Player:
   """
   Attributes:::
@@ -138,4 +149,77 @@ class Player:
       status += f" | <light-cyan>Frail: {self.frail}</light-cyan>"
     if self.vulnerable > 0:
       status += f" | <light-cyan>Vulnerable: {self.vulnerable}</light-cyan>"
+    ansiprint(status, "\n")
+class Enemy:
+  def __init__(self, health, max_health, block, name, debuff_buffs={}):
+    '''
+    Attributes::
+    health: Current health
+    max_health: Maximum health
+    block: Current block
+    name: Enemy name
+    debuff_buffs: Current debuff_buffs w/ debuff length
+    '''
+    self.health = health
+    self.max_health = max_health
+    self.block = block
+    self.name = name
+    self.debuff_buffs = debuff_buffs
+    self.barricade = False
+    self.artifact = 0
+    if self.name == "Spheric Guardian":
+      self.barricade = True
+      self.artifact = 3
+    else:
+      self.barricade = False
+      self.artifact = 0
+    self.vulnerable = 0
+    self.weak = 0
+    self.strength = 0
+  def die(self, enemy):
+    print(f"{enemy.name} has died.")
+    active_enemies.remove(enemy)
+  def debuff_and_buff_check(self):
+    pass
+  def enemy_turn(self):
+    global turn
+    if self.name == 'Spheric Guardian':
+      if turn == 1:
+        # Gives the enemy 25 block
+        self.block += 25
+        ansiprint("<reverse>Activate</reverse>")
+        sleep(1)
+        ansiprint(f"{self.name} gained <light-blue>25 block</light-blue>")
+        sleep(1.5)
+        system("clear")
+        turn += 1
+      elif turn == 2:
+        damage(10, player)
+        player.frail += 5
+        ansiprint(f"{self.name} dealt 10 damage to player and inflicted 5 <yellow>Frail</yellow>(Recieve 25% less block from cards)")
+        sleep(2)
+        system("clear")
+        turn += 1
+      elif turn % 2 == 0 and turn > 2:
+        damage(10, player)
+        print(f"{self.name} dealt 10 damage to player")
+        sleep(0.5)
+        damage(10, player)
+        print(f"{self.name} dealt 10 damage to player")
+        sleep(1.5)
+        system("clear")
+      elif turn % 2 == 1 and turn > 2:
+        damage(10, player)
+        self.block += 15
+        ansiprint(f"{self.name} dealt 10 damage to player and gained <light-blue>15 block</light-blue>")
+        sleep(1.5)
+        system("clear")
+  def show_status(self):
+    status = f"{self.name} (<red>{self.health} / {self.max_health}</red> | <light-blue>{self.block} Block</light-blue>)"
+    if self.barricade is True:
+      status += " | <light-cyan>Barricade</light-cyan>"
+    if self.artifact > 0:
+      status += f" | <light-cyan>Artifact {self.artifact}</light-cyan>"
+    if self.vulnerable > 0:
+      status += f" | <light-cyan>Vulnerable {self.vulnerable}</light-cyan>"
     ansiprint(status, "\n")

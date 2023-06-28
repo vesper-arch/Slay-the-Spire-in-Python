@@ -2,29 +2,29 @@ import random, math
 from os import system
 from time import sleep as wait
 from ansimarkup import parse, ansiprint
-from entities import Player
-import extras
+from extras import active_enemies, player, turn
+from utility import display_ui, end_player_turn
 # Outer loop is for the whole game
 def combat():
   global turn
   turn = 1
 
-  while len(extras.active_enemies) > 0:
+  while len(active_enemies) > 0:
     # Removes the player's block at the beginning of their turn
-    extras.player.block = 0
-    for enemy in extras.active_enemies:
+    player.block = 0
+    for enemy in active_enemies:
       if enemy.barricade == True:
         ansiprint(f"{enemy.name}'s block was not removed because of <light-cyan>Barricade</light-cyan>")
       else:
         enemy.block = 0
     # Player's turn ends when the their energy is out
     while True:
-      extras.display_ui()
+      display_ui()
       # Asks the user what card they want to use
       try:
         ansiprint("What card do you want to use?(<red>[0] to end turn</red>) > ", end='')
         card_used = int(input(""))
-        if len(extras.active_enemies) > 1:
+        if len(active_enemies) > 1:
           target = int(input("What enemy do you want to use it on?"))
         else:
           target = 1
@@ -32,14 +32,14 @@ def combat():
           system("clear")
           break
         # Checks if the number the user inputted is within range of the player.hand list
-        if card_used - 1 in range(0, len(extras.player.hand)) and extras.player.hand[card_used - 1]["Energy"] <= extras.player.energy:
-          extras.player.use_card(extras.player.hand[card_used - 1], extras.active_enemies[target - 1])
+        if card_used - 1 in range(0, len(player.hand)) and player.hand[card_used - 1]["Energy"] <= player.energy:
+          player.use_card(player.hand[card_used - 1], active_enemies[target - 1])
           # if the enemy dies, break out of the current loop, therefore going straight to the end_turn function
-          if extras.active_enemies[target - 1].health == 0:
+          if active_enemies[target - 1].health == 0:
             system("clear")
             break
         # prevents from using a card that the player doesn't have enough energy for
-        elif extras.player.hand[card_used - 1]["Energy"] > extras.player.energy:
+        elif player.hand[card_used - 1]["Energy"] > player.energy:
           system("clear")
           ansiprint("<red>Not enough energy</red>")
           wait(1.5)
@@ -67,7 +67,7 @@ def combat():
         system("clear")
         continue
     # After the player's energy has run out, discard their cards, give them 5 new ones, refil their energy, and make the enemy attack
-    extras.end_player_turn()
+    end_player_turn()
 def rest():
   while True:
     ansiprint("You come across a <green>Rest Site</green>")
@@ -80,7 +80,7 @@ def rest():
       system("clear")
       continue
     if action == 1:
-      extras.player.heal(math.floor(extras.player.max_health//100 * 0.30))
+      player.heal(math.floor(player.max_health//100 * 0.30))
     elif action == 2:
       pass
 combat()
