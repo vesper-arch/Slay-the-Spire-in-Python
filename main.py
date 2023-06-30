@@ -2,9 +2,11 @@ import random, math
 from os import system
 from time import sleep as wait
 from ansimarkup import parse, ansiprint
-from extras import active_enemies, player, turn
-from utility import display_ui, end_player_turn
+from entities import player
+from utility import display_ui, active_enemies
 # Outer loop is for the whole game
+def neow_interact():
+  print("1: WIP \n2: Enemies in your first 3 combats will have 1 hp \n3:")
 def combat():
   global turn
   turn = 1
@@ -19,7 +21,7 @@ def combat():
         enemy.block = 0
     # Player's turn ends when the their energy is out
     while True:
-      display_ui()
+      display_ui(player)
       # Asks the user what card they want to use
       try:
         ansiprint("What card do you want to use?(<red>[0] to end turn</red>) > ", end='')
@@ -67,7 +69,7 @@ def combat():
         system("clear")
         continue
     # After the player's energy has run out, discard their cards, give them 5 new ones, refil their energy, and make the enemy attack
-    end_player_turn()
+    player.end_player_turn()
 def rest():
   while True:
     ansiprint("You come across a <green>Rest Site</green>")

@@ -3,18 +3,7 @@ import math
 import random
 from time import sleep
 from os import system
-from utility import damage
-from extras import player, active_enemies, turn
-cards = {
-  "Strike": {"Name": "Strike", "Damage": 6, "Energy": 1, "Rarity": "Starter", "Type": "Attack", "Info": "Deal 6 damage"},
-  "Strike+": {"Name": "<green>Strike+</green>", "Upgraded": True, "Damage": 9, "Energy": 1, "Rarity": "Starter", "Type": "Attack", "Info": "Deal <green>9</green> damage"},
-
-  "Defend": {"Name": "Defend", "Block": 5, "Energy": 1, "Rarity": "Starter", "Type": "Skill", "Info": "Gain 5 <yellow>Block</yellow>"},
-  "Defend+": {"Name": "<green>Defend+</green>", "Upgraded": True, "Block": 8, "Energy": 1, "Rarity": "Starter", "Type": "Skill", "Info": "Gain <green>8</green> <yellow>Block</yellow"},
-
-  "Bash": {"Name": "Bash", "Damage": 8, "Vulnerable": 2, "Energy": 2, "Rarity": "Starter", "Type": "Attack", "Info": "Deal 8 damage. Apply 2 <yellow>Vulnerable</yellow>"},
-  "Bash+": {"Name": "<green>Bash+</green>", "Upgraded": True, "Damage": 10, "Vulnerable": 3, "Energy": 2, "Rarity": "Starter", "Type": "Attack", "Info": "Deal <green>10</green> damage. Apply <green>3</green> <yellow>Vulnerable</yellow>"}
-}
+from utility import cards, damage, active_enemies, combat_turn
 class Player:
   """
   Attributes:::
@@ -150,6 +139,19 @@ class Player:
     if self.vulnerable > 0:
       status += f" | <light-cyan>Vulnerable: {self.vulnerable}</light-cyan>"
     ansiprint(status, "\n")
+  def end_player_turn(self):
+    player.discard_pile.extend(player.hand)
+    player.hand = []
+    player.draw_cards()
+    player.energy = player.max_energy
+    for enemy in active_enemies:
+      if enemy.health <= 0:
+        enemy.die(enemy)
+      else:
+        enemy.enemy_turn()
+    enemy.debuff_and_buff_check()
+  sleep(1.5)
+  system("clear")
 class Enemy:
   def __init__(self, health, max_health, block, name, debuff_buffs={}):
     '''
@@ -182,9 +184,9 @@ class Enemy:
   def debuff_and_buff_check(self):
     pass
   def enemy_turn(self):
-    global turn
+    global combat_turn
     if self.name == 'Spheric Guardian':
-      if turn == 1:
+      if combat_turn == 1:
         # Gives the enemy 25 block
         self.block += 25
         ansiprint("<reverse>Activate</reverse>")
@@ -192,15 +194,15 @@ class Enemy:
         ansiprint(f"{self.name} gained <light-blue>25 block</light-blue>")
         sleep(1.5)
         system("clear")
-        turn += 1
-      elif turn == 2:
+        combat_turn += 1
+      elif combat_turn == 2:
         damage(10, player)
         player.frail += 5
         ansiprint(f"{self.name} dealt 10 damage to player and inflicted 5 <yellow>Frail</yellow>(Recieve 25% less block from cards)")
         sleep(2)
         system("clear")
-        turn += 1
-      elif turn % 2 == 0 and turn > 2:
+        combat_turn += 1
+      elif combat_turn % 2 == 0 and combat_turn > 2:
         damage(10, player)
         print(f"{self.name} dealt 10 damage to player")
         sleep(0.5)
@@ -208,7 +210,7 @@ class Enemy:
         print(f"{self.name} dealt 10 damage to player")
         sleep(1.5)
         system("clear")
-      elif turn % 2 == 1 and turn > 2:
+      elif combat_turn % 2 == 1 and combat_turn > 2:
         damage(10, player)
         self.block += 15
         ansiprint(f"{self.name} dealt 10 damage to player and gained <light-blue>15 block</light-blue>")
@@ -223,3 +225,9 @@ class Enemy:
     if self.vulnerable > 0:
       status += f" | <light-cyan>Vulnerable {self.vulnerable}</light-cyan>"
     ansiprint(status, "\n")
+
+# Characters
+player = Player(80, 0, 80, 3, 3, [cards["Strike"], cards["Strike"], cards["Strike"], cards["Strike"], cards["Strike"], cards["Defend"], cards["Defend"], cards["Defend"], cards["Defend"], cards["Bash"]], [], [], [], [])
+# Enemies
+Spheric_Guardian = Enemy(20, 20, 40, "Spheric Guardian")
+encounters = [[Spheric_Guardian]]
