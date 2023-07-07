@@ -1,0 +1,7 @@
+{
+    "editor.tokenColorCustomizations": {
+        "[monokai-charcoal (red)]": {
+            "comments": "#373333",
+            "variables": "#1bec99"}
+    }
+}

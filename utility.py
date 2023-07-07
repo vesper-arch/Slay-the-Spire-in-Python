@@ -27,28 +27,34 @@ def damage(damage:int, target:object):
     target.block = 0
   elif damage == target.block:
     target.block -= damage
-def display_ui(entity):
+def display_ui(entity, combat=True):
   # Displays all the card in the player's hand(Look at the function above for code)
   counter = 1
   # Repeats for every card in the player's hand
   for card in entity.hand:
-    # Prints in red if the player doesn't have enough energy to use the card
-    if card["Energy"] > entity.energy:
-      ansiprint(f"{counter}: <red>{card['Name']}</red> | <light-red>{card['Info']}</light-red> | <red>{card['Energy']}</red>")
-    # Otherwise, print in full color
+    if combat is True:
+      # Prints in red if the player doesn't have enough energy to use the card
+      if card["Energy"] > entity.energy:
+        ansiprint(f"{counter}: <red>{card['Name']}</red> | <light-red>{card['Info']}</light-red> | <red>{card['Energy']}</red>")
+      # Otherwise, print in full color
+      else:
+        ansiprint(f"{counter}: <blue>{card['Name']}</blue> | <light-red>{card['Energy']} Energy</light-red> | <yellow>{card['Info']}</yellow>")
+      # Adds one to the counter to make a numbered list(Ex. 1: Defend// 2: Strike...)
+      counter += 1
+    # Displays the type of card if the player is not in combat
     else:
-      ansiprint(f"{counter}: <blue>{card['Name']}</blue> | <light-red>{card['Energy']} Energy</light-red> | <yellow>{card['Info']}</yellow>")
-    # Adds one to the counter to make a numbered list(Ex. 1: Defend// 2: Strike...)
-    counter += 1
+      ansiprint(f"{counter}: <light-black>{card['Type']}</light-black> | <blue>{card['Name']}</blue> | <light-red>{card['Energy']} Energy</light-red>| <yellow>{card['Info']}</yellow>")
+      counter += 1
   print()
-  # Displays the number of cards in the draw and discard pile
-  print(f"Draw pile: {len(entity.draw_pile)}\nDiscard pile: {len(entity.discard_pile)}\n")
-  # Displays the player's current health, block, and energy
+  if combat is True:
+    for enemy in active_enemies:
+      enemy.show_status()
+    # Displays the number of cards in the draw and discard pile
+    print(f"Draw pile: {len(entity.draw_pile)}\nDiscard pile: {len(entity.discard_pile)}\n")
+    # Displays the player's current health, block, and energy
   entity.show_status()
   print()
   counter = 1
-  for enemy in active_enemies:
-    enemy.show_status()
 def start_combat(entity, enemy_list):
   entity.draw_pile = random.sample(entity.deck, len(entity.deck))
   encounter_enemies = random.choice(enemy_list)

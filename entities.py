@@ -1,8 +1,8 @@
-from ansimarkup import parse, ansiprint
 import math
 import random
 from time import sleep
 from os import system
+from ansimarkup import parse, ansiprint
 from utility import cards, damage, active_enemies, combat_turn
 class Player:
   """
@@ -112,9 +112,9 @@ class Player:
   def heal(self, heal):
     self.health += heal
     self.health = min(self.health, self.max_health)
-  def RemoveCardFromDeck(self, card, type):
+  def RemoveCardFromDeck(self, card, action):
     while True:
-      if type == "Remove":
+      if action == "Remove":
         counter = 1
         for card in player.deck:
           ansiprint(f"{counter}: <blue>{card['Name']}</blue> | <light-red>{card['Energy']} Energy</light-red> | <yellow>{card['Info']}</yellow>")
@@ -127,17 +127,20 @@ class Player:
           system("clear")
           continue
         player.deck.remove(card)
-      elif type == 'Upgrade':
+      elif action == 'Upgrade':
         player.deck.remove(card)
         player.deck.append(cards[card["Name", '+']])
-  def show_status(self):
-    status = f"\n{self.name} (<red>{self.health} </red>/ <red>{self.max_health}</red> | <light-blue>{self.block} Block</light-blue> | <light-red>{self.energy} / {self.max_energy}</light-red>)"
-    if self.weak > 0:
-      status += f" | <light-cyan>Weak: {self.weak}</light-cyan>"
-    if self.frail > 0:
-      status += f" | <light-cyan>Frail: {self.frail}</light-cyan>"
-    if self.vulnerable > 0:
-      status += f" | <light-cyan>Vulnerable: {self.vulnerable}</light-cyan>"
+  def show_status(self, combat=True):
+    if combat is True:
+      status = f"\n{self.name} (<red>{self.health} </red>/ <red>{self.max_health}</red> | <light-blue>{self.block} Block</light-blue> | <light-red>{self.energy} / {self.max_energy}</light-red>)"
+      if self.weak > 0:
+        status += f" | <light-cyan>Weak: {self.weak}</light-cyan>"
+      if self.frail > 0:
+        status += f" | <light-cyan>Frail: {self.frail}</light-cyan>"
+      if self.vulnerable > 0:
+        status += f" | <light-cyan>Vulnerable: {self.vulnerable}</light-cyan>"
+    else:
+      status = f"\n{self.name} (<red>{self.health} </red>/ <red>{self.max_health}</red> | <light-blue>{self.block} Block</light-blue>)"
     ansiprint(status, "\n")
   def end_player_turn(self):
     player.discard_pile.extend(player.hand)
@@ -149,24 +152,31 @@ class Player:
         enemy.die(enemy)
       else:
         enemy.enemy_turn()
-    enemy.debuff_and_buff_check()
+      enemy.debuff_and_buff_check()
   sleep(1.5)
   system("clear")
 class Enemy:
-  def __init__(self, health, max_health, block, name, debuff_buffs={}):
+  def __init__(self, health, max_health, block, name, order,  moves):
     '''
     Attributes::
-    health: Current health
-    max_health: Maximum health
-    block: Current block
-    name: Enemy name
-    debuff_buffs: Current debuff_buffs w/ debuff length
+    health: Current health[int]
+    max_health: Maximum health[int]
+    block: Current block[int]
+    name: Enemy name[str]
+    order: Order of moves(planning on using parsing to run)[array, list, whatever]
+    moves: All moves the enemy can use[2D dict]
+    barricade: Block is not removed at the start of combat[bool]
+    artifact: Blocks the next debuff[int]
+    vulnerable: Takes 50% more damage from attacks[int](duration stack)
+    weak: Deals 25% less damage with attacks[int](duration stack)
+    strength: Deal more damage[int](intensity stack)
     '''
     self.health = health
     self.max_health = max_health
     self.block = block
     self.name = name
-    self.debuff_buffs = debuff_buffs
+    self.order = order
+    self.moves = moves
     self.barricade = False
     self.artifact = 0
     if self.name == "Spheric Guardian":
@@ -178,10 +188,16 @@ class Enemy:
     self.vulnerable = 0
     self.weak = 0
     self.strength = 0
-  def die(self, enemy):
-    print(f"{enemy.name} has died.")
-    active_enemies.remove(enemy)
+  def die(self):
+    """
+    Dies.
+    """
+    print(f"{self.name} has died.")
+    active_enemies.remove(self)
   def debuff_and_buff_check(self):
+    """
+    Not finished
+    """
     pass
   def enemy_turn(self):
     global combat_turn
@@ -229,5 +245,8 @@ class Enemy:
 # Characters
 player = Player(80, 0, 80, 3, 3, [cards["Strike"], cards["Strike"], cards["Strike"], cards["Strike"], cards["Strike"], cards["Defend"], cards["Defend"], cards["Defend"], cards["Defend"], cards["Bash"]], [], [], [], [])
 # Enemies
-Spheric_Guardian = Enemy(20, 20, 40, "Spheric Guardian")
+Spheric_Guardian = Enemy(20, 20, 40, "Spheric Guardian", ["Activate", "Attack/Debuff", "Slam", "Harden", "rep(2,3,inf)"], {"Activate": {"Block": 25},
+                                                                                                                           "Attack/Debuff": {"Damage": 10, "Frail": 5},
+                                                                                                                           "Slam": {"Damage": 10, "Times": 2},
+                                                                                                                           "Harden": {"Damage": 10, "Block": 15}})
 encounters = [[Spheric_Guardian]]
