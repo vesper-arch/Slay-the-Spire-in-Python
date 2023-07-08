@@ -18,7 +18,7 @@ class Player:
   discard_pile: Cards get put here when they are played
   exhaust_pile: List of exhausted cards
   """
-  def __init__(self, health, block, max_health, energy, max_energy, deck, hand, draw_pile, discard_pile, exhaust_pile):
+  def __init__(self, health:int, block:int, max_health:int, energy:int, max_energy:int, deck:list, hand:list, draw_pile:list, discard_pile:list, exhaust_pile:list):
     self.health = health
     self.block = block
     self.name = "Ironclad"
@@ -36,14 +36,14 @@ class Player:
     self.vulnerable = 0
     self.entangled = False
 
-  def use_card(self, card, target):
+  def use_card(self, card:dict, target:object):
     if card == cards["Strike"]:
       self.use_strike(target)
     elif card == cards['Bash']:
       self.use_bash(target)
     elif card == cards['Defend']:
       self.use_defend()
-  def use_strike(self, targeted_enemy):
+  def use_strike(self, targeted_enemy:object):
     print()
     # If the enemy has the Vulnerable debuff applied to it, multiply the damage by 1.5 and round it up to the nearest whole number
     damage(cards['Strike']['Damage'], targeted_enemy)
@@ -62,7 +62,7 @@ class Player:
     print()
     sleep(1)
     system("clear")
-  def use_bash(self, targeted_enemy):
+  def use_bash(self, targeted_enemy:object):
     print()
     # If the enemy has the Vulnerable debuff applied to it, multiply the damage by 1.5 and round it up to the nearest whole number
     damage(cards['Bash']['Damage'], targeted_enemy)
@@ -104,7 +104,7 @@ class Player:
     player.hand = player.draw_pile[-5:]
     # Removes those cards
     player.draw_pile = player.draw_pile[:-5]
-  def blocking(self, block):
+  def blocking(self, block:int):
     if self.frail > 0:
       self.block += math.floor(block * 0.75)
     else:
@@ -112,7 +112,7 @@ class Player:
   def heal(self, heal):
     self.health += heal
     self.health = min(self.health, self.max_health)
-  def RemoveCardFromDeck(self, card, action):
+  def RemoveCardFromDeck(self, card:dict, action:str):
     while True:
       if action == "Remove":
         counter = 1
@@ -156,7 +156,7 @@ class Player:
   sleep(1.5)
   system("clear")
 class Enemy:
-  def __init__(self, health, max_health, block, name, order,  moves):
+  def __init__(self, health:int, max_health:int, block:int, name:str, order:list, moves:dict):
     '''
     Attributes::
     health: Current health[int]
@@ -182,12 +182,31 @@ class Enemy:
     if self.name == "Spheric Guardian":
       self.barricade = True
       self.artifact = 3
-    else:
-      self.barricade = False
-      self.artifact = 0
     self.vulnerable = 0
     self.weak = 0
     self.strength = 0
+    # PArsing to determine the order of moves
+    for item in self.order:
+      # Contains all the items with percent symbols in them
+      parsed_order = []
+      # Adds the respective items
+      if "%" in item:
+        parsed_order.append(item)
+      # Dictionary is basically (everything before this->"%"[string]: everything after this->"%" exclusive[int])
+      # Contains the percent chances for each move
+      percent_chances = {text[:text.index("%")]: int(text[text.index("%") + 1]) for text in parsed_order}
+      # Checks if the first character is a right facing arrow
+      if item[:1] == ">":
+        # List of all the indexes and extras instructions in between ()s
+        repeats = [item[item.index["("] + 1: item[item.index[")"]]].split(",")]
+        for index in repeats:
+          if index.isdigit() is True:
+            int(index)
+          else:
+            if index == "inf":
+              rep_inf = True
+              repeats.remove(index)
+
   def die(self):
     """
     Dies.
@@ -212,6 +231,7 @@ class Enemy:
         system("clear")
         combat_turn += 1
       elif combat_turn == 2:
+        # Deals 10 damage to the player
         damage(10, player)
         player.frail += 5
         ansiprint(f"{self.name} dealt 10 damage to player and inflicted 5 <yellow>Frail</yellow>(Recieve 25% less block from cards)")
@@ -219,6 +239,7 @@ class Enemy:
         system("clear")
         combat_turn += 1
       elif combat_turn % 2 == 0 and combat_turn > 2:
+        # Deals 10 damage to the player twice
         damage(10, player)
         print(f"{self.name} dealt 10 damage to player")
         sleep(0.5)
@@ -227,6 +248,7 @@ class Enemy:
         sleep(1.5)
         system("clear")
       elif combat_turn % 2 == 1 and combat_turn > 2:
+        # Deals 10 damage to the player and gains 15 block
         damage(10, player)
         self.block += 15
         ansiprint(f"{self.name} dealt 10 damage to player and gained <light-blue>15 block</light-blue>")

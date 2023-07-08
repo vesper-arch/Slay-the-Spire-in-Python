@@ -2,7 +2,7 @@ from os import system
 from time import sleep as wait
 import math
 from entities import player
-from utility import display_ui, active_enemies
+from utility import display_ui, active_enemies, combat_turn
 from ansimarkup import parse, ansiprint
 # Outer loop is for the whole game
 
@@ -12,8 +12,8 @@ def neow_interact():
 
 
 def combat():
-    global turn
-    turn = 1
+    global combat_turn
+    combat_turn = 1
 
     while len(active_enemies) > 0:
         # Removes the player's block at the beginning of their turn
