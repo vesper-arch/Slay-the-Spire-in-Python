@@ -1,8 +1,8 @@
 from os import system
 from time import sleep as wait
 import math
-from entities import player
-from utility import display_ui, active_enemies, combat_turn
+from entities import player, encounters
+from utility import display_ui, active_enemies, combat_turn, start_combat
 from ansimarkup import parse, ansiprint
 # Outer loop is for the whole game
 
@@ -14,7 +14,7 @@ def neow_interact():
 def combat():
     global combat_turn
     combat_turn = 1
-
+    start_combat(player, encounters)
     while len(active_enemies) > 0:
         # Removes the player's block at the beginning of their turn
         player.block = 0
@@ -25,6 +25,7 @@ def combat():
                 enemy.block = 0
         # Player's turn ends when the their energy is out
         while True:
+            player.draw_cards()
             display_ui(player)
             # Asks the user what card they want to use
             try:
@@ -77,6 +78,16 @@ def combat():
 
 
 def rest():
+    """
+    Actions:
+    Rest: Heal for 30% of you max hp(rounded down)
+    Upgrade: Upgrade 1 card in your deck(Cards can only be upgraded once unless stated otherwise)*
+    Lift: Permanently gain 1 Strength(Requires Girya, can only be used 3 times in a run)*
+    Toke: Remove 1 card from your deck(Requires Peace Pipe)*
+    Dig: Obtain 1 random Relic(Requires Shovel)*
+    Recall: Obtain the Ruby Key(Max 1 use, availible in normal runs when Act 4 is unlocked)*
+    *Not finished*
+    """
     while True:
         ansiprint("You come across a <green>Rest Site</green>")
         wait(1)
@@ -88,7 +99,7 @@ def rest():
             system("clear")
             continue
         if action == 1:
-            heal_amount = math.floor(player.max_health//100 * 0.30)
+            heal_amount = math.floor(player.max_health * 0.30)
             player.heal(heal_amount)
             while True:
                 try:
