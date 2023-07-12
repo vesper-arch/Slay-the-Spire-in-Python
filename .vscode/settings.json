@@ -1,9 +1,0 @@
-{
-    "editor.tokenColorCustomizations": {
-        "[monokai-charcoal (red)]": {
-            "comments": "#959292",
-            "functions": "#ff780a",
-        "variables": "#00ffc8"}
-    }
-    "editor.multiCursorModifier": "ctrlCmd"
-}
