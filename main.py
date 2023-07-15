@@ -1,7 +1,8 @@
 from os import system
 from time import sleep as wait
 import math
-from entities import player, encounters
+import random
+from entities import player, encounters, generate_card_rewards
 from utility import display_ui, active_enemies, combat_turn, start_combat
 from ansimarkup import parse, ansiprint
 # Outer loop is for the whole game
@@ -23,9 +24,14 @@ def combat():
                 ansiprint(f"{enemy.name}'s block was not removed because of <light-cyan>Barricade</light-cyan>")
             else:
                 enemy.block = 0
+        if player.energy_gain > player.max_energy:
+            player.energy += player.energy_gain
+            player.energy_gain = player.max_energy
+        else:
+            player.energy += player.energy_gain
+        player.draw_cards()
         # Player's turn ends when the their energy is out
         while True:
-            player.draw_cards()
             display_ui(player)
             # Asks the user what card they want to use
             try:
@@ -42,8 +48,11 @@ def combat():
                 if card_used in range(0, len(player.hand)) and player.hand[card_used]["Energy"] <= player.energy:
                     player.use_card(player.hand[card_used], active_enemies[target])
                     # if the enemy dies, break out of the current loop, therefore going straight to the end_turn function
-                    if active_enemies[target].health == 0:
-                        system("clear")
+                    for enemy in active_enemies:
+                        if enemy.health == 0:
+                            enemy.die()
+                    if active_enemies == []:
+                        killed_enemies = True
                         break
                 # prevents from using a card that the player doesn't have enough energy for
                 elif player.hand[card_used]["Energy"] > player.energy:
@@ -74,7 +83,14 @@ def combat():
                 system("clear")
                 continue
         # After the player's energy has run out, discard their cards, give them 5 new ones, refil their energy, and make the enemy attack
-        player.end_player_turn()
+        if killed_enemies is True:
+            ansiprint("<green>Combat finished!</green>")
+            player.gain_gold(random.randint(10, 20))
+            generate_card_rewards("Normal", 3)
+        else:
+            player.end_player_turn()
+            for enemy in active_enemies:
+                enemy.enemy_turn()
 
 
 def rest():

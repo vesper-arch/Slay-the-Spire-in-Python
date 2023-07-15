@@ -7,28 +7,8 @@ from ansimarkup import parse, ansiprint
 
 active_enemies = []
 combat_turn = 0
-cards = {
-    "Strike": {"Name": "Strike", "Damage": 6, "Energy": 1, "Rarity": "Starter", "Type": "Attack", "Info": "Deal 6 damage"},
-    "Strike+": {"Name": "<green>Strike+</green>", "Upgraded": True, "Damage": 9, "Energy": 1, "Rarity": "Starter", "Type": "Attack", "Info": "Deal 9 damage"},
+combat_potion_dropchance = 40
 
-    "Defend": {"Name": "Defend", "Block": 5, "Energy": 1, "Rarity": "Starter", "Type": "Skill", "Info": "Gain 5 <yellow>Block</yellow>"},
-    "Defend+": {"Name": "<green>Defend+</green>", "Upgraded": True, "Block": 8, "Energy": 1, "Rarity": "Starter", "Type": "Skill", "Info": "Gain 8 <yellow>Block</yellow>"},
-
-    "Bash": {"Name": "Bash", "Damage": 8, "Vulnerable": 2, "Energy": 2, "Rarity": "Starter", "Type": "Attack", "Info": "Deal 8 damage. Apply 2 <yellow>Vulnerable</yellow>"},
-    "Bash+": {"Name": "<green>Bash+</green>", "Upgraded": True, "Damage": 10, "Vulnerable": 3, "Energy": 2, "Rarity": "Starter", "Type": "Attack", "Info": "Deal 10 damage. Apply 3 <yellow>Vulnerable</yellow>"},
-
-    "Body Slam": {"Name": "Body Slam", "Damage": 0, "Energy": 1, "Rarity": "Common", "Type": "Attack", "Info": "Deal damage equal to your <yellow>Block</yellow>"},
-    "Body Slam+": {"Name": "<green>Body Slam+", "Upgraded": True, "Damage": 0, "Energy": 0, "Rarity": "Common", "Type": "Attack", "Info": "Deal damage equal to your <yellow>Block</yellow>"},
-
-    "Clash": {"Name": "Clash", "Damage": 14, "Energy": 0, "Rarity": "Common", "Type": "Attack", "Info": "Can only be played is every card in your hand is an Attack. Deal 14 damage."},
-    "Clash+": {"Name": "<green>Clash+</green>", "Upgraded": True, "Damage": 18, "Energy": 0, "Rarity": "Common", "Type": "Attack", "Info": "Can only be player if every card in your hand is an Attack. Deal 18 damage."},
-
-    "Cleave": {"Name": "Cleave", "Damage": 8, "Target": "All", "Energy": 1, "Rarity": "Common", "Type": "Attack", "Info": "Deal 8 damage to ALL enemies"},
-    "Cleave+": {"Name": "<green>Cleave+</green>", "Damage": 11, "Target": "All", "Energy": 1, "Rarity": "Common", "Type": "Attack", "Info": "Deal 11 Damage to ALL enemies"},
-
-    "Clothesline": {"Name": "Clothesline", "Damage": 12, "Weak": 2, "Rarity": "Common", "Type": "Attack", "Info": "Deal 12 damage. Apply 2 <yellow>Weak</yellow>"},
-    "Clothesline+": {"Name": "<green>Clothesline</green>", "Damage": 14, "Weak": 3, "Upgraded": True, "Rarity": "Common", "Type": "Attack", "Info": "Deal 14 damage. Apply 3 <yellow>Weak</yellow>"}
-}
 
 
 def damage(damage: int, target: object, user, card=True):
@@ -43,11 +23,20 @@ def damage(damage: int, target: object, user, card=True):
         target.block = 0
     elif damage == target.block:
         target.block -= damage
+    print(f"{user.name} dealt {damage:.0f} damage to {target.name}")
     target.health = max(target.health, 0)
+    if target.health == 0:
+        target.die()
+    sleep(1)
+
 
 
 def display_ui(entity, combat=True):
-    # Displays all the card in the player's hand(Look at the function above for code)
+    """
+    If the player is in combat, don't show the type of card and display if the player doesn't have enough energy for it
+    otherwise, Show the type with the card
+    Shows the enemies's status
+    Shows the player's status"""
     counter = 1
     # Repeats for every card in the player's hand
     for card in entity.hand:
@@ -82,3 +71,5 @@ def start_combat(entity, enemy_list):
     encounter_enemies = random.choice(enemy_list)
     for enemy in encounter_enemies:
         active_enemies.append(enemy)
+        enemy.health = random.randint(enemy.health[0], enemy.health[1])
+        enemy.max_health = enemy.health
