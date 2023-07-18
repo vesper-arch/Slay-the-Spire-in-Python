@@ -29,14 +29,15 @@ class Player:
     strength_down: Lose X Strength next turn(intensity stack, completely removed at the start of turn)
     """
 
-    def __init__(self, health: int, block: int, energy: int, max_energy: int, deck: list):
+    def __init__(self, health: int, block: int, max_energy: int, deck: list):
         self.health = health
         self.block = block
         self.name = "Ironclad"
         self.max_health = health
-        self.energy = energy
+        self.energy = 0
         self.max_energy = max_energy
         self.energy_gain = max_energy
+        self.energized = 0
         self.deck = deck
         self.hand = []
         self.draw_pile = []
@@ -59,65 +60,83 @@ class Player:
         self.poison = 0
         self.shackled = False
         self.artifact = 0
+        self.block_next_turn = 0
+        self.vigor = 0
+        self.thorns = 0
 
     def use_card(self, card: dict, target: object):
         """
         Uses a card
         Wow!
         """
-        if card == cards["Strike"]:
-            self.use_strike(target)
-        elif card == cards['Bash']:
-            self.use_bash(target)
-        elif card == cards['Defend']:
-            self.use_defend()
+        if "Strike" in card["Name"]:
+            self.use_strike(target, card)
+        elif "Bash" in card["Name"]:
+            self.use_bash(target, card)
+        elif "Defend" in card["Name"]:
+            self.use_defend(card)
+        elif "Cleave" in card["Name"]:
+            self.use_cleave(active_enemies, card)
+        elif "Clash" in card["Name"]:
+            self.use_clash(target, card)
+        elif "Perfected Strike" in card["Name"]:
+            self.use_perfectedstrike(target, card)
+        elif "Body Slam" in card["Name"]:
+            self.use_bodyslam(target, card)
 
-    def use_strike(self, targeted_enemy: object):
+    def use_strike(self, targeted_enemy: object, using_card):
+        base_damage = using_card["Damage"]
+        if "+" in using_card["Name"]:
+            base_damage += 3
         print()
         # If the enemy has the Vulnerable debuff applied to it, multiply the damage by 1.5 and round it up to the nearest whole number
-        damage(cards['Strike']['Damage'], targeted_enemy, player)
+        damage(base_damage, targeted_enemy, player)
         # Takes the card's energy cost away from the player's energy
-        self.energy -= cards["Strike"]["Energy"]
-        # Removes the card from the player's cards
-        self.hand.remove(cards["Strike"])
-        self.discard_pile.append(cards["Strike"])
+        self.move_card(using_card, self.discard_pile, self.hand, True)
         print()
         sleep(1)
         system("clear")
 
-    def use_bash(self, targeted_enemy: object):
+    def use_bash(self, targeted_enemy: object, using_card):
+        base_damage = using_card["Damage"]
+        base_vulnerable = using_card["Vulnerable"]
+        if "+" in using_card["Name"]:
+            base_damage += 2
+            base_vulnerable += 1
         print()
         # If the enemy has the Vulnerable debuff applied to it, multiply the damage by 1.5 and round it up to the nearest whole number
-        damage(cards['Bash']['Damage'], targeted_enemy, player)
-        self.debuff("Vulnerable", cards['Bash']['Vulnerable'], targeted_enemy, True)
+        damage(base_damage, targeted_enemy, player)
+        self.debuff("Vulnerable", base_vulnerable, targeted_enemy, True)
         # prevents the enemy's health from going below 0
-        self.energy -= cards["Bash"]["Energy"]
-        self.energy = max(player.energy, 0)
-        self.hand.remove(cards['Bash'])
-        self.discard_pile.append(cards['Bash'])
+        self.move_card(using_card, self.discard_pile, self.hand, True)
         print()
         sleep(1.5)
         system("clear")
 
-    def use_defend(self):
+    def use_defend(self, using_card):
+        base_block = using_card["Block"]
+        if "+" in using_card["Name"]:
+            base_block += 3
         print()
-        self.blocking(cards['Defend']['Block'])
-        self.energy -= cards["Defend"]["Energy"]
-        self.hand.remove(cards['Defend'])
-        self.discard_pile.append(cards['Defend'])
-        print()
-        sleep(1.5)
-        system("clear")
-    def use_bodyslam(self, targeted_enemy):
-        print()
-        damage(cards["Body Slam"]["Damage"], targeted_enemy, self)
-        self.energy -= cards["Body Slam"]["Energy"]
-        self.hand.remove(cards["Body Slam"])
-        self.discard_pile.append(cards["Body Slam"])
+        self.blocking(base_block)
+        self.move_card(using_card, self.discard_pile, self.hand, True)
         print()
         sleep(1.5)
         system("clear")
-    def use_clash(self, targeted_enemy):
+    def use_bodyslam(self, targeted_enemy, using_card):
+        base_energy = using_card["Energy"]
+        if "+" in using_card["Name"]:
+            base_energy -= 1
+        print()
+        damage(using_card["Damage"], targeted_enemy, self)
+        self.move_card(using_card, self.discard_pile, self.hand, True)
+        print()
+        sleep(1.5)
+        system("clear")
+    def use_clash(self, targeted_enemy, using_card):
+        base_damage = using_card["Damage"]
+        if "+" in using_card["Name"]:
+            base_damage += 4
         print()
         while True:
             for card in self.hand:
@@ -127,20 +146,32 @@ class Player:
                 elif card.get("Type") != "Attack":
                     ansiprint("<light-red>You have non-attack cards in your hand</light-red>")
                     break
-            damage(cards["Clash"]["Damage"], targeted_enemy, self)
-            self.energy -= cards["Clash"]["Energy"]
-            self.hand.remove(cards["Clash"])
-            self.discard_pile.append(cards["Clash"])
+            damage(base_damage, targeted_enemy, self)
+            self.move_card(using_card, self.discard_pile, self.hand, True)
             break
         sleep(1.5)
         system("clear")
-    def use_cleave(self, enemies):
+    def use_cleave(self, enemies, using_card):
+        base_damage = using_card["Damage"]
+        if "+" in using_card["Name"]:
+            base_damage += 3
         print()
         for enemy in enemies:
-            damage(cards["Cleave"]["Damage"], enemy, self)
-        self.energy -= cards['Cleave']['Energy']
-        self.hand.remove(cards['Cleave'])
-        self.discard_pile.append(cards["Cleave"])
+            damage(base_damage, enemy, self)
+        self.move_card(using_card, self.discard_pile, self.hand, True)
+        sleep(1.5)
+        system("clear")
+    def use_perfectedstrike(self, targeted_enemy, using_card):
+        damage_per_strike = using_card["Damage Per 'Strike'"]
+        base_damage = using_card["Damage"]
+        if "+" in using_card["Name"]:
+            damage_per_strike = using_card["Damage Per 'Strike'"] + 1
+        print()
+        for card in self.deck:
+            if "strike" in card["Name"].lower():
+                base_damage += damage_per_strike
+        damage(base_damage, targeted_enemy, self)
+        self.move_card(using_card, self.discard_pile, self.hand, True)
         sleep(1.5)
         system("clear")
 
@@ -156,13 +187,13 @@ class Player:
         if self.frail > 0:
             block = math.floor(block * 0.75)
         self.block += block
-        ansiprint(f"{self.name} gained {block} <light-blue>Block</light-blue>")
-        
+        ansiprint(f"{self.name} gained {block} <light-blue>Block</light-blue>")    
 
     def heal(self, heal):
         self.health += heal
         self.health = min(self.health, self.max_health)
-        ansiprint(f"<green>{self.name} healed for {heal} Health</green>")
+        ansiprint(f"<green>{self.name} healed for {min(self.max_health - self.health, heal)} Health</green>")
+        self.show_status(False)
 
     def RemoveCardFromDeck(self, card: dict, action: str):
         while True:
@@ -192,8 +223,12 @@ class Player:
                 status += f" | <light-cyan>Frail: {self.frail}</light-cyan>"
             if self.vulnerable > 0:
                 status += f" | <light-cyan>Vulnerable: {self.vulnerable}</light-cyan>"
+            if self.energized > 0:
+                status += f" | <light-cyan>Energized: {self.energized}</light-cyan>"
+            if self.artifact > 0:
+                status += f" | <light-cyan>Artifact: {self.artifact}</light-cyan>"
         else:
-            status = f"\n{self.name} (<red>{self.health} </red>/ <red>{self.max_health}</red> | <light-blue>{self.block} Block</light-blue>)"
+            status = f"\n{self.name} (<red>{self.health} </red>/ <red>{self.max_health}</red> | <yellow>{self.gold} Gold</yellow>)"
         ansiprint(status, "\n")
 
     def end_player_turn(self):
@@ -203,7 +238,13 @@ class Player:
         player.energy = player.max_energy
         sleep(1.5)
         system("clear")
-    
+
+    def move_card(self, card, to, from_loc, cost_energy):
+        if cost_energy is True:
+            self.energy -= card["Energy"]
+        from_loc.remove(card)
+        to.append(card)
+
     def debuff(self, debuff_name, amount, target, end):
         if target.artifact == 0:
             if debuff_name == "Weak":
@@ -227,7 +268,7 @@ class Player:
         else:
             sleep(1.5)
             system("clear")
-    def buff(self, buff_name, amount, end): 
+    def buff(self, buff_name, amount, end):
         if buff_name == "Strength":
             self.strength += amount
         elif buff_name == "Dexterity":
@@ -247,12 +288,20 @@ class Player:
             sleep(1)
     def gain_gold(self, gold):
         self.gold += gold
-        ansiprint(f"{self.name} gained <green>{gold} <yellow>Gold</green></yellow>")
+        ansiprint(f"{self.name} gained <green>{gold}</green> <yellow>Gold</yellow>")
         sleep(1)
+    def debuff_tick(self):
+        if self.vulnerable > 0:
+            self.vulnerable -= 1
+            ansiprint("<light-cyan>-1 Vulnerable</light-cyan>")
+        if self.weak > 0:
+            self.weak -= 1
+            ansiprint("<light-cyan>-1 Weak</light-cyan>")
+        
 
 
 class Enemy:
-    def __init__(self, health: list, block: int, name: str, moves: dict):
+    def __init__(self, health: list, block: int, name: str, past_moves: dict):
         '''
         Attributes::
         health: Current health[int]
@@ -272,8 +321,7 @@ class Enemy:
         self.max_health = health
         self.block = block
         self.name = name
-        self.moves = moves
-        self.past_moves = []
+        self.past_moves = past_moves
         self.barricade = False
         self.artifact = 0
         if self.name == "Spheric Guardian":
@@ -340,7 +388,7 @@ class Enemy:
             self.active_turns += 1
         if self.name == "Acid Slime (L)" or self.name == "Acid Slime (M)":
             random_num = random.randint(0, 100)
-            if self.health > math.floor(self.health * 0.5) and self.name == "Acid Slime (L)":
+            if self.health < math.floor(self.max_health * 0.5) and self.name == "Acid Slime (L)":
                 ansiprint("<bold>Split<bold>")
                 self.die()
                 active_enemies.append(Enemy([self.health, self.health], 0, "Acid Slime (M)", []))
@@ -383,9 +431,9 @@ class Enemy:
         if self.barricade is True:
             status += " | <light-cyan>Barricade</light-cyan>"
         if self.artifact > 0:
-            status += f" | <light-cyan>Artifact {self.artifact}</light-cyan>"
+            status += f" | <light-cyan>Artifact: {self.artifact}</light-cyan>"
         if self.vulnerable > 0:
-            status += f" | <light-cyan>Vulnerable {self.vulnerable}</light-cyan>"
+            status += f" | <light-cyan>Vulnerable: {self.vulnerable}</light-cyan>"
         ansiprint(status, "\n")
     def attack(self, dmg, times, start, end, name=""):
         if start is True:
@@ -462,9 +510,9 @@ class Enemy:
 
 
 # Characters
-player = Player(80, 0, 3, 3, [])
+player = Player(80, 0, 70, [])
 cards = {
-    "Strike": {"Name": "Strike", "Damage": 6, "Energy": 1, "Rarity": "Starter", "Type": "Attack", "Info": "Deal 6 damage"},
+    "Strike": {"Name": "Strike", "Damage": 100, "Energy": 1, "Rarity": "Starter", "Type": "Attack", "Info": "Deal 6 damage"},
     "Strike+": {"Name": "<green>Strike+</green>", "Upgraded": True, "Damage": 9, "Energy": 1, "Rarity": "Starter", "Type": "Attack", "Info": "Deal 9 damage"},
 
     "Defend": {"Name": "Defend", "Block": 5, "Energy": 1, "Rarity": "Starter", "Type": "Skill", "Info": "Gain 5 <yellow>Block</yellow>"},
@@ -482,14 +530,14 @@ cards = {
     "Cleave": {"Name": "Cleave", "Damage": 8, "Target": "All", "Energy": 1, "Rarity": "Common", "Type": "Attack", "Info": "Deal 8 damage to ALL enemies"},
     "Cleave+": {"Name": "<green>Cleave+</green>", "Damage": 11, "Target": "All", "Energy": 1, "Rarity": "Common", "Type": "Attack", "Info": "Deal 11 Damage to ALL enemies"},
 
-    "Clothesline": {"Name": "Clothesline", "Damage": 12, "Weak": 2, "Rarity": "Common", "Type": "Attack", "Info": "Deal 12 damage. Apply 2 <yellow>Weak</yellow>"},
-    "Clothesline+": {"Name": "<green>Clothesline</green>", "Damage": 14, "Weak": 3, "Upgraded": True, "Rarity": "Common", "Type": "Attack", "Info": "Deal 14 damage. Apply 3 <yellow>Weak</yellow>"},
+    "Clothesline": {"Name": "Clothesline", "Energy": 2, "Damage": 12, "Weak": 2, "Rarity": "Common", "Type": "Attack", "Info": "Deal 12 damage. Apply 2 <yellow>Weak</yellow>"},
+    "Clothesline+": {"Name": "<green>Clothesline+</green>", "Energy": 2, "Damage": 14, "Weak": 3, "Upgraded": True, "Rarity": "Common", "Type": "Attack", "Info": "Deal 14 damage. Apply 3 <yellow>Weak</yellow>"},
 
     "Flex": {"Name": "Flex", "Strength": 2, "Strength Down": 2, "Energy": 0, "Rarity": "Common", "Type": "Skill", "Info": "Gain 2 <yellow>Strength</yellow>. At the end of your turn, lose 2 <yellow>Strength</yellow>"},
     "Flex+": {"Name": "<green>Flex+</green>", "Upgraded": True, "Strength": 4, "Strength Down": 4, "Energy": 0, "Rarity": "Common", "Type": "Skill", "Info": "Gain 4 <yellow>Strength</yellow>. At the end of your turn lose 4 <yellow>Strength</yellow>"},
 
     "Heavy Blade": {"Name": "Heavy Blade", "Damage": 14, "Strength Multi": 3, "Energy": 2, "Rarity": "Common", "Type": "Attack", "Info": "Deal 14 damage. <yellow>Strength</yellow> affects this card 3 times."},
-    "Heavy Blade+": {"Name": "<green>Heavy Blade</green>", "Damage": 14, "Strength Multi": 5, "Energy": 2, "Rarity": "Common", "Type": "Attack", "Info": "Deal 14 damage. <yellow>Strength</yellow> affects this card 5 times"},
+    "Heavy Blade+": {"Name": "<green>Heavy Blade+</green>", "Damage": 14, "Strength Multi": 5, "Energy": 2, "Rarity": "Common", "Type": "Attack", "Info": "Deal 14 damage. <yellow>Strength</yellow> affects this card 5 times"},
 
     "Iron Wave": {"Name": "Iron Wave", "Damage": 5, "Block": 5, "Energy": 1, "Rarity": "Common", "Type": "Attack", "Info": "Gain 5 <yellow>Block</yellow>. Deal 5 damage."},
     "Iron Wave+": {"Name": "<green>Iron Wave+</green>", "Damage": 7, "Block": 7, "Energy": 1, "Rarity": "Common", "Type": "Attack", "Info": "Gain 7 <yellow>Block</yellow>. Deal 7 damage."},
@@ -501,7 +549,7 @@ cards = {
 }
 player.deck = [cards['Strike'], cards['Strike'], cards['Strike'], cards['Strike'], cards['Strike'], cards['Defend'], cards['Defend'], cards['Defend'], cards['Defend'], cards['Bash']]
 # Enemies
-encounters = [[Enemy([65, 69], 0, "Acid Slime (L)", [])]]
+encounters = [[Enemy([65, 69], 0, "Acid Slime (L)", ['PlAce', "Place", "place"])]]
 
 def generate_card_rewards(reward_tier, amount):
     """
@@ -514,27 +562,24 @@ def generate_card_rewards(reward_tier, amount):
     Boss combat rewards:
     Rare: 100% | Uncommon: 0% | Common: 0%
     """
-    common_cards = {card: attr for card, attr in cards if attr.get("Rarity") == "Common" and attr.get("Type") != "Status"}
-    uncommon_cards = {card: attr for card, attr in cards if attr.get("Rarity") == "Uncommon" and attr.get("Type") != "Status"}
-    rare_cards = {card: attr for card, attr in cards if attr.get("Rarity") == "Rare" and attr.get("Type") != "Status"}
+    common_cards = {card: attr for card, attr in cards.items() if attr.get("Rarity") == "Common" and attr.get("Type") != "Status" and '+' not in attr.get("Name")}
+    uncommon_cards = {card: attr for card, attr in cards.items() if attr.get("Rarity") == "Uncommon" and attr.get("Type") != "Status" and '+' not in attr.get("Name")}
+    rare_cards = {card: attr for card, attr in cards.items() if attr.get("Rarity") == "Rare" and attr.get("Type") != "Status" and '+' not in attr.get("Name")}
 
     rewards = []
 
     if reward_tier == "Normal":
         for i in range(amount):
-            random_num = 1 # It's set to 1 because Uncommon and Rare cards don't exist yet
+            random_num = 70 # It's set to 1 because Uncommon and Rare cards don't exist yet
             if random_num < 3:
-                random_key = random.choice(list(common_cards.keys()))
-                random_value = common_cards[random_key]
-                rewards.append(random_key[random_value])
-            elif random_num > 60:
-                random_key = random.choice(list(uncommon_cards.keys()))
-                random_value = uncommon_cards[random_key]
-                rewards.append(random_key[random_value])
-            else:
                 random_key = random.choice(list(rare_cards.keys()))
-                random_value = rare_cards[random_key]
-                rewards.append(random_key[random_value])
+                rewards.append(rare_cards[random_key])
+            elif random_num > 60:
+                random_key = random.choice(list(common_cards.keys()))
+                rewards.append(common_cards[random_key])
+            else:
+                random_key = random.choice(list(uncommon_cards.keys()))
+                rewards.append(uncommon_cards[random_key])
     elif reward_tier == "Elite":
         for i in range(amount):
             random_num = random.randint(1, 101)
@@ -558,7 +603,7 @@ def generate_card_rewards(reward_tier, amount):
     while True:
         counter = 1
         for card in rewards:
-            ansiprint(f"{counter}: <light-black>{card['Type']}</light-black> | <blue>{card['Name']}</blue> | <light-red>{card['Energy']} Energy</light-red>| <yellow>{card['Info']}</yellow>")
+            ansiprint(f"{counter}: <light-black>{card['Type']}</light-black> | <blue>{card['Name']}</blue> | <light-red>{card['Energy']} Energy</light-red> | <yellow>{card['Info']}</yellow>")
             counter += 1
         try:
              chosen_reward = int(input("What card do you want? > ")) - 1

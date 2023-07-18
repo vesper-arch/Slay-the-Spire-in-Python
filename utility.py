@@ -11,21 +11,25 @@ combat_potion_dropchance = 40
 
 
 
-def damage(damage: int, target: object, user, card=True):
+def damage(dmg: int, target: object, user, card=True):
+    dmg = dmg + user.strength + user.vigor
     if user.weak > 0 and card:
-        damage = math.floor(damage * 0.75)
+        dmg = math.floor(dmg * 0.75)
     if target.vulnerable > 0:
-        damage = math.floor(damage * 1.50)
-    if damage < target.block:
-        target.block -= damage
-    elif damage > target.block:
-        target.health -= damage - target.block
+        dmg = math.floor(dmg * 1.50)
+    if dmg < target.block:
+        target.block -= dmg
+    elif dmg > target.block:
+        target.health -= dmg - target.block
         target.block = 0
-    elif damage == target.block:
-        target.block -= damage
-    print(f"{user.name} dealt {damage:.0f} damage to {target.name}")
+    elif dmg == target.block:
+        target.block -= dmg
+    print(f"{user.name} dealt {dmg:.0f} damage to {target.name}")
+    if user.vigor > 0:
+        user.vigor = 0
+        ansiprint("<light-cyan>Vigor</light-cyan> wears off")
     target.health = max(target.health, 0)
-    if target.health == 0:
+    if target.health <= 0:
         target.die()
     sleep(1)
 
@@ -39,8 +43,8 @@ def display_ui(entity, combat=True):
     Shows the player's status"""
     counter = 1
     # Repeats for every card in the player's hand
-    for card in entity.hand:
-        if combat is True:
+    if combat is True:
+        for card in entity.hand:
             # Prints in red if the player doesn't have enough energy to use the card
             if card["Energy"] > entity.energy:
                 ansiprint(f"{counter}: <red>{card['Name']}</red> | <light-red>{card['Info']}</light-red> | <red>{card['Energy']}</red>")
@@ -49,10 +53,11 @@ def display_ui(entity, combat=True):
                 ansiprint(f"{counter}: <blue>{card['Name']}</blue> | <light-red>{card['Energy']} Energy</light-red> | <yellow>{card['Info']}</yellow>")
             # Adds one to the counter to make a numbered list(Ex. 1: Defend// 2: Strike...)
             counter += 1
-        # Displays the type of card if the player is not in combat
-        else:
-            ansiprint(f"{counter}: <light-black>{card['Type']}</light-black> | <blue>{card['Name']}</blue> | <light-red>{card['Energy']} Energy</light-red>| <yellow>{card['Info']}</yellow>")
+    else:
+        for card in entity.deck:
+            ansiprint(f"{counter}: <light-black>{card['Type']}</light-black> | <blue>{card['Name']}</blue> | <light-red>{card['Energy']} Energy</light-red> | <yellow>{card['Info']}</yellow>")
             counter += 1
+            sleep(0.05)
     print()
     if combat is True:
         for enemy in active_enemies:
@@ -60,7 +65,9 @@ def display_ui(entity, combat=True):
         # Displays the number of cards in the draw and discard pile
         print(f"Draw pile: {len(entity.draw_pile)}\nDiscard pile: {len(entity.discard_pile)}\n")
         # Displays the player's current health, block, and energy
-    entity.show_status()
+        entity.show_status()
+    else:
+        entity.show_status(False)
     print()
     counter = 1
 
