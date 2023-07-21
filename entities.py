@@ -33,22 +33,29 @@ class Player:
         self.health = health
         self.block = block
         self.name = "Ironclad"
+        self.player_class = "Ironclad"
         self.max_health = health
         self.energy = 0
         self.max_energy = max_energy
         self.energy_gain = max_energy
         self.energized = 0
         self.deck = deck
+        self.potions = []
+        self.potion_bag = 3
         self.hand = []
         self.draw_pile = []
         self.discard_pile = []
         self.draw_strength = 5
         self.exhaust_pile = []
+        self.orbs = []
+        self.orb_slots = 3
+        self.stored_card = None
         self.gold = 0
         self.barricade = False
         self.weak = 0
         self.frail = 0
         self.vulnerable = 0
+        self.metallicize = 0
         self.entangled = False
         self.strength = 0
         self.strength_down = 0
@@ -63,6 +70,7 @@ class Player:
         self.block_next_turn = 0
         self.vigor = 0
         self.thorns = 0
+        self.plated_armor = 0
 
     def use_card(self, card: dict, target: object):
         """
@@ -175,27 +183,40 @@ class Player:
         sleep(1.5)
         system("clear")
 
-    def draw_cards(self):
-        if len(player.draw_pile) < self.draw_strength:
+    def draw_cards(self, draw_cards=self.draw_strength):
+        if len(player.draw_pile) < draw_cards:
             player.draw_pile.extend(random.sample(player.discard_pile, len(player.discard_pile)))
             player.discard_pile = []
-        player.hand = player.draw_pile[-self.draw_strength:]
+        player.hand = player.draw_pile[-draw_cards:]
         # Removes those cards
-        player.draw_pile = player.draw_pile[:-self.draw_strength]
+        player.draw_pile = player.draw_pile[:-draw_cards]
+        self.draw_strength = min(draw_cards, 5)
 
     def blocking(self, block: int):
+        block += self.dexterity 
         if self.frail > 0:
             block = math.floor(block * 0.75)
         self.block += block
         ansiprint(f"{self.name} gained {block} <light-blue>Block</light-blue>")    
 
-    def heal(self, heal):
-        self.health += heal
-        self.health = min(self.health, self.max_health)
-        ansiprint(f"<green>{self.name} healed for {min(self.max_health - self.health, heal)} Health</green>")
-        self.show_status(False)
+    def ChangeHealth(self, heal, heal_type):
+        if heal != self.max_health and heal_type == "Heal":
+            self.health += heal
+            self.health = min(self.health, self.max_health)
+            ansiprint(f"You heal <green>{min(self.max_health - self.health, heal)}</green> <light-blue>HP</light-blue")
+            self.show_status(False)
+        elif heal == self.max_health and heal_type == "Heal":
+            self.health += heal
+            self.health = min(self.health, self.max_health)
+            ansiprint("You are <green>healed</green> to full HP")
+            self.show_status(False)
+        elif heal_type == "Max Health":
+            self.max_health += heal
+            self.health += heal
+            ansiprint(f"Your Max HP is increased by <light-blue>{heal}</light-blue>")
+            self.show_status(False)
 
-    def RemoveCardFromDeck(self, card: dict, action: str):
+    def ModifyCard(self, card: dict, action: str):
         while True:
             if action == "Remove":
                 counter = 1
@@ -203,7 +224,7 @@ class Player:
                     ansiprint(f"{counter}: <light-black>{using_card['Type']}</light-black> | <blue>{using_card['Name']}</blue> | <light-red>{using_card['Energy']} Energy</light-red> | <yellow>{using_card['Info']}</yellow>")
                     counter += 1
                 try:
-                    remove_index = int(input("What card do you want to remove?")) - 1
+                    remove_index = int(input("What card do you want to remove? > ")) - 1
                 except ValueError:
                     print("You have to enter a number")
                     sleep(1)
@@ -211,8 +232,9 @@ class Player:
                     continue
                 player.deck.remove(remove_index)
             elif action == 'Upgrade':
-                player.deck.remove(card)
-                player.deck.append(cards[card["Name", '+']])
+                pass
+
+
 
     def show_status(self, combat=True):
         if combat is True:
@@ -255,10 +277,11 @@ class Player:
                 target.vulnerable += amount
             elif debuff_name == "Weakened":
                 target.weakened += amount
+            elif debuff_name == "Strength(1 turn)":
+                target.strength -= amount
+                target.shackled += amount
             elif debuff_name == "Strength":
                 target.strength -= amount
-            elif debuff_name == "Shackled":
-                target.shackled += amount
             ansiprint(f"{self.name} applied {amount} <light-cyan>{debuff_name}</light-cyan> to {target.name}")
         else:
             ansiprint(f"{debuff_name} was blocked by {target.name}'s <light-cyan>Artifact</light-cyan")
@@ -286,9 +309,10 @@ class Player:
             system("clear")
         else:
             sleep(1)
-    def gain_gold(self, gold):
+    def gain_gold(self, gold, dialogue=True):
         self.gold += gold
-        ansiprint(f"{self.name} gained <green>{gold}</green> <yellow>Gold</yellow>")
+        if dialogue is True:
+            ansiprint(f"{self.name} gained <green>{gold}</green> <yellow>Gold</yellow>")
         sleep(1)
     def debuff_tick(self):
         if self.vulnerable > 0:
@@ -297,6 +321,11 @@ class Player:
         if self.weak > 0:
             self.weak -= 1
             ansiprint("<light-cyan>-1 Weak</light-cyan>")
+        if self.strength_down > 0:
+            self.strength -= self.strength_down
+            self.strength_down = 0
+            ansiprint(f"<red>Strength</red> was reduced by {self.strength_down} because of <light-cyan>Strength Down</light-cyan>")
+            ansiprint("<light-cyan>Strength Down</light-cyan> wears off.")
         
 
 
@@ -321,6 +350,8 @@ class Enemy:
         self.max_health = health
         self.block = block
         self.name = name
+        if 'louse' in self.name:
+            self.damage = [5, 7]
         self.past_moves = past_moves
         self.barricade = False
         self.artifact = 0
@@ -335,6 +366,9 @@ class Enemy:
         self.shackled = 0
         self.strength = 0
         self.active_turns = 1
+        self.curl_up = 0
+        if 'louse' in self.name:
+            self.curl_up = random.randint(3, 7)
         # PArsing to determine the order of moves
         #for item in self.order:
         #    # Contains all the items with percent symbols in them
@@ -374,19 +408,12 @@ class Enemy:
 
     def enemy_turn(self):
         global combat_turn
-        if self.name == "Blue Slaver":
-            random_num = random.randint(0, 100)
-            if random_num >= 60 and self.past_moves[-2] != "Stab":
-                # Stab: Deal 12 damage
-                self.attack(12, 1, True, True, "Stab")
-                self.past_moves.append("Stab")
-            elif random_num < 60 and self.past_moves[-2] != "Rake":
-                # Rake: Deal 7 damage, apply 1 Weak
-                self.attack(7, 1, True, False, "Rake")
-                self.debuff("Weak", 1, False, True)
-                self.past_moves.append("Rake")
-            self.active_turns += 1
-        if self.name == "Acid Slime (L)" or self.name == "Acid Slime (M)":
+        if self.name == "Cultist":
+            if self.active_turns == 1:
+                self.buff("Ritual", 3, True, True, "Incantation")
+            else:
+                self.attack(6, 1, True, True, "Dark Strike")
+        elif self.name == "Acid Slime (L)" or self.name == "Acid Slime (M)":
             random_num = random.randint(0, 100)
             if self.health < math.floor(self.max_health * 0.5) and self.name == "Acid Slime (L)":
                 ansiprint("<bold>Split<bold>")
@@ -423,8 +450,31 @@ class Enemy:
                 self.debuff("Weak", 1, True, True, "Lick")
                 self.past_moves.append("Lick")
             self.active_turns += 1
-
-        combat_turn += 1
+        elif self.name == "Jaw Worm":
+            random_num = random.randint(0, 100)
+            if self.active_turns == 1 or (random_num > 75 and self.past_moves != "Chomp"):
+                self.attack(11, 1, True, True, "Chomp")
+                self.past_moves.append("Chomp")
+            elif random_num < 45 and self.past_moves[-1] != "Bellow":
+                self.buff("Strength", 3, True, False, "Bellow")
+                self.blocking(6, False, True)
+                self.past_moves.append("Bellow")
+            elif self.past_moves[-2] != "Thrash":
+                self.attack(7, 1, True, False, "Thrash")
+                self.blocking(5, False, True)
+                self.past_moves.append("Thrash")
+        elif 'louse' in self.name.lower():
+            random_num = random.randint(0, 100)
+            if random_num < 75 and self.past_moves[-2] != "Bite":
+                self.attack(self.damage, 1, True, True, "Bite")
+                self.moves.append("Bite")
+            elif self.past_moves[-2] != "Grow" and self.name == "Red Louse":
+                self.buff("Strength", 3, True, True, "Grow")
+                self.past_mves.append("Grow")
+            elif self.past_moves[-2] != "Spit Web" and self.name == "Green Louse":
+                self.debuff("Weak", 2, True, True, "Spit Web")
+                self.past_moves.append("Spit Web")
+            
 
     def show_status(self):
         status = f"{self.name} (<red>{self.health} / {self.max_health}</red> | <light-blue>{self.block} Block</light-blue>)"
@@ -512,14 +562,15 @@ class Enemy:
 # Characters
 player = Player(80, 0, 70, [])
 cards = {
-    "Strike": {"Name": "Strike", "Damage": 100, "Energy": 1, "Rarity": "Starter", "Type": "Attack", "Info": "Deal 6 damage"},
-    "Strike+": {"Name": "<green>Strike+</green>", "Upgraded": True, "Damage": 9, "Energy": 1, "Rarity": "Starter", "Type": "Attack", "Info": "Deal 9 damage"},
+    # Ironclad cards
+    "Strike": {"Name": "Strike", "Damage": 100, "Energy": 1, "Rarity": "Basic", "Type": "Attack", "Info": "Deal 6 damage"},
+    "Strike+": {"Name": "<green>Strike+</green>", "Upgraded": True, "Damage": 9, "Energy": 1, "Rarity": "Basic", "Type": "Attack", "Info": "Deal 9 damage"},
 
-    "Defend": {"Name": "Defend", "Block": 5, "Energy": 1, "Rarity": "Starter", "Type": "Skill", "Info": "Gain 5 <yellow>Block</yellow>"},
-    "Defend+": {"Name": "<green>Defend+</green>", "Upgraded": True, "Block": 8, "Energy": 1, "Rarity": "Starter", "Type": "Skill", "Info": "Gain 8 <yellow>Block</yellow>"},
+    "Defend": {"Name": "Defend", "Block": 5, "Energy": 1, "Rarity": "Basic", "Type": "Skill", "Info": "Gain 5 <yellow>Block</yellow>"},
+    "Defend+": {"Name": "<green>Defend+</green>", "Upgraded": True, "Block": 8, "Energy": 1, "Rarity": "Basic", "Type": "Skill", "Info": "Gain 8 <yellow>Block</yellow>"},
 
-    "Bash": {"Name": "Bash", "Damage": 8, "Vulnerable": 2, "Energy": 2, "Rarity": "Starter", "Type": "Attack", "Info": "Deal 8 damage. Apply 2 <yellow>Vulnerable</yellow>"},
-    "Bash+": {"Name": "<green>Bash+</green>", "Upgraded": True, "Damage": 10, "Vulnerable": 3, "Energy": 2, "Rarity": "Starter", "Type": "Attack", "Info": "Deal 10 damage. Apply 3 <yellow>Vulnerable</yellow>"},
+    "Bash": {"Name": "Bash", "Damage": 8, "Vulnerable": 2, "Energy": 2, "Rarity": "Basic", "Type": "Attack", "Info": "Deal 8 damage. Apply 2 <yellow>Vulnerable</yellow>"},
+    "Bash+": {"Name": "<green>Bash+</green>", "Upgraded": True, "Damage": 10, "Vulnerable": 3, "Energy": 2, "Rarity": "Basic", "Type": "Attack", "Info": "Deal 10 damage. Apply 3 <yellow>Vulnerable</yellow>"},
 
     "Body Slam": {"Name": "Body Slam", "Damage": player.block, "Energy": 1, "Rarity": "Common", "Type": "Attack", "Info": "Deal damage equal to your <yellow>Block</yellow>"},
     "Body Slam+": {"Name": "<green>Body Slam+</green>", "Upgraded": True, "Damage": player.block, "Energy": 0, "Rarity": "Common", "Type": "Attack", "Info": "Deal damage equal to your <yellow>Block</yellow>"},
@@ -545,13 +596,66 @@ cards = {
     "Perfected Strike": {"Name": "Perfected Strike", "Damage": 6, "Damage Per 'Strike'": 2, "Energy": 2, "Rarity": "Common", "Type": "Attack", "Info": "Deal 6 damage. Deals 2 additional damage for ALL your cards containing 'Strike'"},
     "Perfected Strike+": {"Name": "<green>Perfected Strike+</green>", "Damage": 6, "Damage Per 'Strike'": 3, "Energy": 2, "Rarity": "Common", "Type": "Attack", "Info": "Deal 6 damage. Deals 3 additional damage for ALL your cards containing 'Strike'"},
 
-    "Slimed": {"Name": "Slimed", "Energy": 1, "Rarity": "Common", "Type": "Status", "Info": "<yellow>Exhaust</yellow>"}
+    # Status cards
+    "Slimed": {"Name": "Slimed", "Energy": 1, "Rarity": "Common", "Type": "Status", "Info": "<yellow>Exhaust</yellow>"},
+
+    # Curses
+    "Regret": {"Name": "Regret", "Playable": False, "Rarity": "Curse", "Type": "Curse", "Info": "<yellow>Unplayable</yellow>. At the end of your turn, lose 1 HP for each card in your hand."}
+}
+potions = {
+    # Common | All Classes
+    "Attack Potion": {"Name": "Attack Potion", "Cards": 1, "Card type": "Attack", "Class": "All", "Rarity": "Common", "Info": "Add 1 of 3 random Attack cards to your hand, it costs 0 this turn"},
+    "Power Potion": {"Name": "Power Potion", "Cards": 1, "Card type": "Power", "Class": "All", "Rarity": "Common", "Info": "Add 1 of 3 random Power cards to your hand, it costs 0 this turn"},
+    "Skill Potion": {"Name": "Skill Potion", "Cards": 1, "Card type": "Skill", "Class": "All", "Rarity": "Common", "Info": "Add 1 of 3 random Skill cards to your hand, it costs 0 this turn"},
+    "Colorless Potion": {"Name": "Colorless Potion", "Cards": 1, "Card type": "Colorless", "Class": "All", "Rarity": "Common", "Info": "Choose 1 of 3 random Colorless cards to add to your hand, it costs 0 this turn"},
+    "Block Potion": {"Name": "Block Potion", "Block": 12, "Class": "All", "Rarity": "Common", "Info": "Gain 12 Block"},
+    "Dexterity Potion": {"Name": "Dexterity Potion", "Dexterity": 2, "Class": "All", "Rarity": "Common", "Info": "Gain 2 Dexterity"},
+    "Energy Potion": {"Name": "Energy Potion", "Energy": 2, "Class": "All", "Rarity": "Common", "Info": "Gain 2 Energy"},
+    "Explosive Potion": {"Name": "Explosive Potion", "Damage": 10, "Target": "All", "Class": "All", "Rarity": "Common", "Info": "Deal 10 damage to ALL enemies"},
+    "Fear Potion": {"Name": "Fear Potion", "Vulnerable": 3, "Class": "All", "Rarity": "Common", "Info": "Apply 3 Vulnerable"},
+    "Fire Potion": {"Name": "Fire Potion", "Damage": 20, "Class": "All", "Rarity": "Common", "Info": "Deal 20 damage to target enemy"},
+    "Flex Potion": {"Name": "Flex Potion", "Strength": 5, "Class": "All", "Rarity": "Common", "Info": "Gain 5 Strength. At the end of your turn lose 5 Strength"},
+    "Speed Potion": {"Name": "Speed Potion", "Dexterity": 5, "Class": "All", "Rarity": "Common", "Info": "Gain 5 Dexterity. At the end of your turn, lose 5 Dexterity"},
+    "Strength Potion": {"Name": "Strength Potion", "Strength": 2, "Class": "All", "Rarity": "Common", "Info": "Gain 2 Strength"},
+    "Swift Potion": {"Name": "Swift Potion", "Cards": 3, "Class": "All", "Rarity": "Common", "Info": "Draw 3 cards"},
+    # Uncommon | All Classes
+    "Ancient Potion": {"Name": "Ancient Potion", "Artifact": 1, "Class": "All", "Rarity": "Uncommon", "Info": "Gain 1 Artifact"},
+    "Distilled Chaos": {"Name": "Distilled Chaos", "Cards": 3, "Class": "All", "Rarity": "Uncommon", "Info": "Play the top 3 cards of your draw pile"},
+    "Duplication Potion": {"Name": "Duplication Potion", "Cards": 1, "Class": "All", "Rarity": "Uncommon", "Info": "This turn, the next card is played twice."},
+    "Essence of Steel": {"Name": "Essence of Steel", "Plated Armor": 4, "Class": "All", "Rarity": "Uncommon", "Info": "Gain 4 Plated Armor"},
+    "Gambler's Brew": {"Name": "Gambler's Brew", "Class": "All", "Rarity": "Uncommon", "Info": "Discard any number of cards, then draw that many"},
+    "Liquid Bronze": {"Name": "Liquid Bronze", "Thorns": 3, "Class": "All", "Rarity": "Uncommon", "Info": "Gain 3 Thorns"},
+    "Liquid Memories": {"Name": "Liquid Memories", "Cards": 1, "Class": "All", "Rarity": "Uncommon", "Info": "Choose a card in your discard pile and return it to your hand. It costs 0 this turn"},
+    "Regen Potion": {"Name": "Regen Potion", "Regen": 5, "Class": "All", "Rarity": "Common", "Info": "Gain 5 Regeneration"},
+    # Rare | All Classes
+    "Cultist Potion": {"Name": "Cultist Potion", "Ritual": 1, "Class": "All", "Rarity": "Rare", "Info": "Gain 1 Ritual"},
+    "Entropic Brew": {"Name": "Entropic Brew", "Potions": 3 - player.potion_bag, "Class": "All", "Rarity": "Rare", "Info": "Fill all your empty potion slots with random potions"},
+    "Fairy in a Bottle": {"Name": "Fairy in a Bottle", "Playable": False, "Health": 30, "Class": "All", "Rarity": "Rare", "Info": "When you would die, heal to 30 percent of your Max HP instead and discard this potion"},
+    "Fruit Juice": {"Name": "Fruit Juice", "Playable out of combat": True, "Max Health": 5, "Class": "All", "Rarity": "Rare", "Info": "Gain 5 Max HP"},
+    "Smoke Bomb": {"Name": "Smoke Bomb", "Escape from boss": False, "Class": "All", "Rarity": "Rare", "Info": "Escape from a non-boss combat. You recieve no rewards."},
+    "Sneko Oil": {"Name": "Snecko Oil", "Cards": 5, "Range": (0, player.max_energy), "Class": "All", "Rarity": "Rare", "Info": "Draw 5 cards. Randomized the costs of al cards in your hand for the rest of combat."},
+    # Ironclad Potions                       (In percent)
+    "Blood Potion": {"Name": "Blood Potion", "Health": 20, "Class": "Ironclad", "Rarity": "Uncommon", "Info": "Heal for 20 percent of your Max HP"},
+    "Elixir": {"Name": "Elixir", "Class": "Ironclad", "Rarity": "Uncommon", "Info": "Exhaust any number of card in your hand"},
+    "Heart of Iron": {"Name": "Heart of Iron", "Metallicize": 8, "Class": "Ironclad", "Rarity": "Rare", "Info": "Gain 8 Metallicize"},
+    # Silent potion
+    "Poison Potion": {"Name": "Poison Potion", "Poison": 6, "Class": "Silent", "Rarity": "Common", "Info": "Apply 6 Poison to target enemy"},
+    "Cunning Potion": {"Name": "Cunning Potion", "Shivs": 3, "Card": "placehold", "Class": "Silent", "Rarity": "Uncommon", "Info": "Add 3 Upgraded Shivs to your hand"}, # Shiv card doesn't not exist yet
+    "Ghost in a Jar": {"Name": "Ghost in a Jar", "Intangible": 1, "Class": "Silent", "Rarity": "Rare", "Info": "Gain 1 Intangible"},
+    # Defect Potions
+    "Focus Potion": {"Name": "Focus Potion", "Focus": 2, "Class": "Defect", "Rarity": "Common", "Info": "Gain 2 Focus"},
+    "Potion of Capacity": {"Name": "Potion of Capacity", "Orb Slots": 2, "Class": "Defect", "Rarity": "Uncommon", "Info": "Gain 2 Orb slots"},
+    "Essence of Darkness": {"Name": "Essence of Darkness", "Dark": player.orb_slots, "Class": "Defect", "Rarity": "Rare", "Info": "Channel 1 Dark for each orb slot"},
+    # Watcher Potions
+    "Bottled Miracle": {"Name": "Bottled Miracle", "Miracles": 2, "Card": "placehold", "Class": "Watcher", "Rarity": "Common", "Info": "Add 2 Miracles to your hand"},
+    "Stance Potion": {"Name": "Stance Potion", "Stances": ["Calm", "Wrath"], "Class": "Watcher", "Rarity": "Uncommon", "Info": "Enter Calm or Wrath"},
+    "Ambrosia": {"Name": "Ambrosia", "Stance": "Divinity", "Class": "Watcher", "Rarity": "Rare", "Info": "Enter Divinity Stance"}
 }
 player.deck = [cards['Strike'], cards['Strike'], cards['Strike'], cards['Strike'], cards['Strike'], cards['Defend'], cards['Defend'], cards['Defend'], cards['Defend'], cards['Bash']]
 # Enemies
-encounters = [[Enemy([65, 69], 0, "Acid Slime (L)", ['PlAce', "Place", "place"])]]
+encounters = [[Enemy([48, 54], 0, "Cultist", ['place', 'place', 'place'])], [Enemy([40, 44], 0, "Jaw Worm", ['place', 'place', 'place'])]]
 
-def generate_card_rewards(reward_tier, amount):
+def generate_card_rewards(reward_tier, amount, combat=True):
     """
     Normal combat rewards:
     Rare: 3% | Uncommon: 37% | Common: 60%
@@ -570,7 +674,7 @@ def generate_card_rewards(reward_tier, amount):
 
     if reward_tier == "Normal":
         for i in range(amount):
-            random_num = 70 # It's set to 1 because Uncommon and Rare cards don't exist yet
+            random_num = 70 # It's set to 70 because Uncommon and Rare cards don't exist yet
             if random_num < 3:
                 random_key = random.choice(list(rare_cards.keys()))
                 rewards.append(rare_cards[random_key])
@@ -618,9 +722,74 @@ def generate_card_rewards(reward_tier, amount):
         sleep(1.5)
         system("clear")
         break
-#def potion_reward(amount, chance):
-#    random_num = random.randint(1, 100)
-#    if random_num < chance:
-#        random_num = random.randint(1, 100)
-#        if random_num > 65:
 
+def generate_potion_rewards(amount):
+    common_potions = {potion: attr for potion, attr in potions.items() if attr.get("Rarity") == "Common" and (attr.get("Class") == "All" or attr.get("Class") == player.player_class)}
+    uncommon_potions = {potion: attr for potion, attr in potions.items() if attr.get("Rarity") == "Uncommon" and (attr.get("Class") == "All" or attr.get("Class") == player.player_class)}
+    rare_potions = {potion: attr for potion, attr in potions.items() if attr.get("Rarity") == "Rare" and (attr.get("Class") == "All" or attr.get("Class") == player.player_class)}
+
+    rewards = []
+    for i in range(amount):
+        random_num = random.randint(1, 100)
+        if random_num > 65:
+            random_key = random.choice(list(common_potions.keys()))
+            rewards.append(common_potions[random_key])
+        elif random_num < 25:
+            random_key = random.choice(list(uncommon_potions.keys()))
+            rewards.append(uncommon_potions[random_key])
+        else:
+            random_key = random.choice(list(rare_potions.keys()))
+            rewards.append(rare_potions[random_key])
+    
+    while len(rewards) > 0:
+        counter = 1
+        print("Potion Bag:")
+        for potion in player.potions:
+            ansiprint(f"{counter}: <light-black>{potion["Rarity"]}</light-black> | <green>{potion["Class"]}</green> | <blue>{potion["Name"]}</blue> | <yellow>{potion["Info"]}")
+            counter += 1
+        print(f"{len(player.potions)} / {player.potion_bag}")
+        print()
+        print("Potion reward(s):")
+        counter = 1
+        for potion in rewards:
+            ansiprint(f"{counter}: <light-black>{potion["Rarity"]}</light-black> | Class: <green>{potion["Class"]}</green> | <blue>{potion["Name"]}</blue> | <yellow>{potion["Info"]}</yellow>")
+            counter += 1
+        print()
+        try:
+            option = int(input("What potion do you want to obtain? > ")) - 1
+        except ValueError:
+            print("You have to enter a number")
+            sleep(1.5)
+            system("clear")
+            continue
+        if len(player.potions) == player.potion_bag:
+            ansiprint("<red>Potion bag full!")
+            sleep(1)
+            option = input("Discard a potion?(y|n) > ")
+            if option == 'y':
+                counter = 1
+                for potion in player.potions:
+                    ansprint(f"{counter}: <light-black>{potion["Rarity"]}</light-black> | <green>{potion["Class"]}</green> | <blue>{potion["Name"]}</blue> | <yellow>{potion["Info"]}</yellow>")
+                    counter += 1
+                try:
+                    option = int(input("What potion do you want to discard? > ")) - 1
+                except ValueError:
+                    print("You have to enter a number")
+                    sleep(1.5)
+                    system("clear")
+                    continue
+                print(f"Discarded {player.potions[option]}.")
+                player.potions.remove(player.potions[options])
+                sleep(1.5)
+                system("clear")
+                continue
+            else:
+                sleep(1.5)
+                system("clear")
+                continue
+        else:
+            player.potions.append(rewards[option])
+            print(f"{player.name} obtained {rewards[option]["Name"]}")
+            rewards.remove(rewards[option])
+            sleep(1.5)
+            system("clear")

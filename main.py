@@ -2,8 +2,9 @@ from os import system
 from time import sleep
 import math
 import random
-from entities import player, encounters, generate_card_rewards
+from entities import player, encounters, generate_card_rewards, generate_potion_rewards
 from utility import display_ui, active_enemies, combat_turn, start_combat
+import events
 from ansimarkup import parse, ansiprint
 # Outer loop is for the whole game
 
@@ -16,6 +17,7 @@ def combat(tier):
     global combat_turn
     combat_turn = 1
     killed_enemies = False
+    escaped = False
     start_combat(player, encounters)
     while len(active_enemies) > 0:
         # Removes the player's block at the beginning of their turn
@@ -89,13 +91,23 @@ def combat(tier):
                 system("clear")
                 continue
         # After the player's energy has run out, discard their cards, give them 5 new ones, refil their energy, and make the enemy attack
-        if killed_enemies is True:
+        if killed_enemies is True and escaped is False:
             player.hand = []
             player.discard_pile = []
             player.draw_pile = []
             ansiprint("<green>Combat finished!</green>")
             player.gain_gold(random.randint(10, 20))
+            generate_potion_rewards(1)
             generate_card_rewards(tier, 3)
+            sleep(1.5)
+            break
+        elif escaped is True:
+            print("Escaped...")
+            sleep(0.8)
+            print("You recieve nothing.")
+            sleep(1.5)
+            system("clear")
+            break
         else:
             player.end_player_turn()
             for enemy in active_enemies:
