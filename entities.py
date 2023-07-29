@@ -10,23 +10,16 @@ from utility import damage, active_enemies, combat_turn
 class Player:
     """
     Attributes:::
-    health: Player's current health
-    block: Block reduces the damage deal by attacks and is removed at the start of their turn
-    max_health: Maximum amount of health the player can have
-    energy: Used to play cards
-    max_energy: Maximum amount of energy the player can have
-    deck: All the cards that can appear in game. Players can collect cards to add to the deck
-    hand: The cards availible to play at any given time
-    draw_pile: A randomized instance of the deck, cards are drawn in order from it.(All cards from the discard pile are shuffled into this when the draw pile is empty)
-    discard_pile: Cards get put here when they are played
-    exhaust_pile: List of exhausted cards
-    draw_strength: Amount of cards the player draws at the start of their turn
-    weak: Deals 25% less damage with Attacks(duration stack, rounded down)
-    frail: Gains 25% less block from cards(duration stack, rounded down)
-    vulnerable: Takes 50% more damage from attacks(duration stack, rounded down)
-    entangled: You cannot play Attacks this turn(Does not stack)
-    strength: Deal X more damage(intensity stack, can be negative)
-    strength_down: Lose X Strength next turn(intensity stack, completely removed at the start of turn)
+    health: The player's current health
+    block: The amount of damage the player can take before losing health. Removed at the start of their turn
+    name: The player's name
+    player_class: Ironclad, Silent, Defect, and Watcher
+    max_health: The max amount health the player can have
+    energy: Resource used to play cards. Replenished at the start of their turn
+    max_energy/energy_gain: The base amount of energy the player gains at the start of their turn
+    deck: All the cards the player has
+    potions: Consumables that have varying effects.
+    potion_bag: The max amount of potions the player can have
     """
 
     def __init__(self, health: int, block: int, max_energy: int, deck: list):
@@ -46,12 +39,16 @@ class Player:
         self.draw_pile = []
         self.discard_pile = []
         self.draw_strength = 5
+        self.draw_up = 0
+        self.no_draw = False
         self.exhaust_pile = []
         self.orbs = []
         self.orb_slots = 3
-        self.stored_card = None
+        self.regen = 0
+        self.regeneration = 0
         self.gold = 0
         self.barricade = False
+        self.hex = 0
         self.weak = 0
         self.frail = 0
         self.vulnerable = 0
@@ -62,6 +59,7 @@ class Player:
         self.confused = False
         self.dexterity = 0
         self.dexterity_down = 0
+        self.ritual = 0 # Gain X Strength at the end of your turn
         self.focus = 0
         self.no_draw = False
         self.poison = 0
@@ -97,7 +95,6 @@ class Player:
         if "+" in using_card["Name"]:
             base_damage += 3
         print()
-        # If the enemy has the Vulnerable debuff applied to it, multiply the damage by 1.5 and round it up to the nearest whole number
         damage(base_damage, targeted_enemy, player)
         # Takes the card's energy cost away from the player's energy
         self.move_card(using_card, self.discard_pile, self.hand, True)
@@ -108,11 +105,11 @@ class Player:
     def use_bash(self, targeted_enemy: object, using_card):
         base_damage = using_card["Damage"]
         base_vulnerable = using_card["Vulnerable"]
+        # Checks if the card is upgraded
         if "+" in using_card["Name"]:
             base_damage += 2
             base_vulnerable += 1
         print()
-        # If the enemy has the Vulnerable debuff applied to it, multiply the damage by 1.5 and round it up to the nearest whole number
         damage(base_damage, targeted_enemy, player)
         self.debuff("Vulnerable", base_vulnerable, targeted_enemy, True)
         # prevents the enemy's health from going below 0
@@ -149,6 +146,7 @@ class Player:
         while True:
             for card in self.hand:
                 if card.get("Type") is None:
+                    system("clear")
                     ansiprint("<light-red>PythonRail, *sigh* you forgot the 'Type' key-value pair")
                     sys.exit(2)
                 elif card.get("Type") != "Attack":
@@ -183,21 +181,34 @@ class Player:
         sleep(1.5)
         system("clear")
 
-    def draw_cards(self, draw_cards=self.draw_strength):
-        if len(player.draw_pile) < draw_cards:
-            player.draw_pile.extend(random.sample(player.discard_pile, len(player.discard_pile)))
-            player.discard_pile = []
-        player.hand = player.draw_pile[-draw_cards:]
-        # Removes those cards
-        player.draw_pile = player.draw_pile[:-draw_cards]
-        self.draw_strength = min(draw_cards, 5)
+    def draw_cards(self, middle_of_turn, draw_cards=self.draw_strength):
+        while True:
+            if self.no_draw is True:
+                print("You can't draw any more cards")
+                break
+            if middle_of_turn is False:
+                draw_cards += self.draw_up
+            if len(player.draw_pile) < draw_cards:
+                player.draw_pile.extend(random.sample(player.discard_pile, len(player.discard_pile)))
+                player.discard_pile = []
+                ansiprint("<bold>Discard pile shuffled into draw pile.</bold>")
+            player.hand.extend(player.draw_pile[-draw_cards:])
+            # Removes those cards
+            player.draw_pile = player.draw_pile[:-draw_cards]
+            print(f"{self.name} drew {draw_cards} cards.")
+            break
 
-    def blocking(self, block: int):
+    def blocking(self, block: int, card=True):
         block += self.dexterity 
         if self.frail > 0:
             block = math.floor(block * 0.75)
         self.block += block
-        ansiprint(f"{self.name} gained {block} <light-blue>Block</light-blue>")    
+        if self.dexterity > 0 and card is True:
+            ansiprint(f"{self.name} gained <green>{block}</green> <light-blue>Block</light-blue>")    
+        elif self.dexterity < 0 or self.frail > 0 and card is True:
+            ansiprint(f"{self.name} gained <red>{block}</red> <light-blue>Block</light-blue>")
+        else:
+            ansiprint(f"{self.name} gained {block} <light-blue>Block</light-blue>")
 
     def ChangeHealth(self, heal, heal_type):
         if heal != self.max_health and heal_type == "Heal":
@@ -314,18 +325,81 @@ class Player:
         if dialogue is True:
             ansiprint(f"{self.name} gained <green>{gold}</green> <yellow>Gold</yellow>")
         sleep(1)
-    def debuff_tick(self):
-        if self.vulnerable > 0:
+    def start_turn(self):
+        print(f"{self.name}:")
+        # Start of turn effects
+        self.draw_cards()
+        if self.barricade is False: # Barricade: Block is not remove at the start of your turn
+            self.block = 0
+        else:
+            if self.block > 0 and self.active_turns > 1:
+                ansiprint(f"Your Block was not removed because of <light-cyan>Barricade</light-cyan>")
+        if self.next_turn_block > 0:
+            self.blocking(self.next_turn_block, False)
+            self.next_turn_block = 0
+        self.energy += self.energy_gain + self.energized
+        if self.energized > 0: # Energized: Gain X Energy next turn
+            ansiprint(f"You gained {self.energized} extra energy because of <light-cyan>Energized</light-cyan>")
+            self.energized = 0
+            ansiprint("<light-cyan>Energized wears off.")
+
+        # //////Debuffs\\\\\\ 
+        if self.vulnerable > 0: # Vulnerable: Take 50% more damage from attacks
             self.vulnerable -= 1
             ansiprint("<light-cyan>-1 Vulnerable</light-cyan>")
-        if self.weak > 0:
+            if self.vulnerable == 0:
+                ansiprint("<green>Vulnerable wears off.</green>")
+            sleep(0.8)
+        if self.weak > 0: # Weak: Deal 25% less damage with attacks
             self.weak -= 1
             ansiprint("<light-cyan>-1 Weak</light-cyan>")
-        if self.strength_down > 0:
+            if self.weak == 0:
+                ansiprint("<green>Weak wears off.</green")
+            sleep(0.8)
+        if self.frail > 0: # Frail: Gain 25% less block from cards
+            self.frail -= 1
+            ansiprint("<light-cyan>-1 Frail</light-cyan>")
+            if self.frail == 0:
+                ansiprint("<green>Frail wears off</green>")
+            sleep(0.8)
+        if self.strength_down > 0: # Strength Down: Lose X Strength at the end of your turn
             self.strength -= self.strength_down
+            ansiprint(f"<red>Strength</red> was reduced by {self.strength_down} because of <red>Strength Down</red>")
+            sleep(0.7)
             self.strength_down = 0
-            ansiprint(f"<red>Strength</red> was reduced by {self.strength_down} because of <light-cyan>Strength Down</light-cyan>")
-            ansiprint("<light-cyan>Strength Down</light-cyan> wears off.")
+            print("Strength Down wears off.")
+            sleep(0.8)
+        if self.shackled > 0: # Shackled: Regain X Strength at the end of your turn
+            self.strength += self.shackled
+            ansiprint(f"Regained {self.shackled} Strength because of Shackled")
+            sleep(1)
+            self.shackled = 0
+            print("Shackled wears off")
+            sleep(0.8)
+
+        # //////Buffs\\\\\\
+        if self.intangible > 0: # Intangible: Reduce ALL damage and HP loss to 1 for X turns
+            self.intangible -= 1
+            ansiprint("<light-cyan>-1 Intangible</light-cyan>")
+            if self.intangible == 0:
+                print("Intangible wears off.")
+    def end_turn(self):
+        if self.regen > 0: # Regen: Heal for X HP at the end of your turn.
+            self.ChangeHealth(self.regen, "Heal")
+            sleep(0.8)
+        if self.regeneration > 0:
+            self.ChangeHealth(self.regeneration, False)
+        if self.metallicize > 0: # Metallicize: At the end of your turn, gain X Block
+            print("Metallicize: ", end='')
+            self.blocking(self.metallicize, False)
+            sleep(0.8)
+        if self.plated_armor > 0: # Plated Armor: At the end of your turn, gain X Block. Decreases by 1 when recieving unblocked attack damage
+            print("Plated Armor: ", end='')
+            self.blocking(self.plated_armor, False)
+            sleep(0.8)
+        if self.ritual > 0:
+            print("Ritual: ", end='')
+            self.buff("Strength", self.ritual, True)
         
 
 
@@ -557,6 +631,23 @@ class Enemy:
             system("clear")
         else:
             sleep(1)
+    def start_turn(self):
+        print(f"{self.name}:")
+        if self.barricade is False:
+            self.block = 0
+        else:
+            if self.active_turns > 1 and self.block > 0:
+                ansiprint(f"{self.name}'s Block was not removed because of <light-cyan>Barricade</light-cyan")
+        if self.vulnerable > 0:
+            self.vulnerable -= 1
+            ansiprint("<light-cyan>-1 Vulnerable</light-cyan>")
+            if self.vulnerable == 0:
+                print("Vulnerable wears off.")
+        if self.weak > 0:
+            self.weak -= 1
+            ansiprint("<light-cyan>-1 Weak</light-cyan>")
+            if self.weak == 0:
+                print("Weak wears off")
 
 
 # Characters
@@ -566,8 +657,8 @@ cards = {
     "Strike": {"Name": "Strike", "Damage": 100, "Energy": 1, "Rarity": "Basic", "Type": "Attack", "Info": "Deal 6 damage"},
     "Strike+": {"Name": "<green>Strike+</green>", "Upgraded": True, "Damage": 9, "Energy": 1, "Rarity": "Basic", "Type": "Attack", "Info": "Deal 9 damage"},
 
-    "Defend": {"Name": "Defend", "Block": 5, "Energy": 1, "Rarity": "Basic", "Type": "Skill", "Info": "Gain 5 <yellow>Block</yellow>"},
-    "Defend+": {"Name": "<green>Defend+</green>", "Upgraded": True, "Block": 8, "Energy": 1, "Rarity": "Basic", "Type": "Skill", "Info": "Gain 8 <yellow>Block</yellow>"},
+    "Defend": {"Name": "Defend", "Block": 5, "Energy": 1, "Target": "Yourself", "Rarity": "Basic", "Type": "Skill", "Info": "Gain 5 <yellow>Block</yellow>"},
+    "Defend+": {"Name": "<green>Defend+</green>", "Upgraded": True, "Block": 8, "Energy": 1, "Target": "Yourself", "Rarity": "Basic", "Type": "Skill", "Info": "Gain 8 <yellow>Block</yellow>"},
 
     "Bash": {"Name": "Bash", "Damage": 8, "Vulnerable": 2, "Energy": 2, "Rarity": "Basic", "Type": "Attack", "Info": "Deal 8 damage. Apply 2 <yellow>Vulnerable</yellow>"},
     "Bash+": {"Name": "<green>Bash+</green>", "Upgraded": True, "Damage": 10, "Vulnerable": 3, "Energy": 2, "Rarity": "Basic", "Type": "Attack", "Info": "Deal 10 damage. Apply 3 <yellow>Vulnerable</yellow>"},
@@ -584,11 +675,11 @@ cards = {
     "Clothesline": {"Name": "Clothesline", "Energy": 2, "Damage": 12, "Weak": 2, "Rarity": "Common", "Type": "Attack", "Info": "Deal 12 damage. Apply 2 <yellow>Weak</yellow>"},
     "Clothesline+": {"Name": "<green>Clothesline+</green>", "Energy": 2, "Damage": 14, "Weak": 3, "Upgraded": True, "Rarity": "Common", "Type": "Attack", "Info": "Deal 14 damage. Apply 3 <yellow>Weak</yellow>"},
 
-    "Flex": {"Name": "Flex", "Strength": 2, "Strength Down": 2, "Energy": 0, "Rarity": "Common", "Type": "Skill", "Info": "Gain 2 <yellow>Strength</yellow>. At the end of your turn, lose 2 <yellow>Strength</yellow>"},
-    "Flex+": {"Name": "<green>Flex+</green>", "Upgraded": True, "Strength": 4, "Strength Down": 4, "Energy": 0, "Rarity": "Common", "Type": "Skill", "Info": "Gain 4 <yellow>Strength</yellow>. At the end of your turn lose 4 <yellow>Strength</yellow>"},
+    "Flex": {"Name": "Flex", "Strength": 2, "Strength Down": 2, "Energy": 0, "Target": "Yourself", "Rarity": "Common", "Type": "Skill", "Info": "Gain 2 <yellow>Strength</yellow>. At the end of your turn, lose 2 <yellow>Strength</yellow>"},
+    "Flex+": {"Name": "<green>Flex+</green>", "Upgraded": True, "Strength": 4, "Strength Down": 4, "Energy": 0, "Target": "Yourself", "Rarity": "Common", "Type": "Skill", "Info": "Gain 4 <yellow>Strength</yellow>. At the end of your turn lose 4 <yellow>Strength</yellow>"},
 
-    "Heavy Blade": {"Name": "Heavy Blade", "Damage": 14, "Strength Multi": 3, "Energy": 2, "Rarity": "Common", "Type": "Attack", "Info": "Deal 14 damage. <yellow>Strength</yellow> affects this card 3 times."},
-    "Heavy Blade+": {"Name": "<green>Heavy Blade+</green>", "Damage": 14, "Strength Multi": 5, "Energy": 2, "Rarity": "Common", "Type": "Attack", "Info": "Deal 14 damage. <yellow>Strength</yellow> affects this card 5 times"},
+    "Heavy Blade": {"Name": "Heavy Blade", "Damage": 14, "Strength Multi": 3, "Energy": 2, "Target": "Yourself", "Rarity": "Common", "Type": "Attack", "Info": "Deal 14 damage. <yellow>Strength</yellow> affects this card 3 times."},
+    "Heavy Blade+": {"Name": "<green>Heavy Blade+</green>", "Damage": 14, "Strength Multi": 5, "Energy": 2, "Target": "Yourself", "Rarity": "Common", "Type": "Attack", "Info": "Deal 14 damage. <yellow>Strength</yellow> affects this card 5 times"},
 
     "Iron Wave": {"Name": "Iron Wave", "Damage": 5, "Block": 5, "Energy": 1, "Rarity": "Common", "Type": "Attack", "Info": "Gain 5 <yellow>Block</yellow>. Deal 5 damage."},
     "Iron Wave+": {"Name": "<green>Iron Wave+</green>", "Damage": 7, "Block": 7, "Energy": 1, "Rarity": "Common", "Type": "Attack", "Info": "Gain 7 <yellow>Block</yellow>. Deal 7 damage."},
@@ -597,10 +688,10 @@ cards = {
     "Perfected Strike+": {"Name": "<green>Perfected Strike+</green>", "Damage": 6, "Damage Per 'Strike'": 3, "Energy": 2, "Rarity": "Common", "Type": "Attack", "Info": "Deal 6 damage. Deals 3 additional damage for ALL your cards containing 'Strike'"},
 
     # Status cards
-    "Slimed": {"Name": "Slimed", "Energy": 1, "Rarity": "Common", "Type": "Status", "Info": "<yellow>Exhaust</yellow>"},
+    "Slimed": {"Name": "Slimed", "Energy": 1, "Target": "Nothing", "Rarity": "Common", "Type": "Status", "Info": "<yellow>Exhaust</yellow>"},
 
     # Curses
-    "Regret": {"Name": "Regret", "Playable": False, "Rarity": "Curse", "Type": "Curse", "Info": "<yellow>Unplayable</yellow>. At the end of your turn, lose 1 HP for each card in your hand."}
+    "Regret": {"Name": "Regret", "Playable": False, "Damage": len(player.hand), "Rarity": "Curse", "Type": "Curse", "Info": "<yellow>Unplayable</yellow>. At the end of your turn, lose 1 HP for each card in your hand."}
 }
 potions = {
     # Common | All Classes
@@ -612,8 +703,8 @@ potions = {
     "Dexterity Potion": {"Name": "Dexterity Potion", "Dexterity": 2, "Class": "All", "Rarity": "Common", "Info": "Gain 2 Dexterity"},
     "Energy Potion": {"Name": "Energy Potion", "Energy": 2, "Class": "All", "Rarity": "Common", "Info": "Gain 2 Energy"},
     "Explosive Potion": {"Name": "Explosive Potion", "Damage": 10, "Target": "All", "Class": "All", "Rarity": "Common", "Info": "Deal 10 damage to ALL enemies"},
-    "Fear Potion": {"Name": "Fear Potion", "Vulnerable": 3, "Class": "All", "Rarity": "Common", "Info": "Apply 3 Vulnerable"},
-    "Fire Potion": {"Name": "Fire Potion", "Damage": 20, "Class": "All", "Rarity": "Common", "Info": "Deal 20 damage to target enemy"},
+    "Fear Potion": {"Name": "Fear Potion", "Vulnerable": 3, "Target": "Enemy", "Class": "All", "Rarity": "Common", "Info": "Apply 3 Vulnerable"},
+    "Fire Potion": {"Name": "Fire Potion", "Damage": 20, "Target": "Enemy", "Class": "All", "Rarity": "Common", "Info": "Deal 20 damage to target enemy"},
     "Flex Potion": {"Name": "Flex Potion", "Strength": 5, "Class": "All", "Rarity": "Common", "Info": "Gain 5 Strength. At the end of your turn lose 5 Strength"},
     "Speed Potion": {"Name": "Speed Potion", "Dexterity": 5, "Class": "All", "Rarity": "Common", "Info": "Gain 5 Dexterity. At the end of your turn, lose 5 Dexterity"},
     "Strength Potion": {"Name": "Strength Potion", "Strength": 2, "Class": "All", "Rarity": "Common", "Info": "Gain 2 Strength"},
@@ -632,14 +723,14 @@ potions = {
     "Entropic Brew": {"Name": "Entropic Brew", "Potions": 3 - player.potion_bag, "Class": "All", "Rarity": "Rare", "Info": "Fill all your empty potion slots with random potions"},
     "Fairy in a Bottle": {"Name": "Fairy in a Bottle", "Playable": False, "Health": 30, "Class": "All", "Rarity": "Rare", "Info": "When you would die, heal to 30 percent of your Max HP instead and discard this potion"},
     "Fruit Juice": {"Name": "Fruit Juice", "Playable out of combat": True, "Max Health": 5, "Class": "All", "Rarity": "Rare", "Info": "Gain 5 Max HP"},
-    "Smoke Bomb": {"Name": "Smoke Bomb", "Escape from boss": False, "Class": "All", "Rarity": "Rare", "Info": "Escape from a non-boss combat. You recieve no rewards."},
-    "Sneko Oil": {"Name": "Snecko Oil", "Cards": 5, "Range": (0, player.max_energy), "Class": "All", "Rarity": "Rare", "Info": "Draw 5 cards. Randomized the costs of al cards in your hand for the rest of combat."},
+    "Smoke Bomb": {"Name": "Smoke Bomb", "Escape from boss": False, "Target": "Nothing", "Class": "All", "Rarity": "Rare", "Info": "Escape from a non-boss combat. You recieve no rewards."},
+    "Sneko Oil": {"Name": "Snecko Oil", "Cards": 5, "Range": (0, player.max_energy), "Class": "All", "Rarity": "Rare", "Info": "Draw 5 cards. Randomized the costs of all cards in your hand for the rest of combat."},
     # Ironclad Potions                       (In percent)
     "Blood Potion": {"Name": "Blood Potion", "Health": 20, "Class": "Ironclad", "Rarity": "Uncommon", "Info": "Heal for 20 percent of your Max HP"},
     "Elixir": {"Name": "Elixir", "Class": "Ironclad", "Rarity": "Uncommon", "Info": "Exhaust any number of card in your hand"},
     "Heart of Iron": {"Name": "Heart of Iron", "Metallicize": 8, "Class": "Ironclad", "Rarity": "Rare", "Info": "Gain 8 Metallicize"},
     # Silent potion
-    "Poison Potion": {"Name": "Poison Potion", "Poison": 6, "Class": "Silent", "Rarity": "Common", "Info": "Apply 6 Poison to target enemy"},
+    "Poison Potion": {"Name": "Poison Potion", "Poison": 6, "Target": "Enemy", "Class": "Silent", "Rarity": "Common", "Info": "Apply 6 Poison to target enemy"},
     "Cunning Potion": {"Name": "Cunning Potion", "Shivs": 3, "Card": "placehold", "Class": "Silent", "Rarity": "Uncommon", "Info": "Add 3 Upgraded Shivs to your hand"}, # Shiv card doesn't not exist yet
     "Ghost in a Jar": {"Name": "Ghost in a Jar", "Intangible": 1, "Class": "Silent", "Rarity": "Rare", "Info": "Gain 1 Intangible"},
     # Defect Potions
@@ -654,6 +745,7 @@ potions = {
 player.deck = [cards['Strike'], cards['Strike'], cards['Strike'], cards['Strike'], cards['Strike'], cards['Defend'], cards['Defend'], cards['Defend'], cards['Defend'], cards['Bash']]
 # Enemies
 encounters = [[Enemy([48, 54], 0, "Cultist", ['place', 'place', 'place'])], [Enemy([40, 44], 0, "Jaw Worm", ['place', 'place', 'place'])]]
+
 
 def generate_card_rewards(reward_tier, amount, combat=True):
     """
