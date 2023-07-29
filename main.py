@@ -14,8 +14,6 @@ def neow_interact():
 
 
 def combat(tier):
-    global combat_turn
-    combat_turn = 1
     killed_enemies = False
     escaped = False
     start_combat(player, encounters)
@@ -28,24 +26,22 @@ def combat(tier):
             else:
                 enemy.block = 0
         player.energy += player.energy_gain + player.energized
-        if player.energized > 0:
-            player.energized = 0
-            ansiprint("<light-cyan>Energized</light-cyan> wears off.")
-        if player.strength_down > 0:
-            player.strength -= player.strength_down
-            ansiprint(f"{player.name}'s <light-red>Strength</light-red> was reduced by {player.strength_down} because of Strength Down")
-            ansiprint(f"<light-red>Strength: {player.strength}</light-red>")
-            player.strength_down = 0
-            print("<light-cyan>Strength Down</light-cyan> wears off.")
+        player.debuff_buff_tick()
         player.draw_cards()
         # Player's turn ends when the their energy is out
         while True:
+            print(f"Turn {combat_turn}: ")
             display_ui(player)
             # Asks the user what card they want to use
             try:
                 ansiprint("What card do you want to use?(<red>[0] to end turn</red>) > ", end='')
                 card_used = int(input("")) - 1
-                if len(active_enemies) > 1:
+                confirm = input("Are you sure? (y|n) > ").lower()
+                if confirm != 'y':
+                    sleep(1.5)
+                    system("clear")
+                    continue
+                if len(active_enemies) > 1 and player.hand[card_used].get("Target") is None:
                     target = int(input("What enemy do you want to use it on?")) - 1
                 else:
                     target = 0
@@ -59,7 +55,7 @@ def combat(tier):
                     for enemy in active_enemies:
                         if enemy.health == 0:
                             enemy.die()
-                    if not active_enemies:
+                    if len(active_enemies) == 0:
                         killed_enemies = True
                         break
                 # prevents from using a card that the player doesn't have enough energy for
@@ -90,15 +86,16 @@ def combat(tier):
                 sleep(1.5)
                 system("clear")
                 continue
-        # After the player's energy has run out, discard their cards, give them 5 new ones, refil their energy, and make the enemy attack
         if killed_enemies is True and escaped is False:
             player.hand = []
             player.discard_pile = []
             player.draw_pile = []
+            player.exhaust_pile = []
             ansiprint("<green>Combat finished!</green>")
             player.gain_gold(random.randint(10, 20))
             generate_potion_rewards(1)
             generate_card_rewards(tier, 3)
+            combat_turn = 0
             sleep(1.5)
             break
         elif escaped is True:
@@ -107,11 +104,15 @@ def combat(tier):
             print("You recieve nothing.")
             sleep(1.5)
             system("clear")
+            combat_turn = 1
             break
         else:
             player.end_player_turn()
             for enemy in active_enemies:
                 enemy.enemy_turn()
+                sleep(1.5)
+                system("clear")
+            combat_turn += 1
 
 
 def rest():
@@ -129,38 +130,36 @@ def rest():
         ansiprint("You come across a <green>Rest Site</green>")
         sleep(1)
         player.show_status(False)
-        try:
-            action = int(input("1:Rest(Heal for 30 percent of your max health)\nor \n2:Upgrade a card in you deck?"))
-        except ValueError:
-            print("You have to enter a number")
-            sleep(1)
-            system("clear")
-            continue
-        if action == 1:
+        ansiprint(f"<bold>[Rest]</bold> Heal for 30 percent of your Max HP({math.floor(player.max_health * 0.30)}) \n<bold>[Upgrade]</bold> Upgrade a card in your deck > ", end='')
+        action = input('').lower()
+        if action == 'rest':
             heal_amount = math.floor(player.max_health * 0.30)
             sleep(1)
             system("clear")
             player.heal(heal_amount)
             while True:
-                try:
-                    action = int(input("1: View your deck \nor \n2: Leave"))
-                except ValueError:
-                    print("You have to enter a number")
-                    sleep(1)
+                option = input("[View Deck] or [Leave]").lower()
+                if action == 'view deck':
+                    display_ui(player, False)
+                    action = input("Press enter to leave")
                     system("clear")
                     continue
-                break
-            if action == 1:
-                display_ui(player, False)
-                action = input("Press enter to leave")
-            elif action == 2:
-                print("You leave...")
-                print()
-                sleep(1.5)
-                system("clear")
-                break
-        elif action == 2:
+                elif action == 'leave':
+                    print("You leave...")
+                    print()
+                    sleep(1.5)
+                    system("clear")
+                    break
+                else:
+                    print("Invalid input")
+                    sleep(1.5)
+                    system("clear")
+        elif action == 'upgrade':
             pass
+        else:
+            print("Invalid input")
+            sleep(1.5)
+            system("clear")
 
 
 order_of_encounters = [combat, rest, combat, combat, rest, rest, combat, combat, combat]

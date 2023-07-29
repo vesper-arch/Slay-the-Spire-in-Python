@@ -2,6 +2,7 @@ import random, math
 from os import system
 from time import sleep
 from entities import player, cards, generate_card_rewards, generate_potion_rewards
+from utility import integer_input
 
 
 def BonfireSpirits():
@@ -17,43 +18,39 @@ def BonfireSpirits():
         for using_card in player.deck:
             ansiprint(f"{counter}: <light-black>{using_card['Type']}</light-black> | <blue>{using_card['Name']}</blue> | <light-red>{using_card['Energy']} Energy</light-red> | <yellow>{using_card['Info']}</yellow>")
             counter += 1
-        try:
-            offering = int(input("What card do you want to offer? > ")) - 1
-        except ValueError:
-            print("You have to enter a number")
-            sleep(1)
+        
+        offering = integer_input("What card do you want to offer? > ", player.deck)
+
+        ansiprint("<bold>You toss an offering into the bonfire</bold>")
+        if player.deck[offering].get("Rarity") == "Curse":
+            ansiprint("However, the spirits aren't happy that you offered a <italic><magenta>Curse...</magenta></italic> The card fizzles a meek black smoke. You recieve a... <italic><magenta>something</italic></magenta> in return.")
+            sleep(1.5)
             system("clear")
-            continue
-            ansiprint("<bold>You toss an offering into the bonfire</bold>")
-            if player.deck[offering].get("Rarity") == "Curse":
-                ansiprint("However, the spirits aren't happy that you offered a <italic><magenta>Curse...</magenta></italic> The card fizzles a meek black smoke. You recieve a... <italic><magenta>something</italic></magenta> in return.")
-                sleep(1.5)
-                system("clear")
-                break
-            elif player.deck[offering].get("Rarity") == "Basic":
-                ansiprint("<italic>Nothing happens...</italic>\n \nThe spirits seem to be ignoring you now. Disapointing...")
-                sleep(1.5)
-                system("clear")
-                break
-            elif player.deck[offering].get("Rarity") == "Common" or player.deck[offering].get("Rarity") == "Special":
-                ansiprint("""<italic>The flames grow slightly brighter.</italic>
+            break
+        elif player.deck[offering].get("Rarity") == "Basic":
+            ansiprint("<italic>Nothing happens...</italic>\n \nThe spirits seem to be ignoring you now. Disapointing...")
+            sleep(1.5)
+            system("clear")
+            break
+        elif player.deck[offering].get("Rarity") == "Common" or player.deck[offering].get("Rarity") == "Special":
+            ansiprint("""<italic>The flames grow slightly brighter.</italic>
                                             
-                            The spirits continue dancing. You feel slightly warmer from their presense..\n""")
-                player.ChangeHealth(5, "Heal")
-                sleep(1.5)
-                system("clear")
-                break
-            elif player.deck[offering].get("Rarity") == "Uncommon":
-                ansiprint("""<italic>The flames erupt, growing significantly stronger!</italic>
+                        The spirits continue dancing. You feel slightly warmer from their presense..\n""")
+            player.ChangeHealth(5, "Heal")
+            sleep(1.5)
+            system("clear")
+            break
+        elif player.deck[offering].get("Rarity") == "Uncommon":
+            ansiprint("""<italic>The flames erupt, growing significantly stronger!</italic>
                                         
-                            The spirits dance around you exitedly, filling you with a sense of warmth.\n""")
-                player.ChangeHealth(player.max_health, "Heal")
-            elif player.deck[offering].get("Rarity") == "Rare":
-                ansiprint("""<italic>The flames burst, nearly knocking you off your feet, as the fire doubles in strength.</italic>              
+                        The spirits dance around you exitedly, filling you with a sense of warmth.\n""")
+            player.ChangeHealth(player.max_health, "Heal")
+        elif player.deck[offering].get("Rarity") == "Rare":
+            ansiprint("""<italic>The flames burst, nearly knocking you off your feet, as the fire doubles in strength.</italic>              
                              
-                            The spirits dance around you excitedly before merging into your form, filling you with warmth and strength\n""")
-                player.ChangeHealth(10, "Max Health")
-                player.ChangeHealth(player.max_health, "Heal")
+                        The spirits dance around you excitedly before merging into your form, filling you with warmth and strength\n""")
+            player.ChangeHealth(10, "Max Health")
+            player.ChangeHealth(player.max_health, "Heal")
             break
 
 def TheDivineFountain():
@@ -94,13 +91,7 @@ def Duplicator():
             for card in player.deck:
                 ansiprint(f"{counter}: <light-black>{card['Type']}</light-black> | <blue>{card['Name']}</blue> | <light-red>{card['Energy']} Energy</light-red> | <yellow>{card['Info']}</yellow>")
                 counter += 1
-            try:
-                duplicate = int(input("What card do you want to duplicate? > ")) - 1
-            except ValueError:
-                print("You have to enter a number")
-                sleep(1.5)
-                system("clear")
-                continue
+            duplicate = integer_input("What card do you want to duplicate? > ", player.deck)
             player.deck.append(player.deck[duplicate])
             print("You kneel respectfully. A ghastly mirror image appears from the shrine and collides into you.")
             sleep(1.5)

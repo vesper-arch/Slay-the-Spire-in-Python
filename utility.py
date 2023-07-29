@@ -6,7 +6,7 @@ from ansimarkup import parse, ansiprint
 
 
 active_enemies = []
-combat_turn = 0
+combat_turn = 1
 combat_potion_dropchance = 40
 
 
@@ -17,6 +17,7 @@ def damage(dmg: int, target: object, user, card=True):
         dmg = math.floor(dmg * 0.75)
     if target.vulnerable > 0:
         dmg = math.floor(dmg * 1.50)
+    # Manages Block
     if dmg < target.block:
         target.block -= dmg
     elif dmg > target.block:
@@ -24,7 +25,9 @@ def damage(dmg: int, target: object, user, card=True):
         target.block = 0
     elif dmg == target.block:
         target.block -= dmg
+    
     print(f"{user.name} dealt {dmg:.0f} damage to {target.name}")
+    # Removes debuffs that trigger on attack.
     if user.vigor > 0:
         user.vigor = 0
         ansiprint("<light-cyan>Vigor</light-cyan> wears off")
@@ -80,3 +83,21 @@ def start_combat(entity, enemy_list):
         active_enemies.append(enemy)
         enemy.health = random.randint(enemy.health[0], enemy.health[1])
         enemy.max_health = enemy.health
+    
+def integer_input(input_string, array):
+    while True:
+        try:
+            option = int(input(input_string)) - 1
+            array[option] = array[option] # Does nothing, checks that the number is in range
+        except ValueError:
+            print("You have to enter a number")
+            sleep(1.5)
+            system("clear")
+            continue
+        except IndexError:
+            print("Option not in range")
+            sleep(1.5)
+            system("clear")
+            continue
+        return option
+        break
