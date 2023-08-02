@@ -1,10 +1,11 @@
+# pylint: disable: 
 import math
 import sys
 import random
 from time import sleep
 from os import system
-from ansimarkup import parse, ansiprint
-from utility import damage, active_enemies, combat_turn
+from ansimarkup import ansiprint
+from utility import damage, active_enemies, combat_turn, integer_input
 
 
 class Player:
@@ -34,6 +35,7 @@ class Player:
         self.energized = 0
         self.deck = deck
         self.potions = []
+        self.relics = []
         self.potion_bag = 3
         self.hand = []
         self.draw_pile = []
@@ -44,6 +46,7 @@ class Player:
         self.exhaust_pile = []
         self.orbs = []
         self.orb_slots = 3
+        self.next_turn_block = 0
         self.regen = 0
         self.regeneration = 0
         self.gold = 0
@@ -65,18 +68,21 @@ class Player:
         self.poison = 0
         self.shackled = False
         self.artifact = 0
-        self.block_next_turn = 0
+        self.intangible = 0
         self.vigor = 0
         self.thorns = 0
         self.plated_armor = 0
         self.neows_lament = 0
         self.anchor = False
+        self.bag_of_marbles = False
 
-    def use_card(self, card: dict, target: object, exhaust, pile=self.hand):
+    def use_card(self, card: dict, target: object, exhaust, pile):
         """
         Uses a card
         Wow!
         """
+        if pile is None:
+            pile = self.hand
         if "Strike" in card["Name"]:
             self.use_strike(target, card)
         elif "Bash" in card["Name"]:
@@ -94,7 +100,7 @@ class Player:
         elif "Flex" in card['Name']:
             self.use_flex(card)
         elif "Havoc" in card['Name']:
-            self.use_havoc(card)
+            self.use_havoc(target, card)
         elif "Thunderclap" in card['Name']:
             self.use_thunderclap(active_enemies, card)
         elif "Clothesline" in card['Name']:
@@ -112,12 +118,12 @@ class Player:
         elif "Sword Boomerang" in card['Name']:
             self.use_swordboomerang(active_enemies, card)
         elif "Anger" in card['Name']:
-            self.use_anger(targeted_enemy, card)
+            self.use_anger(target, card)
         if exhaust is True:
             ansiprint(f"{card['Name']} was <bold>Exhausted</bold>.")
-            self.move_card(card, pile, self.exhaust_pile, True)
+            self.move_card(card, self.exhaust_pile, pile, True)
         else:
-            self.move_card(card, pile, self.discard_pile, True)
+            self.move_card(card, self.discard_pile, pile, True)
 
     def use_strike(self, targeted_enemy: object, using_card):
         base_damage = using_card['Damage']
@@ -244,11 +250,12 @@ class Player:
             base_temp_strength += 2
         self.buff("Strength(Temp)", base_temp_strength, True)
 
-    def use_headbutt(self, using_card):
+    def use_headbutt(self, targeted_enemy, using_card):
         base_damage = 9
         if '+' in using_card['Name']:
             base_damage += 3
         counter = 1
+        damage(base_damage, targeted_enemy, self)
         while True:
             for card in self.discard_pile:
                 ansiprint(f"{counter}: <light-black>{card['Type']}</light-black> | <blue>{card['Name']}</blue> | <light-red>{card['Energy']} Energy</light-red> | <yellow>{card['Info']}</yellow>")
@@ -259,6 +266,7 @@ class Player:
                 system("clear")
                 continue
             self.move_card(self.discard_pile[choice], self.discard_pile, self.draw_pile, True)
+            break
         sleep(1.5)
         system("clear")
 
@@ -290,7 +298,7 @@ class Player:
         sleep(0.5)
         system("clear")
 
-    def use_ironwave(targeted_enemy, card):
+    def use_ironwave(self, targeted_enemy, card):
         base_block = 5
         base_damage = 5
         if '+' in card['Name']:
@@ -312,7 +320,9 @@ class Player:
         sleep(1.5)
         system("clear")
 
-    def draw_cards(self, middle_of_turn, draw_cards=self.draw_strength):
+    def draw_cards(self, middle_of_turn, draw_cards):
+        if draw_cards == 0:
+            draw_cards = self.draw_strength
         while True:
             if self.no_draw is True:
                 print("You can't draw any more cards")
@@ -415,11 +425,9 @@ class Player:
             if self.barricade is True:
                 print("Barricade: Block is not removed at the start of your turn.")
 
-
     def end_player_turn(self):
         player.discard_pile.extend(player.hand)
         player.hand = []
-        player.draw_cards()
         sleep(1.5)
         system("clear")
 
@@ -456,6 +464,7 @@ class Player:
         else:
             sleep(1.5)
             system("clear")
+
     def buff(self, buff_name, amount, end):
         if buff_name == "Strength":
             self.strength += amount
@@ -482,20 +491,22 @@ class Player:
             system("clear")
         else:
             sleep(1)
+
     def gain_gold(self, gold, dialogue=True):
         self.gold += gold
         if dialogue is True:
             ansiprint(f"{self.name} gained <green>{gold}</green> <yellow>Gold</yellow>")
         sleep(1)
+
     def start_turn(self):
         print(f"{self.name}:")
         # Start of turn effects
-        self.draw_cards()
+        self.draw_cards(False, 0)
         if self.barricade is False: # Barricade: Block is not remove at the start of your turn
             self.block = 0
         else:
-            if self.block > 0 and self.active_turns > 1:
-                ansiprint(f"Your Block was not removed because of <light-cyan>Barricade</light-cyan>")
+            if self.block > 0 and combat_turn > 1:
+                ansiprint("Your Block was not removed because of <light-cyan>Barricade</light-cyan>")
         if self.next_turn_block > 0:
             self.blocking(self.next_turn_block, False)
             self.next_turn_block = 0
@@ -572,7 +583,7 @@ class Player:
         if self.bag_of_marbles is True:
             print("Bag of Marbles:")
             for enemy in enemies:
-                self.debuff("Vulnerable", 1, enemy)
+                self.debuff("Vulnerable", 1, enemy, False)
     
     # def print_list(self, display_type, target_list, combat=True):
     #     counter = 1
@@ -668,7 +679,6 @@ class Enemy:
         """
         Not finished
         """
-        pass
 
     def enemy_turn(self):
         global combat_turn
@@ -731,10 +741,10 @@ class Enemy:
             random_num = random.randint(0, 100)
             if random_num < 75 and self.past_moves[-2] != "Bite":
                 self.attack(self.damage, 1, True, True, "Bite")
-                self.moves.append("Bite")
+                self.past_moves.append("Bite")
             elif self.past_moves[-2] != "Grow" and self.name == "Red Louse":
                 self.buff("Strength", 3, True, True, "Grow")
-                self.past_mves.append("Grow")
+                self.past_moves.append("Grow")
             elif self.past_moves[-2] != "Spit Web" and self.name == "Green Louse":
                 self.debuff("Weak", 2, True, True, "Spit Web")
                 self.past_moves.append("Spit Web")
@@ -844,7 +854,7 @@ class Enemy:
 player = Player(80, 0, 70, [])
 cards = {
     # Ironclad cards
-    'Strike': {'Name': 'Strike', 'Damage': 100, 'Energy': 1, 'Rarity': 'Basic', 'Type': 'Attack', 'Info': 'Deal 6 damage'},
+    'Strike': {'Name': 'Strike', 'Damage': 6, 'Energy': 1, 'Rarity': 'Basic', 'Type': 'Attack', 'Info': 'Deal 6 damage'},
     'Strike+': {'Name': '<green>Strike+</green>', 'Upgraded': True, 'Damage': 9, 'Energy': 1, 'Rarity': 'Basic', 'Type': 'Attack', 'Info': 'Deal 9 damage'},
 
     'Defend': {'Name': 'Defend', 'Block': 5, 'Energy': 1, 'Target': 'Yourself', 'Rarity': 'Basic', 'Type': 'Skill', 'Info': 'Gain 5 <yellow>Block</yellow>'},
@@ -869,7 +879,7 @@ cards = {
     'Cleave+': {'Name': '<green>Cleave+</green>', 'Upgraded': True, 'Damage': 11, 'Target': 'All', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Info': 'Deal 11 Damage to ALL enemies'},
 
     'Clothesline': {'Name': 'Clothesline', 'Energy': 2, 'Damage': 12, 'Weak': 2, 'Rarity': 'Common', 'Type': 'Attack', 'Info': 'Deal 12 damage. Apply 2 <yellow>Weak</yellow>'},
-    'Clothesline+': {'Name': '<green>Clothesline+</green>', 'Upgraded': True, 'Energy': 2, 'Damage': 14, 'Weak': 3, 'Upgraded': True, 'Rarity': 'Common', 'Type': 'Attack', 'Info': 'Deal 14 damage. Apply 3 <yellow>Weak</yellow>'},
+    'Clothesline+': {'Name': '<green>Clothesline+</green>', 'Upgraded': True, 'Energy': 2, 'Damage': 14, 'Weak': 3, 'Rarity': 'Common', 'Type': 'Attack', 'Info': 'Deal 14 damage. Apply 3 <yellow>Weak</yellow>'},
 
     'Flex': {'Name': 'Flex', 'Strength': 2, 'Strength Down': 2, 'Energy': 0, 'Target': 'Yourself', 'Rarity': 'Common', 'Type': 'Skill', 'Info': 'Gain 2 <yellow>Strength</yellow>. At the end of your turn, lose 2 <yellow>Strength</yellow>'},
     'Flex+': {'Name': '<green>Flex+</green>', 'Upgraded': True, 'Strength': 4, 'Strength Down': 4, 'Energy': 0, 'Target': 'Yourself', 'Rarity': 'Common', 'Type': 'Skill', 'Info': 'Gain 4 <yellow>Strength</yellow>. At the end of your turn lose 4 <yellow>Strength</yellow>'},
@@ -896,7 +906,7 @@ cards = {
     'Shrug it Off+': {'Name': '<green>Shrug it Off+</green>', 'Upgraded': True, 'Block': 11, 'Cards': 1, 'Energy': 1, 'Rarity': 'Common', 'Type': 'Skill', 'Info': 'Gain 11 <yellow>Block</yellow>. Draw 1 card.'},
 
     'Sword Boomerang': {'Name': 'Sword Boomerang', 'Damage': 3, 'Times': 3, 'Target': 'Random', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Info': 'Deal 3 damage to a random enemy 3 times.'},
-    'Sword Boomerang': {'Name': '<green>Sword Boomerang+</green>', 'Upgraded': True, 'Damage': 3, 'Times': 4, 'Target': 'Random': 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Info': 'Deal 3 damage to a random enemy 4 times.'},
+    'Sword Boomerang+': {'Name': '<green>Sword Boomerang+</green>', 'Upgraded': True, 'Damage': 3, 'Times': 4, 'Target': 'Random', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Info': 'Deal 3 damage to a random enemy 4 times.'},
 
     'Thunderclap': {'Name': 'Thunderclap', 'Damage': 4, 'Vulnerable': 1, 'Target': 'All', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Info': 'Deal 4 damage and apply 1 <yellow>Vulnerable</yellow> to ALL enemies.'},
     'Thunderclap+': {'Name': '<green>Thunderclap+</green>', 'Upgraded': True, 'Damage': 7, 'Vulnerable': 1, 'Target': 'All', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Info': 'Deal 7 damage and apply 1 <yellow>Vulnerable</yellow> to ALL enemies.'},
@@ -917,12 +927,12 @@ cards = {
     'Decay': {'Name': 'Decay', 'Playable': False, 'Damage': 2, 'Type': 'Curse', 'Energy': 'Unplayable', 'Rarity': 'Curse', 'Info': '<yellow>Unplayable.</yellow> At the end of your turn, take 2 damage.'},
     'Doubt': {'Name': 'Doubt', 'Playable': False, 'Weak': 1, 'Energy': 'Unplayable', 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<yellow>Unplayable.</yellow> At the end of your turn, gain 1 <yellow>Weak</yellow>.'},
     'Injury': {'Name': 'Injury', 'Playable': False, 'Energy': 'Unplayable', 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<yellow>Unplayable.</yellow>'},
-    'Necronomicurse': {'Name': 'Necronomicurse', 'Playable': False, 'Energy': 'Unplayable', 'Rarity': 'Curse': 'Type': 'Curse', 'Info': '<yellow>Unplayable.</yellow> There is no escape from this <yellow>Curse</yellow>.'},
+    'Necronomicurse': {'Name': 'Necronomicurse', 'Playable': False, 'Energy': 'Unplayable', 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<yellow>Unplayable.</yellow> There is no escape from this <yellow>Curse</yellow>.'},
     'Normality': {'Name': 'Normality', 'Playable': False, 'Cards Limit': 3, 'Energy': 'Unplayable', 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<yellow>Unplayable.</yellow> You cannot play more than 3 cards this turn.'},
     'Pain': {'Name': 'Pain', 'Playable': False, 'Damage': 1, 'Energy': 'Unplayable', 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<yellow>Unplayable.<yellow> While in hand, lose 1 HP when other cards are played.'},
     'Parasite': {'Name': 'Parasite', 'Playable': False, 'Max Hp Loss': 3, 'Energy': 'Unplayable', 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<yellow>Unplayable.</yellow> If transformed or removed from your deck, lose 3 Max HP.'},
     'Pride': {'Name': 'Pride', 'Innate': True, 'Exhaust': True, 'Energy': 1, 'Location': player.draw_pile, 'Rarity': 'Special', 'Type': 'Curse', 'Info': '<yellow>Innate.</yellow> At the end of your turn, put a copy of this card on top of your draw pile. <yellow>Exhaust.</yellow>'},
-    'Shame': {'Name': 'Shame': 'Playable': False, 'Frail': 1, 'Energy': 'Unplayable', 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<yellow>Unplayable.</yellow> At the end of your turn, gain 1 <yellow>Frail</yellow>.'},
+    'Shame': {'Name': 'Shame', 'Playable': False, 'Frail': 1, 'Energy': 'Unplayable', 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<yellow>Unplayable.</yellow> At the end of your turn, gain 1 <yellow>Frail</yellow>.'},
     'Writhe': {'Name': 'Writhe', 'Playable': False, 'Innate': True, 'Energy': 'Unplayable', 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<yellow>Unplayable. Innate.</yellow>'}
 }
 potions = {
@@ -1043,7 +1053,7 @@ def generate_card_rewards(reward_tier, amount, combat=True):
         for card in rewards:
             ansiprint(f"{counter}: <light-black>{card['Type']}</light-black> | <blue>{card['Name']}</blue> | <light-red>{card['Energy']} Energy</light-red> | <yellow>{card['Info']}</yellow>")
             counter += 1
-        chosen_reward = interger_input('What card do you want? > ', rewards)
+        chosen_reward = integer_input('What card do you want? > ', rewards)
         player.deck.append(rewards[chosen_reward])
         print(f"{player.name} obtained {rewards[chosen_reward]['Name']}")
         rewards = []
@@ -1073,14 +1083,14 @@ def generate_potion_rewards(amount):
         counter = 1
         print("Potion Bag:")
         for potion in player.potions:
-            ansiprint(f"{counter}: <light-black>{potion["Rarity"]}</light-black> | <green>{potion["Class"]}</green> | <blue>{potion["Name"]}</blue> | <yellow>{potion["Info"]}")
+            ansiprint(f"{counter}: <light-black>{potion['Rarity']}</light-black> | <green>{potion['Class']}</green> | <blue>{potion['Name']}</blue> | <yellow>{potion['Info']}")
             counter += 1
         print(f"{len(player.potions)} / {player.potion_bag}")
         print()
         print("Potion reward(s):")
         counter = 1
         for potion in rewards:
-            ansiprint(f"{counter}: <light-black>{potion["Rarity"]}</light-black> | Class: <green>{potion["Class"]}</green> | <blue>{potion["Name"]}</blue> | <yellow>{potion["Info"]}</yellow>")
+            ansiprint(f"{counter}: <light-black>{potion['Rarity']}</light-black> | Class: <green>{potion['Class']}</green> | <blue>{potion['Name']}</blue> | <yellow>{potion['Info']}</yellow>")
             counter += 1
         print()
         option= integer_input('What potion you want? >', rewards)
@@ -1091,7 +1101,7 @@ def generate_potion_rewards(amount):
             if option == 'y':
                 counter = 1
                 for potion in player.potions:
-                    ansprint(f"{counter}: <light-black>{potion["Rarity"]}</light-black> | <green>{potion["Class"]}</green> | <blue>{potion["Name"]}</blue> | <yellow>{potion["Info"]}</yellow>")
+                    ansiprint(f"{counter}: <light-black>{potion['Rarity']}</light-black> | <green>{potion['Class']}</green> | <blue>{potion['Name']}</blue> | <yellow>{potion['Info']}</yellow>")
                     counter += 1
                 try:
                     option = int(input("What potion do you want to discard? > ")) - 1
@@ -1101,7 +1111,7 @@ def generate_potion_rewards(amount):
                     system("clear")
                     continue
                 print(f"Discarded {player.potions[option]}.")
-                player.potions.remove(player.potions[options])
+                player.potions.remove(player.potions[option])
                 sleep(1.5)
                 system("clear")
                 continue
@@ -1111,7 +1121,7 @@ def generate_potion_rewards(amount):
                 continue
         else:
             player.potions.append(rewards[option])
-            print(f"{player.name} obtained {rewards[option]["Name"]}")
+            print(f"{player.name} obtained {rewards[option]['Name']}")
             rewards.remove(rewards[option])
             sleep(1.5)
             system("clear")

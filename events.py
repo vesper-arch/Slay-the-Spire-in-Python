@@ -1,7 +1,8 @@
 import random, math
 from os import system
 from time import sleep
-from entities import player, cards, generate_card_rewards, generate_potion_rewards
+from ansimarkup import ansiprint
+from entities import player, cards, generate_potion_rewards
 from utility import integer_input
 
 
@@ -29,7 +30,7 @@ def BonfireSpirits():
                   The spirits toss small bones and fragments unto the fire, which brilliantly erupts each time. As you approach, the spirits all turn to you, expectantly...""")
         sleep(0.8)
         ansiprint("<bold>[Offer]</bold> Choose a card in your deck and offer it to the spirits. The offered card will be removed from your deck, and you will receive a reward based on the card's rarity. > ", end="")
-        option = input('Press enter>>')
+        input('Press enter>>')
         counter = 1
         for using_card in player.deck:
             ansiprint(f"{counter}: <light-black>{using_card['Type']}</light-black> | <blue>{using_card['Name']}</blue> | <light-red>{using_card['Energy']} Energy</light-red> | <yellow>{using_card['Info']}</yellow>")
@@ -43,12 +44,12 @@ def BonfireSpirits():
             sleep(1.5)
             system("clear")
             break
-        elif player.deck[offering].get("Rarity") == "Basic":
+        if player.deck[offering].get("Rarity") == "Basic":
             ansiprint("<italic>Nothing happens...</italic>\n \nThe spirits seem to be ignoring you now. Disapointing...")
             sleep(1.5)
             system("clear")
             break
-        elif player.deck[offering].get("Rarity") == "Common" or player.deck[offering].get("Rarity") == "Special":
+        if player.deck[offering].get("Rarity") == "Common" or player.deck[offering].get("Rarity") == "Special":
             ansiprint("""<italic>The flames grow slightly brighter.</italic>
                                             
                         The spirits continue dancing. You feel slightly warmer from their presense..\n""")
@@ -56,12 +57,13 @@ def BonfireSpirits():
             sleep(1.5)
             system("clear")
             break
-        elif player.deck[offering].get("Rarity") == "Uncommon":
+        if player.deck[offering].get("Rarity") == "Uncommon":
             ansiprint("""<italic>The flames erupt, growing significantly stronger!</italic>
                                         
                         The spirits dance around you exitedly, filling you with a sense of warmth.\n""")
             player.ChangeHealth(player.max_health, "Heal")
-        elif player.deck[offering].get("Rarity") == "Rare":
+            break
+        if player.deck[offering].get("Rarity") == "Rare":
             ansiprint("""<italic>The flames burst, nearly knocking you off your feet, as the fire doubles in strength.</italic>              
                              
                         The spirits dance around you excitedly before merging into your form, filling you with warmth and strength\n""")
@@ -166,7 +168,7 @@ def Lab():
           
           Why do you know the name of all these tools? It doesn't matter, you take a look around.""")
     ansiprint("<bold>[Search]</bold> Obtain 3 random potions", end='')
-    option = input('Press enter|')
+    input('Press enter|')
     generate_potion_rewards(3)
 
 def OminousForge():

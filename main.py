@@ -2,14 +2,15 @@ from os import system
 from time import sleep
 import math
 import random
+from ansimarkup import ansiprint
 from entities import player, encounters, generate_card_rewards, generate_potion_rewards
-from utility import display_ui, active_enemies, combat_turn, start_combat
+from utility import display_ui, active_enemies, combat_turn, start_combat, integer_input
 import events
-from ansimarkup import parse, ansiprint
 
 
 
 def combat(tier):
+    global combat_turn
     killed_enemies = False
     escaped = False
     start_combat(player, encounters)
@@ -21,7 +22,7 @@ def combat(tier):
         # Player's turn ends when the their energy is out
         while True:
             print(f"Turn {combat_turn}: ")
-            display_ui(player)
+            display_ui(player, player.hand)
             # Asks the user what card they want to use
             ansiprint("1: <blue>Play a card</blue> \n2: <light-red>View debuffs and buffs</light-red> \n3: <green>Use potions</green> \n4: <magenta>View relics</magenta> \n5: View deck \n6: View draw pile \n7: View discard pile \n8: End turn")
             option = input('')
@@ -44,7 +45,7 @@ def combat(tier):
                     system("clear")
                     continue
                 # Cards that either target the player or target all enemies won't ask for a target.
-                if playing_card.get("Target") is None:
+                if playing_card.get("Target") is None and len(active_enemies) > 1:
                     target = integer_input("What enemy do you want to use it on? >", active_enemies)
                     if target is False:
                         system("clear")
@@ -53,7 +54,7 @@ def combat(tier):
                     target = 0
                 else:
                     target = 0
-                player.use_card(playing_card, target)
+                player.use_card(playing_card, active_enemies[target], False, player.hand)
                 continue
             elif option == '2':
                 print(player.name + ': ')
@@ -72,7 +73,7 @@ def combat(tier):
                     ansiprint(f"<light-black>{counter}: (Empty)</light-black>")
                     counter += 1
                     sleep(0.05)
-                "Machine, turn back now."
+                print("Machine, turn back now.")
             elif option == '4':
                 counter = 1
                 for relic in player.relics:
@@ -118,6 +119,11 @@ def combat(tier):
                 sleep(1.5)
                 system("clear")
                 break
+            else:
+                print("Invalid input.")
+                sleep(1.5)
+                system("clear")
+                continue
         if killed_enemies is True and escaped is False:
             player.hand = []
             player.discard_pile = []
@@ -130,7 +136,7 @@ def combat(tier):
             combat_turn = 0
             sleep(1.5)
             break
-        elif escaped is True:
+        if escaped is True:
             print("Escaped...")
             sleep(0.8)
             print("You recieve nothing.")
@@ -138,13 +144,12 @@ def combat(tier):
             system("clear")
             combat_turn = 1
             break
-        else:
-            player.end_player_turn()
-            for enemy in active_enemies:
-                enemy.enemy_turn()
-                sleep(1.5)
-                system("clear")
-            combat_turn += 1
+        player.end_player_turn()
+        for enemy in active_enemies:
+            enemy.enemy_turn()
+            sleep(1.5)
+            system("clear")
+        combat_turn += 1
 
 
 def rest():
@@ -168,15 +173,15 @@ def rest():
             heal_amount = math.floor(player.max_health * 0.30)
             sleep(1)
             system("clear")
-            player.heal(heal_amount)
+            player.ChangeHealth(heal_amount, "Heal")
             while True:
                 option = input("[View Deck] or [Leave]").lower()
-                if action == 'view deck':
+                if option == 'view deck':
                     display_ui(player, False)
                     action = input("Press enter to leave")
                     system("clear")
                     continue
-                elif action == 'leave':
+                elif option == 'leave':
                     print("You leave...")
                     print()
                     sleep(1.5)
@@ -196,7 +201,7 @@ def rest():
 
 order_of_encounters = [combat, rest, combat, combat, rest, rest, combat, combat, combat]
 for encounter in order_of_encounters:
-    if callable(encounter):
+    if encounter == combat:
+        encounter("Normal")
+    else:
         encounter()
-    elif encounter == combat:
-        combat("Normal")

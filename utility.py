@@ -56,10 +56,10 @@ def display_ui(entity, target_list, combat=True):
     for card in target_list:
         # Prints in red if the player doesn't have enough energy to use the card
         if card["Energy"] > entity.energy:
-            ansiprint(f"{counter}: <light-black>{card['Type']}</light-black> | <blue>{card['Name']}</blue> | <italic><red>{card['Energy']} Energy</red></italic> | <yellow>{card['Info']}</yellow>")
+            ansiprint(f"{counter}: <blue>{card['Name']}</blue> | <light-black>{card['Type']}</light-black> | <italic><red>{card['Energy']} Energy</red></italic> | <yellow>{card['Info']}</yellow>")
         # Otherwise, print in full color
         else:
-            ansiprint(f"{counter}: <light-black>{card['Type']}</light-black> | <blue>{card['Name']}</blue> | <light-red>{card['Energy']} Energy</light-red> | <yellow>{card['Info']}</yellow>")
+            ansiprint(f"{counter}: <blue>{card['Name']}</blue> | <light-black>{card['Type']}</light-black> | <light-red>{card['Energy']} Energy</light-red> | <yellow>{card['Info']}</yellow>")
         # Adds one to the counter to make a numbered list(Ex. 1: Defend// 2: Strike...)
         counter += 1
         sleep(0.05)
@@ -92,7 +92,7 @@ def integer_input(input_string, array=None):
             option = int(input(input_string)) - 1
             array[option] # Checks that the number is in range
         else:
-            option = int(input(input_string)) 
+            option = int(input(input_string))
     except ValueError:
         print("You have to enter a number")
         sleep(1.5)
