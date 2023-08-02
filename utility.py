@@ -38,29 +38,31 @@ def damage(dmg: int, target: object, user, card=True):
 
 
 
-def display_ui(entity, combat=True):
-    """
-    If the player is in combat, don't show the type of card and display if the player doesn't have enough energy for it
-    otherwise, Show the type with the card
-    Shows the enemies's status
-    Shows the player's status"""
-    counter = 1
+def display_ui(entity, target_list, combat=True):
     # Repeats for every card in the player's hand
-    if combat is True:
-        for card in entity.hand:
-            # Prints in red if the player doesn't have enough energy to use the card
-            if card["Energy"] > entity.energy:
-                ansiprint(f"{counter}: <red>{card['Name']}</red> | <light-red>{card['Info']}</light-red> | <red>{card['Energy']}</red>")
-            # Otherwise, print in full color
-            else:
-                ansiprint(f"{counter}: <blue>{card['Name']}</blue> | <light-red>{card['Energy']} Energy</light-red> | <yellow>{card['Info']}</yellow>")
-            # Adds one to the counter to make a numbered list(Ex. 1: Defend// 2: Strike...)
-            counter += 1
-    else:
-        for card in entity.deck:
+    print("Potions: ")
+    counter = 1
+    for potion in entity.potions:
+        ansiprint(f"{counter}: {potion['Name']} | {potion['Class']} | <light-black>{potion['Rarity']}</light-black> | <yellow>{potion['Info']}</yellow>")
+        counter += 1
+        sleep(0.05)
+    for i in range(entity.potion_bag - len(entity.potions)):
+        ansiprint(f"<light-black>{counter}: (Empty)</light-black>")
+        counter += 1
+        sleep(0.05)
+    print('\n')
+    print("Hand: ")
+    counter = 1
+    for card in target_list:
+        # Prints in red if the player doesn't have enough energy to use the card
+        if card["Energy"] > entity.energy:
+            ansiprint(f"{counter}: <light-black>{card['Type']}</light-black> | <blue>{card['Name']}</blue> | <italic><red>{card['Energy']} Energy</red></italic> | <yellow>{card['Info']}</yellow>")
+        # Otherwise, print in full color
+        else:
             ansiprint(f"{counter}: <light-black>{card['Type']}</light-black> | <blue>{card['Name']}</blue> | <light-red>{card['Energy']} Energy</light-red> | <yellow>{card['Info']}</yellow>")
-            counter += 1
-            sleep(0.05)
+        # Adds one to the counter to make a numbered list(Ex. 1: Defend// 2: Strike...)
+        counter += 1
+        sleep(0.05)
     print()
     if combat is True:
         for enemy in active_enemies:
@@ -84,20 +86,19 @@ def start_combat(entity, enemy_list):
         enemy.health = random.randint(enemy.health[0], enemy.health[1])
         enemy.max_health = enemy.health
     
-def integer_input(input_string, array):
-    while True:
-        try:
+def integer_input(input_string, array=None):
+    try:
+        if array is not None:
             option = int(input(input_string)) - 1
-            array[option] = array[option] # Does nothing, checks that the number is in range
-        except ValueError:
-            print("You have to enter a number")
-            sleep(1.5)
-            system("clear")
-            continue
-        except IndexError:
-            print("Option not in range")
-            sleep(1.5)
-            system("clear")
-            continue
-        return option
-        break
+            array[option] # Checks that the number is in range
+        else:
+            option = int(input(input_string)) 
+    except ValueError:
+        print("You have to enter a number")
+        sleep(1.5)
+        return False
+    except IndexError:
+        print("Option not in range")
+        sleep(1.5)
+        return False
+    return option

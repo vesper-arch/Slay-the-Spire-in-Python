@@ -5,6 +5,22 @@ from entities import player, cards, generate_card_rewards, generate_potion_rewar
 from utility import integer_input
 
 
+def Neow():
+    if player.player_class == "Ironclad":
+        max_hp_increase = 8
+        max_hp_decrease = 8
+    elif player.player_class == "Silent":
+        max_hp_increase = 6
+        max_hp_decrease = 7
+    elif player.player_class == "Defect" or player.player_class == "Watcher":
+        max_hp_increase = 7
+        max_hp_decrease = 7
+    
+    ansiprint(f"1: <green>+{max_hp_increase} Max HP</green> \n2: <green>Enemies in your first 3 combats have 1 HP.")
+    option = integer_input("")
+    if option == 1:
+        player.ChangeHealth(max_hp_increase, 'Max Health')
+
 def BonfireSpirits():
     while True:
         ansiprint("<bold>Bonfire Spirits</bold")
