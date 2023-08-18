@@ -1,10 +1,10 @@
-# pylint: disable: 
 import math
 import sys
 import random
 from time import sleep
 from os import system
 from ansimarkup import ansiprint
+
 from utility import damage, active_enemies, combat_turn, integer_input
 
 
@@ -40,6 +40,7 @@ class Player:
         self.hand = []
         self.draw_pile = []
         self.discard_pile = []
+        self.card_reward_choices = 3
         self.draw_strength = 5
         self.draw_up = 0
         self.no_draw = False
@@ -72,53 +73,21 @@ class Player:
         self.vigor = 0
         self.thorns = 0
         self.plated_armor = 0
-        self.neows_lament = 0
-        self.anchor = False
-        self.bag_of_marbles = False
 
     def use_card(self, card: dict, target: object, exhaust, pile):
         """
         Uses a card
         Wow!
         """
-        if pile is None:
-            pile = self.hand
-        if "Strike" in card["Name"]:
-            self.use_strike(target, card)
-        elif "Bash" in card["Name"]:
-            self.use_bash(target, card)
-        elif "Defend" in card["Name"]:
-            self.use_defend(card)
-        elif "Cleave" in card["Name"]:
-            self.use_cleave(active_enemies, card)
-        elif "Clash" in card["Name"]:
-            self.use_clash(target, card)
-        elif "Perfected Strike" in card["Name"]:
-            self.use_perfectedstrike(target, card)
-        elif "Body Slam" in card["Name"]:
-            self.use_bodyslam(target, card)
-        elif "Flex" in card['Name']:
-            self.use_flex(card)
-        elif "Havoc" in card['Name']:
-            self.use_havoc(target, card)
-        elif "Thunderclap" in card['Name']:
-            self.use_thunderclap(active_enemies, card)
-        elif "Clothesline" in card['Name']:
-            self.use_clothesline(target, card)
-        elif "Headbutt" in card['Name']:
-            self.use_headbutt(target, card)
-        elif "Heavy Blade" in card['Name']:
-            self.use_heavyblade(target, card)
-        elif "Iron Wave" in card['Name']:
-            self.use_ironwave(target, card)
-        elif "Shrug it Off" in card['Name']:
-            self.use_shrugitoff(card)
-        elif "Pommel Strike" in card['Name']:
-            self.use_pommelstrike(target, card)
-        elif "Sword Boomerang" in card['Name']:
-            self.use_swordboomerang(active_enemies, card)
-        elif "Anger" in card['Name']:
-            self.use_anger(target, card)
+        if card.get('Name') == 'Slimed':
+            self.move_card(card, self.exhaust_pile, pile, True)
+        if card.get('Target') == 'Single':
+            card['Function'](target, card)
+        elif card.get('Target') in ('Area', 'Random'):
+            card['Function'](active_enemies, card)
+        else:
+            card['Function'](card)
+
         if exhaust is True:
             ansiprint(f"{card['Name']} was <bold>Exhausted</bold>.")
             self.move_card(card, self.exhaust_pile, pile, True)
@@ -126,6 +95,7 @@ class Player:
             self.move_card(card, self.discard_pile, pile, True)
 
     def use_strike(self, targeted_enemy: object, using_card):
+        '''Deals 6(9) damage.'''
         base_damage = using_card['Damage']
         if "+" in using_card['Name']:
             base_damage += 3
@@ -137,6 +107,7 @@ class Player:
         system("clear")
 
     def use_bash(self, targeted_enemy: object, using_card):
+        '''Deals 8(10) damage. Apply 2(3) Vulnerable'''
         base_damage = using_card['Damage']
         base_vulnerable = using_card['Vulnerable']
         # Checks if the card is upgraded
@@ -152,6 +123,7 @@ class Player:
         system("clear")
 
     def use_defend(self, using_card):
+        '''Gain 5(8) Block'''
         base_block = using_card['Block']
         if "+" in using_card['Name']:
             base_block += 3
@@ -161,6 +133,7 @@ class Player:
         sleep(1.5)
         system("clear")
     def use_bodyslam(self, targeted_enemy, using_card):
+        '''Deals damage equal to your Block. Exhaust.(Don't Exhaust)'''
         base_energy = using_card['Energy']
         if "+" in using_card['Name']:
             base_energy -= 1
@@ -170,6 +143,7 @@ class Player:
         sleep(1.5)
         system("clear")
     def use_clash(self, targeted_enemy, using_card):
+        '''Can only be played if there are no non-attack cards in your hand. Deal 14(18) damage.'''
         base_damage = using_card['Damage']
         if "+" in using_card['Name']:
             base_damage += 4
@@ -187,14 +161,18 @@ class Player:
             break
         sleep(1.5)
         system("clear")
+
     def use_heavyblade(self, targeted_enemy, using_card):
+        '''Deal 14(18) damage. Strength affects this card 3(5) times'''
         strength_multi = 3
         if '+' in using_card['Name']:
             strength_multi += 2
         damage(using_card['Damage'] * strength_multi, targeted_enemy, self)
         sleep(1.5)
         system("clear")
+
     def use_cleave(self, enemies, using_card):
+        '''Deal 8 damage to ALL enemies.'''
         base_damage = using_card['Damage']
         if "+" in using_card['Name']:
             base_damage += 3
@@ -203,7 +181,9 @@ class Player:
             damage(base_damage, enemy, self)
         sleep(1.5)
         system("clear")
+
     def use_perfectedstrike(self, targeted_enemy, using_card):
+        '''Deal 6 damage. Deals 2(3) additional damage for ALL your cards containing "Strike"'''
         damage_per_strike = using_card['Damage Per "Strike"']
         base_damage = using_card['Damage']
         if "+" in using_card['Name']:
@@ -215,7 +195,9 @@ class Player:
         damage(base_damage, targeted_enemy, self)
         sleep(1.5)
         system("clear")
+
     def use_anger(self, targeted_enemy, using_card):
+        '''Deal 6(8) damage. Add a copy of this card to your discard pile.'''
         base_damage = using_card['Damage']
         if '+' in using_card['Name']:
             base_damage += 2
@@ -224,7 +206,9 @@ class Player:
         self.discard_pile.append(using_card)
         sleep(1.5)
         system("clear")
+
     def use_clothesline(self, targeted_enemy, using_card):
+        '''Deal 12(14) damage. Apply 2(3) Weak'''
         base_damage = using_card['Damage']
         base_weak = using_card['Weak']
         if '+' in using_card['Name']:
@@ -235,22 +219,26 @@ class Player:
         self.debuff("Weak", base_weak, targeted_enemy, True)
         sleep(1.5)
         system("clear")
-    def use_havoc(self, targeted_enemy, using_card):
+
+    def use_havoc(self, using_card):
+        '''Play the top card of your draw pile and Exhaust it.'''
         base_energy = using_card['Energy']
         if '+' in using_card['Name']:
             base_energy -= 1
         print()
-        self.use_card(self.draw_pile[-1], targeted_enemy, True, self.draw_pile)
+        self.use_card(self.draw_pile[-1], random.choice(active_enemies), True, self.draw_pile)
         sleep(1.5)
         system("clear")
 
     def use_flex(self, using_card):
+        '''Gain 2(4) Strength. At the end of your turn, lose 2(4) Strength'''
         base_temp_strength = 2
         if '+' in using_card['Name']:
             base_temp_strength += 2
         self.buff("Strength(Temp)", base_temp_strength, True)
 
     def use_headbutt(self, targeted_enemy, using_card):
+        '''Deal 9(12) damage. Put a card from your discard pile on top of your draw pile.'''
         base_damage = 9
         if '+' in using_card['Name']:
             base_damage += 3
@@ -271,6 +259,7 @@ class Player:
         system("clear")
 
     def use_shrugitoff(self, using_card):
+        '''Gain 8(11) Block. Draw 1 card.'''
         base_block = 8
         if '+' in using_card['Name']:
             base_block += 3
@@ -278,17 +267,19 @@ class Player:
         self.draw_cards(True, 1)
         sleep(1.5)
         system("clear")
-    
+
     def use_swordboomerang(self, enemies, using_card):
+        '''Deal 3 damage to a random enemy 3(4) times.'''
         base_times = 3
         if '+' in using_card['Name']:
             base_times += 1
-        for i in range(base_times):
+        for _ in range(base_times):
             damage(using_card['Damage'], random.choice(enemies), self)
         sleep(1.5)
         system("clear")
 
     def use_thunderclap(self, enemies, using_card):
+        '''Deal 4(7) damage and apply 1 Vulnerable to ALL enemies.'''
         base_damage = 4
         if '+' in using_card['Name']:
             base_damage += 3
@@ -299,6 +290,7 @@ class Player:
         system("clear")
 
     def use_ironwave(self, targeted_enemy, card):
+        '''Gain 5(7) Block. Deal 5(7) damage.'''
         base_block = 5
         base_damage = 5
         if '+' in card['Name']:
@@ -310,6 +302,7 @@ class Player:
         system("clear")
 
     def use_pommelstrike(self, targeted_enemy, using_card):
+        '''Deal 9(10) damage. Draw 1(2) cards.'''
         base_damage = 9
         base_cards = 1
         if '+' in using_card['Name']:
@@ -321,6 +314,7 @@ class Player:
         system("clear")
 
     def draw_cards(self, middle_of_turn, draw_cards):
+        '''Draws [draw_cards] cards.'''
         if draw_cards == 0:
             draw_cards = self.draw_strength
         while True:
@@ -340,18 +334,20 @@ class Player:
             break
 
     def blocking(self, block: int, card=True):
-        block += self.dexterity 
+        '''Gains [block] Block. Cards are affected by Dexterity and Frail.'''
+        block += self.dexterity
         if self.frail > 0:
             block = math.floor(block * 0.75)
         self.block += block
         if self.dexterity > 0 and card is True:
-            ansiprint(f"{self.name} gained <green>{block}</green> <light-blue>Block</light-blue>")    
+            ansiprint(f"{self.name} gained <green>{block}</green> <light-blue>Block</light-blue>")
         elif self.dexterity < 0 or self.frail > 0 and card is True:
             ansiprint(f"{self.name} gained <red>{block}</red> <light-blue>Block</light-blue>")
         else:
             ansiprint(f"{self.name} gained {block} <light-blue>Block</light-blue>")
 
-    def ChangeHealth(self, heal, heal_type):
+    def health_actions(self, heal, heal_type):
+        '''If [heal_type] is 'Heal', you heal for [heal] HP. If [heal_type] is 'Max Health', increase your max health by [heal].'''
         if heal != self.max_health and heal_type == "Heal":
             self.health += heal
             self.health = min(self.health, self.max_health)
@@ -368,25 +364,17 @@ class Player:
             ansiprint(f"Your Max HP is increased by <light-blue>{heal}</light-blue>")
             self.show_status(False)
 
-    def ModifyCard(self, card: dict, action: str):
+    def card_actions(self, card, action: str):
+        '''[action] == 'Remove', remove [card] from your deck.
+        [action] == 'Upgrade', Upgrade [card]
+        [action] == 'Transform', transform a card into another random card.
+        [action] == 'Store', (Only in the Note From Yourself event) stores a card to be collected from the event in another run.
+        [action] == 'Offer', (Only in the Bonfire Spirits event) offers a card. You recieve a reward based on the rarity.'''
         while True:
             if action == "Remove":
-                counter = 1
-                for using_card in player.deck:
-                    ansiprint(f"{counter}: <light-black>{using_card['Type']}</light-black> | <blue>{using_card['Name']}</blue> | <light-red>{using_card['Energy']} Energy</light-red> | <yellow>{using_card['Info']}</yellow>")
-                    counter += 1
-                try:
-                    remove_index = int(input("What card do you want to remove? > ")) - 1
-                except ValueError:
-                    print("You have to enter a number")
-                    sleep(1)
-                    system("clear")
-                    continue
-                player.deck.remove(remove_index)
+                player.deck.remove(card)
             elif action == 'Upgrade':
                 pass
-
-
 
     def show_status(self, full_view=False, combat=True):
         if combat is True:
@@ -403,7 +391,7 @@ class Player:
                 status += f" | <light-cyan>Artifact: {self.artifact}</light-cyan>"
         else:
             status = f"\n{self.name} (<red>{self.health} </red>/ <red>{self.max_health}</red> | <yellow>{self.gold} Gold</yellow>)"
-        ansiprint(status, "\n")
+        ansiprint(status)
         print()
         if full_view is True:
             if self.vulnerable > 0:
@@ -431,14 +419,14 @@ class Player:
         sleep(1.5)
         system("clear")
 
-    def move_card(self, card, to, from_loc, cost_energy, shuffle=False):
+    def move_card(self, card, move_to, from_location, cost_energy, shuffle=False):
         if cost_energy is True:
             self.energy -= card["Energy"]
-        from_loc.remove(card)
+        from_location.remove(card)
         if shuffle is True:
-            to.insert(random.randint(0, len(to) - 1), card)
+            move_to.insert(random.randint(0, len(move_to) - 1), card)
         else:
-            to.append(card)
+            move_to.append(card)
 
     def debuff(self, debuff_name, amount, target, end):
         if target.artifact == 0:
@@ -516,7 +504,7 @@ class Player:
             self.energized = 0
             ansiprint("<light-cyan>Energized wears off.")
 
-        # //////Debuffs\\\\\\ 
+        # //////Debuffs\\\\\\
         if self.vulnerable > 0: # Vulnerable: Take 50% more damage from attacks
             self.vulnerable -= 1
             ansiprint("<light-cyan>-1 Vulnerable</light-cyan>")
@@ -573,18 +561,7 @@ class Player:
         if self.ritual > 0:
             print("Ritual: ", end='')
             self.buff("Strength", self.ritual, True)
-    def start_of_combat_relics(self, enemies):
-        if self.neows_lament > 0:
-            for enemy in enemies:
-                enemy.health = 1
-        if self.anchor is True:
-            print("Anchor:")
-            self.blocking(10, False)
-        if self.bag_of_marbles is True:
-            print("Bag of Marbles:")
-            for enemy in enemies:
-                self.debuff("Vulnerable", 1, enemy, False)
-    
+
     # def print_list(self, display_type, target_list, combat=True):
     #     counter = 1
     #     if display_type == "Potions":
@@ -601,26 +578,26 @@ class Player:
     #                 ansiprint(f" | <light-blue><italic>{relic['Flavor']}</italic></light-blue>")
     #             counter += 1
     #             sleep(0.05)
-        
+
 
 
 class Enemy:
+    '''
+    Attributes::
+    health: Current health[int]
+    max_health: Maximum health[int]
+    block: Current block[int]
+    name: Enemy name[str]
+    order: Order of moves(planning on using parsing to run)[list]
+    moves: All moves the enemy can use[2D dict]
+    barricade: Block is not removed at the start of combat[bool]
+    artifact: Blocks the next debuff[int]
+    vulnerable: Takes 50% more damage from attacks[int](duration stack)
+    weak: Deals 25% less damage with attacks[int](duration stack)
+    strength: Deal X more damage[int](intensity stack)
+    ritual: At the end of it's turn, gains X Strength(intensity stack)
+    '''
     def __init__(self, health: list, block: int, name: str, past_moves: dict):
-        '''
-        Attributes::
-        health: Current health[int]
-        max_health: Maximum health[int]
-        block: Current block[int]
-        name: Enemy name[str]
-        order: Order of moves(planning on using parsing to run)[list]
-        moves: All moves the enemy can use[2D dict]
-        barricade: Block is not removed at the start of combat[bool]
-        artifact: Blocks the next debuff[int]
-        vulnerable: Takes 50% more damage from attacks[int](duration stack)
-        weak: Deals 25% less damage with attacks[int](duration stack)
-        strength: Deal X more damage[int](intensity stack)
-        ritual: At the end of it's turn, gains X Strength(intensity stack)
-        '''
         self.health = health
         self.max_health = health
         self.block = block
@@ -681,13 +658,12 @@ class Enemy:
         """
 
     def enemy_turn(self):
-        global combat_turn
         if self.name == "Cultist":
             if self.active_turns == 1:
                 self.buff("Ritual", 3, True, True, "Incantation")
             else:
                 self.attack(6, 1, True, True, "Dark Strike")
-        elif self.name == "Acid Slime (L)" or self.name == "Acid Slime (M)":
+        elif self.name in ('Acid Slime (L)', 'Acid Slime (M)'):
             random_num = random.randint(0, 100)
             if self.health < math.floor(self.max_health * 0.5) and self.name == "Acid Slime (L)":
                 ansiprint("<bold>Split<bold>")
@@ -748,7 +724,7 @@ class Enemy:
             elif self.past_moves[-2] != "Spit Web" and self.name == "Green Louse":
                 self.debuff("Weak", 2, True, True, "Spit Web")
                 self.past_moves.append("Spit Web")
-            
+
 
     def show_status(self):
         status = f"{self.name} (<red>{self.health} / {self.max_health}</red> | <light-blue>{self.block} Block</light-blue>)"
@@ -763,7 +739,7 @@ class Enemy:
         if start is True:
             ansiprint(f"<bold>{name}</bold>")
             sleep(1)
-        for i in range(times):
+        for _ in range(times):
             damage(dmg, player, self)
             sleep(0.5)
         if end is True:
@@ -823,7 +799,7 @@ class Enemy:
                 sys.exit()
             ansiprint(f"<bold>{name}</bold>")
             sleep(1)
-        for i in range(amount):
+        for _ in range(amount):
             location.append(status_card)
         print(f"{player.name} gained {amount} {status_card['Name']}({status_card['Info']}) \nPlaced into {location}")
         if end is True:
@@ -851,65 +827,67 @@ class Enemy:
 
 
 # Characters
-player = Player(80, 0, 70, [])
+player = Player(80, 0, 3, [])
 cards = {
     # Ironclad cards
-    'Strike': {'Name': 'Strike', 'Damage': 6, 'Energy': 1, 'Rarity': 'Basic', 'Type': 'Attack', 'Info': 'Deal 6 damage'},
-    'Strike+': {'Name': '<green>Strike+</green>', 'Upgraded': True, 'Damage': 9, 'Energy': 1, 'Rarity': 'Basic', 'Type': 'Attack', 'Info': 'Deal 9 damage'},
+    'Strike': {'Name': 'Strike', 'Damage': 6, 'Energy': 1, 'Rarity': 'Basic', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': f'Deal {6 + player.strength} damage', 'Function': player.use_strike},
+    'Strike+': {'Name': '<green>Strike+</green>', 'Upgraded': True, 'Damage': 9, 'Energy': 1, 'Rarity': 'Basic', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': f'Deal {9 + player.strength} damage', 'Function': player.use_strike},
 
-    'Defend': {'Name': 'Defend', 'Block': 5, 'Energy': 1, 'Target': 'Yourself', 'Rarity': 'Basic', 'Type': 'Skill', 'Info': 'Gain 5 <yellow>Block</yellow>'},
-    'Defend+': {'Name': '<green>Defend+</green>', 'Upgraded': True, 'Block': 8, 'Energy': 1, 'Target': 'Yourself', 'Rarity': 'Basic', 'Type': 'Skill', 'Info': 'Gain 8 <yellow>Block</yellow>'},
+    'Defend': {'Name': 'Defend', 'Block': 5, 'Energy': 1, 'Target': 'Yourself', 'Rarity': 'Basic', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': f'Gain {5 + player.dexterity} <yellow>Block</yellow>', 'Function': player.use_defend},
+    'Defend+': {'Name': '<green>Defend+</green>', 'Upgraded': True, 'Block': 8, 'Energy': 1, 'Target': 'Yourself', 'Rarity': 'Basic', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': f'Gain {8 + player.dexterity} <yellow>Block</yellow>', 'Function': player.use_defend},
 
-    'Bash': {'Name': 'Bash', 'Damage': 8, 'Vulnerable': 2, 'Energy': 2, 'Rarity': 'Basic', 'Type': 'Attack', 'Info': 'Deal 8 damage. Apply 2 <yellow>Vulnerable</yellow>'},
-    'Bash+': {'Name': '<green>Bash+</green>', 'Upgraded': True, 'Damage': 10, 'Vulnerable': 3, 'Energy': 2, 'Rarity': 'Basic', 'Type': 'Attack', 'Info': 'Deal 10 damage. Apply 3 <yellow>Vulnerable</yellow>'},
+    'Bash': {'Name': 'Bash', 'Damage': 8, 'Vulnerable': 2, 'Energy': 2, 'Target': 'Single', 'Rarity': 'Basic', 'Class': 'Ironclad', 'Type': 'Attack', 'Info': f'Deal {8 + player.strength} damage. Apply 2 <yellow>Vulnerable</yellow>', 'Function': player.use_bash},
+    'Bash+': {'Name': '<green>Bash+</green>', 'Upgraded': True, 'Damage': 10, 'Vulnerable': 3, 'Energy': 2, 'Target': 'Single', 'Rarity': 'Basic', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': f'Deal {10 + player.strength} damage. Apply 3 <yellow>Vulnerable</yellow>', 'Function': player.use_bash},
 
-    'Anger': {'Name': 'Anger', 'Damage': 6, 'Energy': 0, 'Location': player.discard_pile, 'Rarity': 'Common', 'Type': 'Attack', 'Info': 'Deal 6 damage. Add a copy of this card to your discard pile.'},
-    'Anger+': {'Name': '<green>Anger+</green>', 'Upgraded': True, 'Damage': 8, 'Energy': 0, 'Location': player.discard_pile, 'Rarity': 'Common', 'Type': 'Attack', 'Info': 'Deal 8 damage. Add a copy of this card to your discard pile.'},
+    'Anger': {'Name': 'Anger', 'Damage': 6, 'Energy': 0, 'Location': player.discard_pile, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': f'Deal {6 + player.strength} damage. Add a copy of this card to your discard pile.', 'Function': player.use_anger},
+    'Anger+': {'Name': '<green>Anger+</green>', 'Upgraded': True, 'Damage': 8, 'Energy': 0, 'Location': player.discard_pile, 'Target': 'Single', 'Rarity': 'Common', 'Class': 'Ironclad', 'Type': 'Attack', 'Info': f'Deal {8 + player.strength} damage. Add a copy of this card to your discard pile.', 'Function': player.use_anger},
 
-    'Armaments': {'Name': 'Armaments', 'Block': 5, 'Upgrade Target': 'Single', 'Target': 'Yourself', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Skill', 'Info': 'Gain 5 <yellow>Block</yellow>. <yellow>Upgrade</yellow> a card in your hand for the rest of combat.'},
-    'Armaments+': {'Name': '<green>Armaments+</green>', 'Upgraded': True, 'Block': 5, 'Upgrade Target': 'All', 'Target': 'Yourself', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Skill', 'Info': 'Gain 5 <yellow>Block</yellow>. <yellow>Upgrade</yellow> ALL cards in your hand for the rest of combat.'},
+    'Armaments': {'Name': 'Armaments', 'Block': 5, 'Upgrade Target': 'Single', 'Target': 'Yourself', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': f'Gain {5 + player.dexterity} <yellow>Block</yellow>. <yellow>Upgrade</yellow> a card in your hand for the rest of combat.'},
+    'Armaments+': {'Name': '<green>Armaments+</green>', 'Upgraded': True, 'Block': 5, 'Upgrade Target': 'All', 'Target': 'Yourself', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': f'Gain {5 + player.dexterity} <yellow>Block</yellow>. <yellow>Upgrade</yellow> ALL cards in your hand for the rest of combat.'},
 
-    'Body Slam': {'Name': 'Body Slam', 'Damage': player.block, 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Info': 'Deal damage equal to your <yellow>Block</yellow>'},
-    'Body Slam+': {'Name': '<green>Body Slam+</green>', 'Upgraded': True, 'Damage': player.block, 'Energy': 0, 'Rarity': 'Common', 'Type': 'Attack', 'Info': 'Deal damage equal to your <yellow>Block</yellow>'},
+    'Body Slam': {'Name': 'Body Slam', 'Damage': player.block, 'Energy': 1, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal damage equal to your <yellow>Block</yellow>', 'Function': player.use_bodyslam},
+    'Body Slam+': {'Name': '<green>Body Slam+</green>', 'Upgraded': True, 'Damage': player.block, 'Energy': 0, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal damage equal to your <yellow>Block</yellow>', 'Function': player.use_bodyslam},
 
-    'Clash': {'Name': 'Clash', 'Damage': 14, 'Energy': 0, 'Rarity': 'Common', 'Type': 'Attack', 'Info': 'Can only be played is every card in your hand is an Attack. Deal 14 damage.'},
-    'Clash+': {'Name': '<green>Clash+</green>', 'Upgraded': True, 'Damage': 18, 'Energy': 0, 'Rarity': 'Common', 'Type': 'Attack', 'Info': 'Can only be played if every card in your hand is an Attack. Deal 18 damage.'},
+    'Clash': {'Name': 'Clash', 'Damage': 14, 'Energy': 0, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': f'Can only be played is every card in your hand is an Attack. Deal {14 + player.strength} damage.', 'Function': player.use_clash},
+    'Clash+': {'Name': '<green>Clash+</green>', 'Upgraded': True, 'Damage': 18, 'Energy': 0, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': f'Can only be played if every card in your hand is an Attack. Deal {18 + player.strength} damage.', 'Function': player.use_clash},
 
-    'Cleave': {'Name': 'Cleave', 'Damage': 8, 'Target': 'All', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Info': 'Deal 8 damage to ALL enemies'},
-    'Cleave+': {'Name': '<green>Cleave+</green>', 'Upgraded': True, 'Damage': 11, 'Target': 'All', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Info': 'Deal 11 Damage to ALL enemies'},
+    'Cleave': {'Name': 'Cleave', 'Damage': 8, 'Target': 'All', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': f'Deal {8 + player.strength} damage to ALL enemies', 'Function': player.use_cleave},
+    'Cleave+': {'Name': '<green>Cleave+</green>', 'Upgraded': True, 'Damage': 11, 'Target': 'All', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': f'Deal {11 + player.strength} damage to ALL enemies', 'Function': player.use_cleave},
 
-    'Clothesline': {'Name': 'Clothesline', 'Energy': 2, 'Damage': 12, 'Weak': 2, 'Rarity': 'Common', 'Type': 'Attack', 'Info': 'Deal 12 damage. Apply 2 <yellow>Weak</yellow>'},
-    'Clothesline+': {'Name': '<green>Clothesline+</green>', 'Upgraded': True, 'Energy': 2, 'Damage': 14, 'Weak': 3, 'Rarity': 'Common', 'Type': 'Attack', 'Info': 'Deal 14 damage. Apply 3 <yellow>Weak</yellow>'},
+    'Clothesline': {'Name': 'Clothesline', 'Energy': 2, 'Damage': 12, 'Weak': 2, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': f'Deal {12 + player.strength} damage. Apply 2 <yellow>Weak</yellow>', 'Function': player.use_clothesline},
+    'Clothesline+': {'Name': '<green>Clothesline+</green>', 'Upgraded': True, 'Energy': 2, 'Damage': 14, 'Weak': 3, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': f'Deal {14 + player.strength} damage. Apply 3 <yellow>Weak</yellow>', 'Function': player.use_clothesline},
 
-    'Flex': {'Name': 'Flex', 'Strength': 2, 'Strength Down': 2, 'Energy': 0, 'Target': 'Yourself', 'Rarity': 'Common', 'Type': 'Skill', 'Info': 'Gain 2 <yellow>Strength</yellow>. At the end of your turn, lose 2 <yellow>Strength</yellow>'},
-    'Flex+': {'Name': '<green>Flex+</green>', 'Upgraded': True, 'Strength': 4, 'Strength Down': 4, 'Energy': 0, 'Target': 'Yourself', 'Rarity': 'Common', 'Type': 'Skill', 'Info': 'Gain 4 <yellow>Strength</yellow>. At the end of your turn lose 4 <yellow>Strength</yellow>'},
+    'Flex': {'Name': 'Flex', 'Strength': 2, 'Strength Down': 2, 'Energy': 0, 'Target': 'Yourself', 'Rarity': 'Common', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Gain 2 <yellow>Strength</yellow>. At the end of your turn, lose 2 <yellow>Strength</yellow>'},
+    'Flex+': {'Name': '<green>Flex+</green>', 'Upgraded': True, 'Strength': 4, 'Strength Down': 4, 'Energy': 0, 'Target': 'Yourself', 'Rarity': 'Common', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Gain 4 <yellow>Strength</yellow>. At the end of your turn lose 4 <yellow>Strength</yellow>', 'Function': player.use_flex},
 
-    'Havoc': {'Name': 'Havoc', 'Energy': 1, 'Target': 'Yourself', 'Rarity': 'Common', 'Type': 'Skill', 'Info': 'Play the top card of your draw pile and <yellow>Exhaust</yellow> it.'},
-    'Havoc+': {'Name': '<green>Havoc+</green>', 'Upgraded': True, 'Energy': 0, 'Target': 'Yourself', 'Rarity': 'Common', 'Type': 'Skill', 'Info': 'Play the top card of your draw pile and <yellow>Exhaust</yellow> it.'},
+    'Havoc': {'Name': 'Havoc', 'Energy': 1, 'Target': 'Yourself', 'Rarity': 'Common', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Play the top card of your draw pile and <yellow>Exhaust</yellow> it.', 'Function': player.use_havoc},
+    'Havoc+': {'Name': '<green>Havoc+</green>', 'Upgraded': True, 'Energy': 0, 'Target': 'Yourself', 'Rarity': 'Common', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Play the top card of your draw pile and <yellow>Exhaust</yellow> it.', 'Function': player.use_havoc},
 
-    'Headbutt': {'Name': 'Headbutt', 'Damage': 9, 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Info': 'Deal 9 damage. Place a card from your discard pile on top of your draw pile.'},
-    'Headbutt+': {'Name': '<green>Headbutt+</green>', 'Upgraded': True, 'Damage': 12, 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Info': 'Deal 12 damage. Place a card from your discard pile on top of your draw pile.'},
+    'Headbutt': {'Name': 'Headbutt', 'Damage': 9, 'Energy': 1, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': f'Deal {9 + player.strength} damage. Place a card from your discard pile on top of your draw pile.', 'Function': player.use_headbutt},
+    'Headbutt+': {'Name': '<green>Headbutt+</green>', 'Upgraded': True, 'Damage': 12, 'Energy': 1, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': f'Deal {12 + player.strength} damage. Place a card from your discard pile on top of your draw pile.', 'Function': player.use_headbutt},
 
-    'Heavy Blade': {'Name': 'Heavy Blade', 'Damage': 14, 'Strength Multi': 3, 'Energy': 2, 'Rarity': 'Common', 'Type': 'Attack', 'Info': 'Deal 14 damage. <yellow>Strength</yellow> affects this card 3 times.'},
-    'Heavy Blade+': {'Name': '<green>Heavy Blade+</green>', 'Upgraded': True, 'Damage': 14, 'Strength Multi': 5, 'Energy': 2, 'Rarity': 'Common', 'Type': 'Attack', 'Info': 'Deal 14 damage. <yellow>Strength</yellow> affects this card 5 times'},
+    'Heavy Blade': {'Name': 'Heavy Blade', 'Damage': 14, 'Strength Multi': 3, 'Energy': 2, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': f'Deal {14 + player.strength} damage. <yellow>Strength</yellow> affects this card 3 times.', 'Function': player.use_heavyblade},
+    'Heavy Blade+': {'Name': '<green>Heavy Blade+</green>', 'Upgraded': True, 'Damage': 14, 'Strength Multi': 5, 'Energy': 2, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': f'Deal {14 + player.strength} damage. <yellow>Strength</yellow> affects this card 5 times', 'Function': player.use_heavyblade},
 
-    'Iron Wave': {'Name': 'Iron Wave', 'Damage': 5, 'Block': 5, 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Info': 'Gain 5 <yellow>Block</yellow>. Deal 5 damage.'},
-    'Iron Wave+': {'Name': '<green>Iron Wave+</green>', 'Upgraded': True, 'Damage': 7, 'Block': 7, 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Info': 'Gain 7 <yellow>Block</yellow>. Deal 7 damage.'},
+    'Iron Wave': {'Name': 'Iron Wave', 'Damage': 5, 'Block': 5, 'Energy': 1, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': f'Gain {5 + player.dexterity} <yellow>Block</yellow>. Deal {5 + player.strength} damage.', 'Function': player.use_ironwave},
+    'Iron Wave+': {'Name': '<green>Iron Wave+</green>', 'Upgraded': True, 'Damage': 7, 'Block': 7, 'Energy': 1, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': f'Gain {7 + player.dexterity} <yellow>Block</yellow>. Deal {7 + player.strength} damage.', 'Function': player.use_ironwave},
 
-    'Perfected Strike': {'Name': 'Perfected Strike', 'Damage': 6, 'Damage Per "Strike"': 2, 'Energy': 2, 'Rarity': 'Common', 'Type': 'Attack', 'Info': 'Deal 6 damage. Deals 2 additional damage for ALL your cards containing "Strike".'},
-    'Perfected Strike+': {'Name': '<green>Perfected Strike+</green>', 'Upgraded': True, 'Damage': 6, 'Damage Per "Strike"': 3, 'Energy': 2, 'Rarity': 'Common', 'Type': 'Attack', 'Info': 'Deal 6 damage. Deals 3 additional damage for ALL your cards containing "Strike".'},
+    'Perfected Strike': {'Name': 'Perfected Strike', 'Damage': 6, 'Damage Per "Strike"': 2, 'Energy': 2, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 
+                         'Info': f'Deal {6 + player.strength + len([card for card in player.deck if "strike" in card.get("Name").lower()]) * 2} damage. Deals 2 additional damage for ALL your cards containing "Strike".', 'Function': player.use_perfectedstrike},
+    'Perfected Strike+': {'Name': '<green>Perfected Strike+</green>', 'Upgraded': True, 'Damage': 6, 'Damage Per "Strike"': 3, 'Energy': 2, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 
+                          'Info': f'Deal {6 + player.strength + len([card for card in player.deck if "strike" in card.get("Name").lower()]) * 3} damage. Deals 3 additional damage for ALL your cards containing "Strike".', 'Function': player.use_perfectedstrike},
 
-    'Pommel Strike': {'Name': 'Pommel Strike', 'Damage': 9, 'Cards': 2, 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Info': 'Deal 9 damage. Draw 1 card.'},
-    'Pommel Strike+': {'Name': '<green>Pommel Strike+</green>', 'Upgraded': True, 'Damage': 10, 'Cards': 2, 'Rarity': 'Common', 'Type': 'Attack', 'Info': 'Deal 10 damage. Draw 2 cards.'},
+    'Pommel Strike': {'Name': 'Pommel Strike', 'Damage': 9, 'Cards': 2, 'Energy': 1, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': f'Deal {9 + player.strength} damage. Draw 1 card.', 'Function': player.use_pommelstrike},
+    'Pommel Strike+': {'Name': '<green>Pommel Strike+</green>', 'Upgraded': True, 'Damage': 10, 'Cards': 2, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': f'Deal {10 + player.strength} damage. Draw 2 cards.', 'Function': player.use_pommelstrike},
 
-    'Shrug it Off': {'Name': 'Shrug it Off', 'Block': 8, 'Cards': 1, 'Energy': 1, 'Rarity': 'Common', 'Type': 'Skill', 'Info': 'Gain 8 <yellow>Block</yellow>. Draw 1 card.'},
-    'Shrug it Off+': {'Name': '<green>Shrug it Off+</green>', 'Upgraded': True, 'Block': 11, 'Cards': 1, 'Energy': 1, 'Rarity': 'Common', 'Type': 'Skill', 'Info': 'Gain 11 <yellow>Block</yellow>. Draw 1 card.'},
+    'Shrug it Off': {'Name': 'Shrug it Off', 'Block': 8, 'Cards': 1, 'Energy': 1, 'Rarity': 'Common', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': f'Gain {8 + player.dexterity} <yellow>Block</yellow>. Draw 1 card.', 'Function': player.use_shrugitoff},
+    'Shrug it Off+': {'Name': '<green>Shrug it Off+</green>', 'Upgraded': True, 'Block': 11, 'Cards': 1, 'Energy': 1, 'Rarity': 'Common', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': f'Gain {11 + player.dexterity} <yellow>Block</yellow>. Draw 1 card.', 'Function': player.use_shrugitoff},
 
-    'Sword Boomerang': {'Name': 'Sword Boomerang', 'Damage': 3, 'Times': 3, 'Target': 'Random', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Info': 'Deal 3 damage to a random enemy 3 times.'},
-    'Sword Boomerang+': {'Name': '<green>Sword Boomerang+</green>', 'Upgraded': True, 'Damage': 3, 'Times': 4, 'Target': 'Random', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Info': 'Deal 3 damage to a random enemy 4 times.'},
+    'Sword Boomerang': {'Name': 'Sword Boomerang', 'Damage': 3, 'Times': 3, 'Target': 'Random', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': f'Deal {3 + player.strength} damage to a random enemy 3 times.', 'Function': player.use_swordboomerang},
+    'Sword Boomerang+': {'Name': '<green>Sword Boomerang+</green>', 'Upgraded': True, 'Damage': 3, 'Times': 4, 'Target': 'Random', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': f'Deal {3 + player.strength} damage to a random enemy 4 times.', 'Function': player.use_swordboomerang},
 
-    'Thunderclap': {'Name': 'Thunderclap', 'Damage': 4, 'Vulnerable': 1, 'Target': 'All', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Info': 'Deal 4 damage and apply 1 <yellow>Vulnerable</yellow> to ALL enemies.'},
-    'Thunderclap+': {'Name': '<green>Thunderclap+</green>', 'Upgraded': True, 'Damage': 7, 'Vulnerable': 1, 'Target': 'All', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Info': 'Deal 7 damage and apply 1 <yellow>Vulnerable</yellow> to ALL enemies.'},
+    'Thunderclap': {'Name': 'Thunderclap', 'Damage': 4, 'Vulnerable': 1, 'Target': 'All', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': f'Deal {4 + player.strength} damage and apply 1 <yellow>Vulnerable</yellow> to ALL enemies.', 'Function': player.use_thunderclap},
+    'Thunderclap+': {'Name': '<green>Thunderclap+</green>', 'Upgraded': True, 'Damage': 7, 'Vulnerable': 1, 'Target': 'All', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': f'Deal {7 + player.strength} damage and apply 1 <yellow>Vulnerable</yellow> to ALL enemies.', 'Function': player.use_thunderclap},
 
     # Status cards
     'Slimed': {'Name': 'Slimed', 'Energy': 1, 'Target': 'Nothing', 'Rarity': 'Common', 'Type': 'Status', 'Info': '<yellow>Exhaust</yellow>'},
@@ -927,7 +905,7 @@ cards = {
     'Decay': {'Name': 'Decay', 'Playable': False, 'Damage': 2, 'Type': 'Curse', 'Energy': 'Unplayable', 'Rarity': 'Curse', 'Info': '<yellow>Unplayable.</yellow> At the end of your turn, take 2 damage.'},
     'Doubt': {'Name': 'Doubt', 'Playable': False, 'Weak': 1, 'Energy': 'Unplayable', 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<yellow>Unplayable.</yellow> At the end of your turn, gain 1 <yellow>Weak</yellow>.'},
     'Injury': {'Name': 'Injury', 'Playable': False, 'Energy': 'Unplayable', 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<yellow>Unplayable.</yellow>'},
-    'Necronomicurse': {'Name': 'Necronomicurse', 'Playable': False, 'Energy': 'Unplayable', 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<yellow>Unplayable.</yellow> There is no escape from this <yellow>Curse</yellow>.'},
+    'Necronomicurse': {'Name': 'Necronomicurse', 'Playable': False, 'Energy': 'Unplayable', 'Exhaustable': False, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<yellow>Unplayable.</yellow> There is no escape from this <yellow>Curse</yellow>.'},
     'Normality': {'Name': 'Normality', 'Playable': False, 'Cards Limit': 3, 'Energy': 'Unplayable', 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<yellow>Unplayable.</yellow> You cannot play more than 3 cards this turn.'},
     'Pain': {'Name': 'Pain', 'Playable': False, 'Damage': 1, 'Energy': 'Unplayable', 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<yellow>Unplayable.<yellow> While in hand, lose 1 HP when other cards are played.'},
     'Parasite': {'Name': 'Parasite', 'Playable': False, 'Max Hp Loss': 3, 'Energy': 'Unplayable', 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<yellow>Unplayable.</yellow> If transformed or removed from your deck, lose 3 Max HP.'},
@@ -937,10 +915,10 @@ cards = {
 }
 potions = {
     # Common | All Classes
-    'Attack Potion': {'Name': 'Attack Potion', 'Cards': 1, 'Card type': 'Attack', 'Class': 'All', 'Rarity': 'Common', 'Info': 'Add 1 of 3 random Attack cards to your hand, it costs 0 this turn'},
-    'Power Potion': {'Name': 'Power Potion', 'Cards': 1, 'Card type': 'Power', 'Class': 'All', 'Rarity': 'Common', 'Info': 'Add 1 of 3 random Power cards to your hand, it costs 0 this turn'},
-    'Skill Potion': {'Name': 'Skill Potion', 'Cards': 1, 'Card type': 'Skill', 'Class': 'All', 'Rarity': 'Common', 'Info': 'Add 1 of 3 random Skill cards to your hand, it costs 0 this turn'},
-    'Colorless Potion': {'Name': 'Colorless Potion', 'Cards': 1, 'Card type': 'Colorless', 'Class': 'All', 'Rarity': 'Common', 'Info': 'Choose 1 of 3 random Colorless cards to add to your hand, it costs 0 this turn'},
+    'Attack Potion': {'Name': 'Attack Potion', 'Cards': 1, 'CardTtype': 'Attack', 'Class': 'All', 'Rarity': 'Common', 'Info': 'Add 1 of 3 random Attack cards to your hand, it costs 0 this turn'},
+    'Power Potion': {'Name': 'Power Potion', 'Cards': 1, 'Card Type': 'Power', 'Class': 'All', 'Rarity': 'Common', 'Info': 'Add 1 of 3 random Power cards to your hand, it costs 0 this turn'},
+    'Skill Potion': {'Name': 'Skill Potion', 'Cards': 1, 'Card Type': 'Skill', 'Class': 'All', 'Rarity': 'Common', 'Info': 'Add 1 of 3 random Skill cards to your hand, it costs 0 this turn'},
+    'Colorless Potion': {'Name': 'Colorless Potion', 'Cards': 1, 'Card Type': 'Colorless', 'Class': 'All', 'Rarity': 'Common', 'Info': 'Choose 1 of 3 random Colorless cards to add to your hand, it costs 0 this turn'},
     'Block Potion': {'Name': 'Block Potion', 'Block': 12, 'Class': 'All', 'Rarity': 'Common', 'Info': 'Gain 12 Block'},
     'Dexterity Potion': {'Name': 'Dexterity Potion', 'Dexterity': 2, 'Class': 'All', 'Rarity': 'Common', 'Info': 'Gain 2 Dexterity'},
     'Energy Potion': {'Name': 'Energy Potion', 'Energy': 2, 'Class': 'All', 'Rarity': 'Common', 'Info': 'Gain 2 Energy'},
@@ -963,14 +941,14 @@ potions = {
     # Rare | All Classes
     'Cultist Potion': {'Name': 'Cultist Potion', 'Ritual': 1, 'Class': 'All', 'Rarity': 'Rare', 'Info': 'Gain 1 Ritual'},
     'Entropic Brew': {'Name': 'Entropic Brew', 'Potions': player.potion_bag - len(player.potions), 'Class': 'All', 'Rarity': 'Rare', 'Info': 'Fill all your empty potion slots with random potions'},
-    'Fairy in a Bottle': {'Name': 'Fairy in a Bottle', 'Playable': False, 'Health': 30, 'Class': 'All', 'Rarity': 'Rare', 'Info': 'When you would die, heal to 30 percent of your Max HP instead and discard this potion'},
-    'Fruit Juice': {'Name': 'Fruit Juice', 'Playable out of combat': True, 'Max Health': 5, 'Class': 'All', 'Rarity': 'Rare', 'Info': 'Gain 5 Max HP'},
+    'Fairy in a Bottle': {'Name': 'Fairy in a Bottle', 'Playable': False, 'Health': 30, 'Class': 'All', 'Rarity': 'Rare', 'Info': f'When you would die, heal to 30 percent of your Max HP({math.floor(player.max_health * 0.30)}) instead and discard this potion'},
+    'Fruit Juice': {'Name': 'Fruit Juice', 'Playable Everywhere?': True, 'Max Health': 5, 'Class': 'All', 'Rarity': 'Rare', 'Info': 'Gain 5 Max HP'},
     'Smoke Bomb': {'Name': 'Smoke Bomb', 'Escape from boss': False, 'Target': 'Nothing', 'Class': 'All', 'Rarity': 'Rare', 'Info': 'Escape from a non-boss combat. You recieve no rewards.'},
     'Sneko Oil': {'Name': 'Snecko Oil', 'Cards': 5, 'Range': (0, player.max_energy), 'Class': 'All', 'Rarity': 'Rare', 'Info': 'Draw 5 cards. Randomized the costs of all cards in your hand for the rest of combat.'},
     # Ironclad Potions                       (In percent)
-    'Blood Potion': {'Name': 'Blood Potion', 'Health': 20, 'Class': '<red>Ironclad</red>', 'Rarity': 'Uncommon', 'Info': 'Heal for 20 percent of your Max HP'},
-    'Elixir': {'Name': 'Elixir', 'Class': '<red>Ironclad</red>', 'Rarity': 'Uncommon', 'Info': 'Exhaust any number of card in your hand'},
-    'Heart of Iron': {'Name': 'Heart of Iron', 'Metallicize': 8, 'Class': '<red>Ironclad</red>', 'Rarity': 'Rare', 'Info': 'Gain 8 Metallicize'},
+    'Blood Potion': {'Name': 'Blood Potion', 'Health': 20, 'Class': '<red>Ironclad</red>', 'Rarity': 'Uncommon', 'Info': f'Heal for 20 percent of your Max HP({math.floor(player.max_health * 0.20)})'},
+    'Elixir': {'Name': 'Elixir', 'Class': '<red>Ironclad</red>', 'Rarity': 'Uncommon', 'Info': 'Exhaust any number of cards in your hand'},
+    'Heart of Iron': {'Name': 'Heart of Iron', 'Metallicize': 8, 'Class': '<red>Ironclad</red>', 'Rarity': 'Rare', 'Info': 'Gain 8 <light-cyan>Metallicize</light-cyan>'},
     # Silent potion
     'Poison Potion': {'Name': 'Poison Potion', 'Poison': 6, 'Target': 'Enemy', 'Class': '<light-green>Silent</light-green>', 'Rarity': 'Common', 'Info': 'Apply 6 Poison to target enemy'},
     'Cunning Potion': {'Name': 'Cunning Potion', 'Shivs': 3, 'Card': 'placehold', 'Class': '<light-green>Silent</light-green>', 'Rarity': 'Uncommon', 'Info': 'Add 3 Upgraded Shivs to your hand'}, # Shiv card doesn't not exist yet
@@ -985,143 +963,41 @@ potions = {
     'Ambrosia': {'Name': 'Ambrosia', 'Stance': 'Divinity', 'Class': '<magenta>Watcher</magenta>', 'Rarity': 'Rare', 'Info': 'Enter Divinity Stance'}
 }
 relics = {
+    # Starter Relics
     'Burning Blood': {'Name': 'Burning Blood', 'Class': 'Ironclad', 'Rarity': 'Starter', 'Health': 6, 'Info': 'At the end of combat, heal 6 HP', 'Flavor': "Your body's own blood burns with an undying rage."},
     'Ring of the Snake': {'Name': 'Ring of the Snake', 'Class': 'Silent', 'Rarity': 'Starter', 'Cards': 2, 'Info': 'At the start of each combat, draw 2 additional cards.', 'Flavor': 'Made from a fossilized snake, represents great skill as a huntress.'},
     'Cracked Core': {'Name': 'Cracked Core', 'Class': 'Defect', 'Rarity': 'Starter', 'Lightning': 1, 'Info': 'At the start of each combat, Channel 1 Lightning orb.', 'Flavor': 'The mysterious life force which powers the Automatons within the Spire. It appears to be cracked.'},
     'Pure Water': {'Name': 'Pure Water', 'Class': 'Watcher', 'Rarity': 'Starter', 'Miracles': 1, 'Card': 'placehold', 'Info': 'At the start of each combat, add 1 Miracle card to your hand.', 'Flavor': 'Filtered through fine sand and free of impurities.'},
+    # Common Relics
     'Akabeko': {'Name': 'Akabeko', 'Class': 'Any', 'Rarity': 'Common', 'Extra Damage': 8, 'Info': 'Your first Attack each combat deals 8 additional damage.', 'Flavor': 'Muuu~'},
     'Anchor': {'Name': 'Anchor', 'Class': 'Any', 'Rarity': 'Common', 'Block': 10, 'Info': 'At the start of combat, gain 10 Block.', 'Flavor': 'Holding this miniature trinket, your feel heavier and more stable.'},
     'Ancient Tea Set': {'Name': 'Ancient Tea Set', 'Class': 'Any', 'Rarity': 'Common', 'Energy': 2, 'Info': 'Whenever you enter a Rest Site, start the next combat with 2 additional energy.', 'Flavor': "The key to a refreshing night's rest."},
-    'Art of War': {'Name': 'Art of War', 'Class': 'Any', 'Rarity': 'Common', 'Energy': 1, 'Info': 'If you do not play Attacks during your turn, gain an extra Energy next turn.', 'Flavor': 'The ancient manuscript contains wisdom from a past age.'}
+    'Art of War': {'Name': 'Art of War', 'Class': 'Any', 'Rarity': 'Common', 'Energy': 1, 'Info': 'If you do not play Attacks during your turn, gain an extra Energy next turn.', 'Flavor': 'The ancient manuscript contains wisdom from a past age.'},
+    'Bag of Marbles': {'Name': 'Bag of Marbles', 'Class': 'Any', 'Rarity': 'Common', 'Target': 'All', 'Vulnerable': 1, 'Info': 'At the start of each combat, apply 1 <yellow>Vulnerable</yellow> to ALL enemies.', 'Flavor': 'A once popular toy in the city. Useful for throwing enemies off balance.'},
+    'Bag of Preparation': {'Name': 'Bag of Preparation', 'Class': 'Any', 'Rarity': 'Common', 'Cards': 2, 'Info': 'At the start of each combat, draw 2 additional cards.', 'Flavor': "Oversized adventurer's pack. Has many pockets and straps."},
+    'Blood Vial': {'Name': 'Blood Vial', 'Class': 'Any', 'Rarity': 'Common', 'HP': 2, 'Info': 'At the start of each combat, heal 2 HP.', 'Flavor': 'A vial containing the blood of a pure and elder vampire.'},
+    'Bronze Scales': {'Name': 'Bronze Scales', 'Class': 'Any', 'Rarity': 'Common', 'Thorns': 3, 'Info': 'Whenever you take damage, deal 3 damage back.', 'Flavor': 'The sharp scales of the Guardian. Rearranges itself to protect its user.'},
+    'Centennial Puzzle': {'Name': 'Centennial Puzzle', 'Class': 'Any', 'Rarity': 'Common', 'Cards': 3, 'Info': 'The first time you lose HP each combat, draw 3 cards.', 'Flavor': 'Upon solving the puzzle you feel a powerful warmth in your chest.'},
+    'Ceramic Fish': {'Name': 'Ceramic Fish', 'Class': 'Any', 'Rarity': 'Common', 'Gold': 9, 'Info': 'Whenever you add a card to your deck, gain 9 Gold.', 'Flavor': 'Meticulously painted, these fish were revered to bring great fortune.'},
+    'Dream Catcher': {'Name': 'Dream Catcher', 'Class': 'Any', 'Rarity': 'Common', 'Info': 'Whenever you rest, you may add a card to your deck.', 'Flavor': 'The northern tribes would often use dream catchers at night, believing they led to self improvement.'},
+    'Happy Flower': {'Name': 'Happy Flower', 'Class': 'Any', 'Rarity': 'Common', 'Energy': 1, 'Info': 'Every 3 turns, gain 1 Energy.', 'Flavor': 'This unceasing joyous plant is a popular novelty item among nobles.'},
+    'Juzu Bracelet': {'Name': 'Juzu Bracelet', 'Class': 'Any', 'Rarity': 'Common', 'Info': 'Regular enemy combats are no longer encountered in ?(Unknown) rooms.', 'Flavor': 'A ward against the unknown.'},
+    'Lantern': {'Name': 'Lantern', 'Class': 'Any', 'Rarity': 'Common', 'Energy': 1, 'Info': 'Gain 1 Energy on the first turn of each combat.', 'Flavor': 'An eerie lantern which illuminates only for the user.'},
+    'Max Bank': {'Name': 'Maw Bank', 'Class': 'Any', 'Rarity': 'Common', 'Gold': 12, 'Info': 'Whenever you climb a floor, gain 12 Gold. No longer works when you spend any gold at the shop.', 'Flavor': 'Suprisingly popular, despite maw attacks being a common occurence.'},
+    'Meal Ticket': {'Name': 'Meal Ticket', 'Class': 'Any', 'Rarity': 'Common', 'Health': 15, 'Info': 'Whenever you enter a shop, heal 15 HP.', 'Flavor': 'Complementary meatballs with every visit!'},
+    'Nunchaku': {'Name': 'Nunchaku', 'Class': 'Any', 'Rarity': 'Common', 'Energy': 1, 'Info': 'Every time you play 10 attacks, gain 1 Energy', 'Flavor': 'A good training tool. Inproves the posture and agility of the user.'},
+    'Oddly Smooth Stone': {'Name': 'Oddly Smooth Stone', 'Class': 'Any', 'Rarity': 'Common', 'Dexterity': 1, 'Info': 'At the start of each combat, gain 1 Dexterity.', 'Flavor': 'You have never seen smething so smooth and pristine. This must be the work of the Ancients.'},
+    'Omamori': {'Name': 'Omamori', 'Class': 'Any', 'Rarity': 'Common', 'Curses': 2, 'Info': 'Negate the next 2 Curses you obtain.', 'Flavor': 'A common charm for staving off vile spirits. This one seems to possess a spark of divine energy.'},
+    'Orichaicum': {'Name': 'Orichaicum', 'Class': 'Any', 'Rarity': 'Common', 'Block': 6, 'Info': 'If you end your turn without Block, gain 6 Block.', 'Flavor': 'A green tinted metal from an unknown origin.'},
+    'Pen Nib': {'Name': 'Pen Nib', 'Class': 'Any', 'Rarity': 'Common', 'Attacks': 10, 'Info': 'Every 10th attack you play deals double damage.', 'Flavor': 'Holding the nib, you can see everyone ever slain by a previous owner of the pen. A violent history.'},
+    'Potion Belt': {'Name': 'Potion Belt', "Class": 'Any', 'Rarity': 'Common', 'Potion Slots': 2, 'Info': 'Upon pickup, gain 2 potion slots.', 'Flavor': 'I can hold more potions using this belt!'},
+    'Preserved Insect': {'Name': 'Preserved Insect', 'Class': 'Any', 'Rarity': 'Common', 'Hp Percent Loss': 25, 'Info': 'Enemies in Elite rooms have 20% less health.', 'Flavor': 'The insect seems to create a shrinking aura that targets particularly large enemies.'},
+    'Regal Pillow': {'Name': 'Regal Pillow', 'Class': 'Any', 'Rarity': 'Common', '+Rest HP': 15, 'Info': 'Heal an additional 15 HP when you Rest.', 'Flavor': "Now you can get a proper night's rest."},
+    'Smiling Mask': {'Name': 'Smiling Mask', 'Class': 'Any', 'Rarity': 'Common', 'Info': "The merchant's card removal service now always costs 50 Gold.", 'Flavor': 'Mask worn by the merchant. He must have spares...'},
+    'Strawberry': {'Name': 'Strawberry', 'Class': 'Any', 'Rarity': 'Common', 'Max HP': 7, 'Flavor': "'Delicious! Haven't seen any of these since the blight.' - Ranwid"},
+    'The Boot': {'Name': 'The Boot', 'Class': 'Any', 'Rarity': 'Common', 'Info': 'When you would deal 4 or less unblocked Attack damage, increase it to 5.', 'Flavor': 'When wound up, the boot grows larger in size.'},
+    'Tiny Chest': {'Name': 'Tiny Chest', 'Class': 'Any', 'Rarity': 'Common', 'Info': 'Every 4th <bold>?</bold> room is a <bold>Treasure</bold> room.', 'Flavor': '"A fine prototype." - The Architect'}
 }
 player.deck = [cards['Strike'], cards['Strike'], cards['Strike'], cards['Strike'], cards['Strike'], cards['Defend'], cards['Defend'], cards['Defend'], cards['Defend'], cards['Bash']]
 # Enemies
 encounters = [[Enemy([48, 54], 0, "Cultist", ['place', 'place', 'place'])], [Enemy([40, 44], 0, "Jaw Worm", ['place', 'place', 'place'])]]
-
-
-def generate_card_rewards(reward_tier, amount, combat=True):
-    """
-    Normal combat rewards:
-    Rare: 3% | Uncommon: 37% | Common: 60%
-    
-    Elite combat rewards:
-    Rare: 10% | Uncommon: 40% | Common: 50%
-    
-    Boss combat rewards:
-    Rare: 100% | Uncommon: 0% | Common: 0%
-    """
-    common_cards = {card: attr for card, attr in cards.items() if attr.get("Rarity") == "Common" and attr.get("Type") != "Status" and '+' not in attr.get("Name")}
-    uncommon_cards = {card: attr for card, attr in cards.items() if attr.get("Rarity") == "Uncommon" and attr.get("Type") != "Status" and '+' not in attr.get("Name")}
-    rare_cards = {card: attr for card, attr in cards.items() if attr.get("Rarity") == "Rare" and attr.get("Type") != "Status" and '+' not in attr.get("Name")}
-
-    rewards = []
-
-    if reward_tier == "Normal":
-        for i in range(amount):
-            random_num = 70 # It's set to 70 because Uncommon and Rare cards don't exist yet
-            if random_num > 97:
-                random_key = random.choice(list(rare_cards.keys()))
-                rewards.append(rare_cards[random_key])
-            elif random_num < 60:
-                random_key = random.choice(list(common_cards.keys()))
-                rewards.append(common_cards[random_key])
-            else:
-                random_key = random.choice(list(uncommon_cards.keys()))
-                rewards.append(uncommon_cards[random_key])
-    elif reward_tier == "Elite":
-        for i in range(amount):
-            random_num = random.randint(1, 101)
-            if random_num <= 10:
-                random_key = random.choice(list(rare_cards.keys()))
-                random_value = rare_cards[random_key]
-                rewards.append(random_key[random_value])
-            elif random_num > 50:
-                random_key = random.choice(list(common_cards.keys()))
-                random_value = common_cards[random_key]
-                rewards.append(random_key[random_value])
-            else:
-                random_key = random.choice(list(uncommon_cards.keys()))
-                random_value = uncommon_cards[random_key]
-                rewards.append(random_key[random_value])
-    elif reward_tier == "Boss":
-        for i in range(amount):
-            random_key = random.choice(list(rare_cards.keys()))
-            random_value = rare_cards[random_value]
-            rewards.append(random_key[random_value])
-    while True:
-        counter = 1
-        for card in rewards:
-            ansiprint(f"{counter}: <light-black>{card['Type']}</light-black> | <blue>{card['Name']}</blue> | <light-red>{card['Energy']} Energy</light-red> | <yellow>{card['Info']}</yellow>")
-            counter += 1
-        chosen_reward = integer_input('What card do you want? > ', rewards)
-        player.deck.append(rewards[chosen_reward])
-        print(f"{player.name} obtained {rewards[chosen_reward]['Name']}")
-        rewards = []
-        sleep(1.5)
-        system("clear")
-        break
-
-def generate_potion_rewards(amount):
-    common_potions = {potion: attr for potion, attr in potions.items() if attr.get("Rarity") == "Common" and (attr.get("Class") == "All" or player.player_class in attr.get('Class'))}
-    uncommon_potions = {potion: attr for potion, attr in potions.items() if attr.get("Rarity") == "Uncommon" and (attr.get("Class") == "All" or player.player_class in attr.get('Class'))}
-    rare_potions = {potion: attr for potion, attr in potions.items() if attr.get("Rarity") == "Rare" and (attr.get("Class") == "All" or player.player_class in attr.get('Class'))}
-
-    rewards = []
-    for i in range(amount):
-        random_num = random.randint(1, 100)
-        if random_num > 65:
-            random_key = random.choice(list(common_potions.keys()))
-            rewards.append(common_potions[random_key])
-        elif random_num < 25:
-            random_key = random.choice(list(uncommon_potions.keys()))
-            rewards.append(uncommon_potions[random_key])
-        else:
-            random_key = random.choice(list(rare_potions.keys()))
-            rewards.append(rare_potions[random_key])
-    
-    while len(rewards) > 0:
-        counter = 1
-        print("Potion Bag:")
-        for potion in player.potions:
-            ansiprint(f"{counter}: <light-black>{potion['Rarity']}</light-black> | <green>{potion['Class']}</green> | <blue>{potion['Name']}</blue> | <yellow>{potion['Info']}")
-            counter += 1
-        print(f"{len(player.potions)} / {player.potion_bag}")
-        print()
-        print("Potion reward(s):")
-        counter = 1
-        for potion in rewards:
-            ansiprint(f"{counter}: <light-black>{potion['Rarity']}</light-black> | Class: <green>{potion['Class']}</green> | <blue>{potion['Name']}</blue> | <yellow>{potion['Info']}</yellow>")
-            counter += 1
-        print()
-        option= integer_input('What potion you want? >', rewards)
-        if len(player.potions) == player.potion_bag:
-            ansiprint("<red>Potion bag full!")
-            sleep(1)
-            option = input("Discard a potion?(y|n) > ")
-            if option == 'y':
-                counter = 1
-                for potion in player.potions:
-                    ansiprint(f"{counter}: <light-black>{potion['Rarity']}</light-black> | <green>{potion['Class']}</green> | <blue>{potion['Name']}</blue> | <yellow>{potion['Info']}</yellow>")
-                    counter += 1
-                try:
-                    option = int(input("What potion do you want to discard? > ")) - 1
-                except ValueError:
-                    print("You have to enter a number")
-                    sleep(1.5)
-                    system("clear")
-                    continue
-                print(f"Discarded {player.potions[option]}.")
-                player.potions.remove(player.potions[option])
-                sleep(1.5)
-                system("clear")
-                continue
-            else:
-                sleep(1.5)
-                system("clear")
-                continue
-        else:
-            player.potions.append(rewards[option])
-            print(f"{player.name} obtained {rewards[option]['Name']}")
-            rewards.remove(rewards[option])
-            sleep(1.5)
-            system("clear")

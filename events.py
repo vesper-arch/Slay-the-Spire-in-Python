@@ -1,28 +1,29 @@
-import random, math
+# import random
+# import math
 from os import system
 from time import sleep
 from ansimarkup import ansiprint
-from entities import player, cards, generate_potion_rewards
-from utility import integer_input
 
+from entities import player, cards, potions
+from utility import integer_input, obtain_potions
 
-def Neow():
+def event_Neow():
     if player.player_class == "Ironclad":
         max_hp_increase = 8
-        max_hp_decrease = 8
+        #max_hp_decrease = 8
     elif player.player_class == "Silent":
         max_hp_increase = 6
-        max_hp_decrease = 7
-    elif player.player_class == "Defect" or player.player_class == "Watcher":
+        #max_hp_decrease = 7
+    elif player.player_class in ('Defect', 'Watcher'):
         max_hp_increase = 7
-        max_hp_decrease = 7
-    
+        #max_hp_decrease = 7
+
     ansiprint(f"1: <green>+{max_hp_increase} Max HP</green> \n2: <green>Enemies in your first 3 combats have 1 HP.")
     option = integer_input("")
     if option == 1:
-        player.ChangeHealth(max_hp_increase, 'Max Health')
+        player.health_actions(max_hp_increase, 'Max Health')
 
-def BonfireSpirits():
+def event_BonfireSpirits():
     while True:
         ansiprint("<bold>Bonfire Spirits</bold")
         ansiprint("""You happen upon a group of what looks like <magenta>purple fire spirits</magenta> dancing around a large bonfire.
@@ -35,7 +36,7 @@ def BonfireSpirits():
         for using_card in player.deck:
             ansiprint(f"{counter}: <light-black>{using_card['Type']}</light-black> | <blue>{using_card['Name']}</blue> | <light-red>{using_card['Energy']} Energy</light-red> | <yellow>{using_card['Info']}</yellow>")
             counter += 1
-        
+
         offering = integer_input("What card do you want to offer? > ", player.deck)
 
         ansiprint("<bold>You toss an offering into the bonfire</bold>")
@@ -53,7 +54,7 @@ def BonfireSpirits():
             ansiprint("""<italic>The flames grow slightly brighter.</italic>
                                             
                         The spirits continue dancing. You feel slightly warmer from their presense..\n""")
-            player.ChangeHealth(5, "Heal")
+            player.health_actions(5, "Heal")
             sleep(1.5)
             system("clear")
             break
@@ -61,17 +62,17 @@ def BonfireSpirits():
             ansiprint("""<italic>The flames erupt, growing significantly stronger!</italic>
                                         
                         The spirits dance around you exitedly, filling you with a sense of warmth.\n""")
-            player.ChangeHealth(player.max_health, "Heal")
+            player.health_actions(player.max_health, "Heal")
             break
         if player.deck[offering].get("Rarity") == "Rare":
-            ansiprint("""<italic>The flames burst, nearly knocking you off your feet, as the fire doubles in strength.</italic>              
+            ansiprint("""<italic>The flames burst, nearly knocking you off your feet, as the fire doubles in strength.</italic>
                              
                         The spirits dance around you excitedly before merging into your form, filling you with warmth and strength\n""")
-            player.ChangeHealth(10, "Max Health")
-            player.ChangeHealth(player.max_health, "Heal")
+            player.health_actions(10, "Max Health")
+            player.health_actions(player.max_health, "Heal")
             break
 
-def TheDivineFountain():
+def event_TheDivineFountain():
     while True:
         ansiprint("<bold>The Divine Fountain</bold>\n")
         sleep(0.8)
@@ -87,17 +88,16 @@ def TheDivineFountain():
             sleep(1.5)
             system("clear")
             break
-        elif option == 'leave':
+        if option == 'leave':
             print("Unsure of the nature of this water, you continue on your way, parched.")
             sleep(1.5)
             system("clear")
             break
-        else:
-            ansiprint("<red>Valid inputs: ['drink', 'leave']</red>(not caps sensitive)")
-            sleep(1.5)
-            system("clear")
+        ansiprint("<red>Valid inputs: ['drink', 'leave']</red>(not caps sensitive)")
+        sleep(1.5)
+        system("clear")
 
-def Duplicator():
+def event_Duplicator():
     while True:
         ansiprint("<bold>Duplicator</bold>\n")
         sleep(0.8)
@@ -115,17 +115,16 @@ def Duplicator():
             sleep(1.5)
             system("clear")
             break
-        elif option == 'leave':
+        if option == 'leave':
             print("You ignore the shrine, confident in your choice.")
             sleep(1.5)
             system("clear")
             break
-        else:
-            ansiprint("<red>Valid inputs: ['leave', 'pray']</red>(not caps sensitive)")
-            sleep(1.5)
-            system("clear")
-        
-def GoldenShrine():
+        ansiprint("<red>Valid inputs: ['leave', 'pray']</red>(not caps sensitive)")
+        sleep(1.5)
+        system("clear")
+
+def event_GoldenShrine():
     while True:
         ansiprint("<bold>Golden Shrine</bold>")
         sleep(0.8)
@@ -160,7 +159,7 @@ def GoldenShrine():
             sleep(1.5)
             system("clear")
 
-def Lab():
+def event_Lab():
     ansiprint("<bold>Lab</bold>")
     print()
     sleep(1)
@@ -169,9 +168,9 @@ def Lab():
           Why do you know the name of all these tools? It doesn't matter, you take a look around.""")
     ansiprint("<bold>[Search]</bold> Obtain 3 random potions", end='')
     input('Press enter|')
-    generate_potion_rewards(3)
+    obtain_potions(True, 3, potions, player)
 
-def OminousForge():
+def event_OminousForge():
     while True:
         ansiprint("<bold>Ominous Forge</bold>")
         sleep(0.8)
@@ -192,5 +191,5 @@ def OminousForge():
                 sleep(1.5)
                 system("clear")
                 continue
-            player.ModifyCard(player.deck[option], "Upgrade")
+            player.card_actions(player.deck[option], "Upgrade")
             

@@ -3,14 +3,14 @@ from time import sleep
 import math
 import random
 from ansimarkup import ansiprint
-from entities import player, encounters, generate_card_rewards, generate_potion_rewards
-from utility import display_ui, active_enemies, combat_turn, start_combat, integer_input
-import events
+from entities import player, encounters, cards, potions
+from utility import display_ui, active_enemies, combat_turn, combat_potion_dropchance, start_combat, integer_input, obtain_potions, card_rewards
 
 
 
 def combat(tier):
-    global combat_turn
+    """There's too much to say here."""
+    global combat_turn, combat_potion_dropchance
     killed_enemies = False
     escaped = False
     start_combat(player, encounters)
@@ -25,114 +25,36 @@ def combat(tier):
             display_ui(player, player.hand)
             # Asks the user what card they want to use
             ansiprint("1: <blue>Play a card</blue> \n2: <light-red>View debuffs and buffs</light-red> \n3: <green>Use potions</green> \n4: <magenta>View relics</magenta> \n5: View deck \n6: View draw pile \n7: View discard pile \n8: End turn")
+            commands = {'1': play_card, '2': play_potion, '3': view_relics, '4': (player.show_status, True), '5': (view_piles, player.deck), '6': (view_piles, player.draw_pile), '7': (view_piles, player.discard_pile)}
             option = input('')
-            if option == '1':
-                card_used = integer_input('What card do you want to play?', player.hand)
-                if card_used is False:
-                    system("clear")
-                    continue
-                playing_card = player.hand[card_used]
-                # Prevents the player from using a card that they don't have enough energy for.
-                if playing_card.get("Energy") > player.energy:
-                    ansiprint("<red>You don't have enough energy to use this card.</red>")
-                    sleep(1.5)
-                    system("clear")
-                    continue
-                # Lets the player go back if they don't want to use the card.
-                option = input("Are you sure? (y|n) > ").lower()
-                if option == 'n':
-                    sleep(1.5)
-                    system("clear")
-                    continue
-                # Cards that either target the player or target all enemies won't ask for a target.
-                if playing_card.get("Target") is None and len(active_enemies) > 1:
-                    target = integer_input("What enemy do you want to use it on? >", active_enemies)
-                    if target is False:
-                        system("clear")
-                        continue
-                elif len(active_enemies) == 1:
-                    target = 0
-                else:
-                    target = 0
-                player.use_card(playing_card, active_enemies[target], False, player.hand)
-                continue
-            elif option == '2':
-                print(player.name + ': ')
-                player.show_status(True)
-                input("Press enter to continue > ")
-                sleep(1.5)
-                system("clear")
-                continue
-            elif option == '3':
-                counter = 1
-                for potion in player.potions:
-                    ansiprint(f"{counter}: {potion['Name']} | {potion['Class']} | <light-black>{potion['Rarity']}</light-black> | <yellow>{potion['Info']}</yellow>")
-                    counter += 1
-                    sleep(0.05)
-                for i in range(player.potion_bag - len(player.potions)):
-                    ansiprint(f"<light-black>{counter}: (Empty)</light-black>")
-                    counter += 1
-                    sleep(0.05)
-                print("Machine, turn back now.")
-            elif option == '4':
-                counter = 1
-                for relic in player.relics:
-                    ansiprint(f"{counter}: {relic['Name']} | {relic['Class']} | <light-black>{relic['Rarity']}</light-black> | <yellow>{relic['Info']}</yellow> | <blue><italic>{relic['Flavor']}</italic></blue>")
-                    counter += 1
-                    sleep(0.05)
-                input("Press enter to continue > ")
-                sleep(1.5)
-                system("clear")
-                continue
-            elif option == '5':
-                counter = 1
-                for card in player.deck:
-                    ansiprint(f"{counter}: <light-black>{card['Type']}</light-black> | <blue>{card['Name']}</blue> | <light-red>{card['Energy']} Energy</light-red> | <yellow>{card['Info']}</yellow>")
-                    counter += 1
-                    sleep(0.05)
-                input("Press enter to continue > ")
-                sleep(1.5)
-                system("clear")
-                continue
-            elif option == '6':
-                shuffled_draw_pile = random.sample(player.draw_pile, len(player.draw_pile))
-                counter = 1
-                for card in shuffled_draw_pile:
-                    ansiprint(f"{counter}: <light-black>{card['Type']}</light-black> | <blue>{card['Name']}</blue> | <light-red>{card['Energy']} Energy</light-red> | <yellow>{card['Info']}</yellow>")
-                    counter += 1
-                    sleep(0.05)
-                input("Press enter to continue > ")
-                sleep(1.5)
-                system("clear")
-                continue
-            elif option == '7':
-                counter = 1
-                for card in player.discard_pile:
-                    ansiprint(f"{counter}: <light-black>{card['Type']}</light-black> | <blue>{card['Name']}</blue> | <light-red>{card['Energy']} Energy</light-red> | <yellow>{card['Info']}</yellow>")
-                    counter += 1
-                    sleep(0.05)
-                input("Press enter to continue > ")
-                sleep(1.5)
-                system("clear")
-                continue
+            if int(option) < 4:
+                commands.get(option)()
+            elif int(option) > 4:
+                func, args = commands[option]
+                func(args)
             elif option == '8':
                 sleep(1.5)
                 system("clear")
                 break
             else:
-                print("Invalid input.")
-                sleep(1.5)
-                system("clear")
-                continue
+                print("Invalid input")
+            sleep(1.5)
+            system("clear")
+            continue
         if killed_enemies is True and escaped is False:
             player.hand = []
             player.discard_pile = []
             player.draw_pile = []
             player.exhaust_pile = []
+            potion_chance = random.randint(0, 100)
             ansiprint("<green>Combat finished!</green>")
             player.gain_gold(random.randint(10, 20))
-            generate_potion_rewards(1)
-            generate_card_rewards(tier, 3)
+            if potion_chance < combat_potion_dropchance:
+                obtain_potions(True, 1, potions, player)
+                combat_potion_dropchance -= 10
+            else:
+                combat_potion_dropchance += 10
+            card_rewards(tier, player, cards)
             combat_turn = 0
             sleep(1.5)
             break
@@ -161,7 +83,7 @@ def rest():
     Toke: Remove 1 card from your deck(Requires Peace Pipe)*
     Dig: Obtain 1 random Relic(Requires Shovel)*
     Recall: Obtain the Ruby Key(Max 1 use, availible in normal runs when Act 4 is unlocked)*
-    *Not finished*
+    **Not finished
     """
     while True:
         ansiprint("You come across a <green>Rest Site</green>")
@@ -173,14 +95,11 @@ def rest():
             heal_amount = math.floor(player.max_health * 0.30)
             sleep(1)
             system("clear")
-            player.ChangeHealth(heal_amount, "Heal")
+            player.health_actions(heal_amount, "Heal")
             while True:
                 option = input("[View Deck] or [Leave]").lower()
                 if option == 'view deck':
-                    display_ui(player, False)
-                    action = input("Press enter to leave")
-                    system("clear")
-                    continue
+                    view_piles(player.deck)
                 elif option == 'leave':
                     print("You leave...")
                     print()
@@ -192,16 +111,94 @@ def rest():
                     sleep(1.5)
                     system("clear")
         elif action == 'upgrade':
-            pass
+            view_piles(player.deck, False, True)
         else:
             print("Invalid input")
             sleep(1.5)
             system("clear")
 
 
+def view_piles(pile, end=False, upgraded=False):
+    """Prints a numbered list of all the cards in a certain pile."""
+    if pile == player.deck:
+        pile = random.sample(pile, len(pile))
+    counter = 1
+    for card in pile:
+        if upgraded is True and card.get('Upgraded'):
+            ansiprint(f"{counter}: <light-black>{card['Type']}</light-black> | <blue>{card['Name']}</blue> | <light-red>{card['Energy']} Energy</light-red> | <yellow>{card['Info']}</yellow>")
+            counter += 1
+            sleep(0.05)
+        else:
+            ansiprint(f"{counter}: <light-black>{card['Type']}</light-black> | <blue>{card['Name']}</blue> | <light-red>{card['Energy']} Energy</light-red> | <yellow>{card['Info']}</yellow>")
+            counter += 1
+            sleep(0.05)
+    input("Press enter to continue > ")
+    sleep(1.0)
+    if end:
+        sleep(0.5)
+        system("clear")
+
+def view_relics():
+    counter = 1
+    for relic in player.relics:
+        ansiprint(f"{counter}: {relic['Name']} | {relic['Class']} | <light-black>{relic['Rarity']}</light-black> | <yellow>{relic['Info']}</yellow> | <blue><italic>{relic['Flavor']}</italic></blue>")
+        counter += 1
+        sleep(0.05)
+    input("Press enter to continue > ")
+    sleep(1.5)
+    system("clear")
+
+def play_potion():
+    counter = 1
+    for potion in player.potions:
+        ansiprint(f"{counter}: {potion['Name']} | {potion['Class']} | <light-black>{potion['Rarity']}</light-black> | <yellow>{potion['Info']}</yellow>")
+        counter += 1
+        sleep(0.05)
+    for _ in range(player.potion_bag - len(player.potions)):
+        ansiprint(f"<light-black>{counter}: (Empty)</light-black>")
+        counter += 1
+        sleep(0.05)
+    print("Machine, turn back now.")
+
+def play_card():
+    while True:
+        print()
+        view_piles(player.hand)
+        card_used = integer_input('What card do you want to play?', player.hand)
+        if not card_used:
+            system("clear")
+            continue
+        playing_card = player.hand[card_used]
+        # Prevents the player from using a card that they don't have enough energy for.
+        if playing_card.get("Energy") > player.energy:
+            ansiprint("<red>You don't have enough energy to use this card.</red>")
+            sleep(1.5)
+            system("clear")
+            continue
+        # Lets the player go back if they don't want to use the card.
+        option = input("Are you sure? (y|n) > ").lower()
+        if option == 'n':
+            sleep(1.5)
+            system("clear")
+            continue
+        # Cards that either target the player or target all enemies won't ask for a target.
+        if playing_card.get("Target") is None and len(active_enemies) > 1:
+            target = integer_input("What enemy do you want to use it on? >", active_enemies)
+            if not target:
+                system("clear")
+                continue
+        elif len(active_enemies) == 1:
+            target = 0
+        else:
+            target = 0
+        player.use_card(playing_card, active_enemies[target], False, player.hand)
+
+
+
 order_of_encounters = [combat, rest, combat, combat, rest, rest, combat, combat, combat]
 for encounter in order_of_encounters:
-    if encounter == combat:
-        encounter("Normal")
-    else:
-        encounter()
+    if callable(encounter):
+        if encounter == combat:
+            encounter('Normal')
+        elif encounter == rest:
+            encounter()
