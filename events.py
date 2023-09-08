@@ -1,11 +1,11 @@
-# import random
+import random
 # import math
 from os import system
 from time import sleep
 from ansimarkup import ansiprint
 
-from entities import player, cards, potions
-from utility import integer_input, obtain_potions
+from entities import player, cards, potions, relics
+from utility import list_input, claim_potions
 
 def event_Neow():
     if player.player_class == "Ironclad":
@@ -19,7 +19,7 @@ def event_Neow():
         #max_hp_decrease = 7
 
     ansiprint(f"1: <green>+{max_hp_increase} Max HP</green> \n2: <green>Enemies in your first 3 combats have 1 HP.")
-    option = integer_input("")
+    option = 'placehold'
     if option == 1:
         player.health_actions(max_hp_increase, 'Max Health')
 
@@ -37,7 +37,7 @@ def event_BonfireSpirits():
             ansiprint(f"{counter}: <light-black>{using_card['Type']}</light-black> | <blue>{using_card['Name']}</blue> | <light-red>{using_card['Energy']} Energy</light-red> | <yellow>{using_card['Info']}</yellow>")
             counter += 1
 
-        offering = integer_input("What card do you want to offer? > ", player.deck)
+        offering = list_input("What card do you want to offer? > ", player.deck)
 
         ansiprint("<bold>You toss an offering into the bonfire</bold>")
         if player.deck[offering].get("Rarity") == "Curse":
@@ -50,7 +50,7 @@ def event_BonfireSpirits():
             sleep(1.5)
             system("clear")
             break
-        if player.deck[offering].get("Rarity") == "Common" or player.deck[offering].get("Rarity") == "Special":
+        if player.deck[offering].get("Rarity") in ('Common', 'Basic'):
             ansiprint("""<italic>The flames grow slightly brighter.</italic>
                                             
                         The spirits continue dancing. You feel slightly warmer from their presense..\n""")
@@ -109,7 +109,7 @@ def event_Duplicator():
             for card in player.deck:
                 ansiprint(f"{counter}: <light-black>{card['Type']}</light-black> | <blue>{card['Name']}</blue> | <light-red>{card['Energy']} Energy</light-red> | <yellow>{card['Info']}</yellow>")
                 counter += 1
-            duplicate = integer_input("What card do you want to duplicate? > ", player.deck)
+            duplicate = list_input("What card do you want to duplicate? > ", player.deck)
             player.deck.append(player.deck[duplicate])
             print("You kneel respectfully. A ghastly mirror image appears from the shrine and collides into you.")
             sleep(1.5)
@@ -139,7 +139,7 @@ def event_GoldenShrine():
             sleep(1.5)
             system("clear")
             break
-        elif option == 'desecrate':
+        if option == 'desecrate':
             player.gain_gold(275, False)
             ansiprint("""Each time you strike the shrine, <yellow>gold</yellow> pours forth again and again!
                       
@@ -149,15 +149,14 @@ def event_GoldenShrine():
             sleep(1.5)
             system("clear")
             break
-        elif option == 'leave':
+        if option == 'leave':
             print("You ignore the shrine.")
             sleep(1.5)
             system("clear")
             break
-        else:
-            ansiprint("<red>Valid inputs: ['pray', 'desecrate', 'leave']</red>(Not caps sensitive)")
-            sleep(1.5)
-            system("clear")
+        ansiprint("<red>Valid inputs: ['pray', 'desecrate', 'leave']</red>(Not caps sensitive)")
+        sleep(1.5)
+        system("clear")
 
 def event_Lab():
     ansiprint("<bold>Lab</bold>")
@@ -168,7 +167,9 @@ def event_Lab():
           Why do you know the name of all these tools? It doesn't matter, you take a look around.""")
     ansiprint("<bold>[Search]</bold> Obtain 3 random potions", end='')
     input('Press enter|')
-    obtain_potions(True, 3, potions, player)
+    claim_potions(True, 3, potions, player)
+
+# Won't add the Match and Keep event because i just don't know how to.
 
 def event_OminousForge():
     while True:
@@ -177,8 +178,8 @@ def event_OminousForge():
         print("You duck into a small hut. Inside, you find what appears to be a forge. The smithing tools are covered with dust, yet a fire roars inside the furnace. You feel on edge...")
         sleep(0.8)
         ansiprint("<bold>[Forge]</bold> <green>Upgrade a Card</green> \n<bold>[Rummage]</bold> <green>Obtain Warped Tongs.</green> <red>Become Cursed | Pain</red> \n<bold>[Leave]</bold> Nothing happens", end='')
-        option = input('')
-        if option == 'Forge':
+        option = input('').lower()
+        if option == 'forge':
             counter = 1
             for card in player.deck:
                 if card.get("Upgraded") is not True:
@@ -192,4 +193,227 @@ def event_OminousForge():
                 system("clear")
                 continue
             player.card_actions(player.deck[option], "Upgrade")
+            sleep(1.5)
+            system('clear')
+            break
+        if option == 'rummage':
+            ansiprint('''You decide to see if you can find anything of use. After uncovering tarps, looking through boxes, and checking nooks and crannies, you find a dust covered <yellow>relic!</yellow>.
+
+Taking the relic, you can't shake a sudden feeling of <red>sharp pain</red> as you exit the hut. Maybe you disturbed some sort of spirit?''')
+                      
             
+
+def event_Purifier():
+    while True:
+        ansiprint('<bold>Purifier</bold>')
+        sleep(0.8)
+        ansiprint('Before you lies an elaborate shrine to a forgotten spirit.')
+        sleep(0.8)
+        ansiprint("<bold>[Pray]</bold> <green>Remove a card from you deck.</green> \n<bold>[Leave]</bold> Nothing happens.")
+        option = input('')
+        if option == 'pray':
+            counter = 1
+            for card in player.deck:
+                if card.get('Removable'):
+                    ansiprint(f"{counter}: <light-black>{card['Type']}</light-black> | <blue>{card['Name']}</blue> | <light-red>{card['Energy']} Energy</light-red> | <yellow>{card['Info']}</yellow>")
+                    counter += 1
+                    sleep(0.05)
+            remove_card = list_input('What card do you want to remove?', player.deck)
+            if player.deck[remove_card].get('Removable') is False:
+                print(f'{player.deck[remove_card]} cannot be removed from your deck.')
+                sleep(1.5)
+                system("clear")
+                continue
+            player.card_actions(player.deck[remove_card], 'Remove')
+            print('As you kneel in reverence, you feel a weight lifted off your shoulders.')
+            break
+        if option == 'leave':
+            print('You ignore the shrine.')
+            break
+        ansiprint('<red>Valid inputs: ["pray", "leave"]</red>')
+        sleep(1.5)
+        system("clear")
+        continue
+    sleep(1.5)
+    system("clear")
+
+def event_Transmogrifier():
+    while True:
+        ansiprint('<bold>Transmogrifier</bold>')
+        sleep(0.8)
+        ansiprint('Before you lies an elaborate shrine to a forgotten spirit.')
+        sleep(0.8)
+        ansiprint('<bold>[Pray]</bold> <green>Transform a card.</green> \n<bold>[Leave]</bold> Nothing happens.')
+        option = input('').lower()
+        if option == 'pray':
+            counter = 1
+            for card in player.deck:
+                if card.get('Removable'):
+                    ansiprint(f"{counter}: <light-black>{card['Type']}</light-black> | <blue>{card['Name']}</blue> | <light-red>{card['Energy']} Energy</light-red> | <yellow>{card['Info']}</yellow>")
+                    counter += 1
+                    sleep(0.05)
+            transform_card = list_input('What card would you like to transform?', player.deck)
+            if player.deck[transform_card].get('Removable') is False:
+                print(f'{player.deck[transform_card]} cannot be transformed.')
+                sleep(1.5)
+                system("clear")
+                continue
+            player.card_actions(player.deck[transform_card], 'Transform')
+            print('As the power of the shrine flows through you, your mind feels altered.')
+            break
+        if option == 'leave':
+            print('You ignore the shrine.')
+            break
+        ansiprint("<red>Valid inputs: ['pray'], ['leave']</red>")
+        sleep(1.5)
+        system("clear")
+    sleep(1.5)
+    system("clear")
+
+def event_UpgradeShrine():
+    while True:
+        ansiprint('<bold>Upgrade Shrine</bold>')
+        sleep(0.8)
+        print('Before you lies an elaborate shrine to a forgotten spirit.')
+        sleep(0.8)
+        ansiprint('<bold>[Pray]</bold> <green>Upgrade a card.</green> \n<bold>[Leave]</bold> Nothing happens.')
+        option = input('').lower()
+        if option == 'pray':
+            counter = 1
+            for card in player.deck:
+                if not card.get('Upgraded') and card.get('Type') != 'Curse':
+                    ansiprint(f"{counter}: <light-black>{card['Type']}</light-black> | <blue>{card['Name']}</blue> | <light-red>{card['Energy']} Energy</light-red> | <yellow>{card['Info']}</yellow>")
+                    counter += 1
+                    sleep(0.05)
+            upgrade_card = list_input('What card do you want to upgrade?', player.deck)
+            if player.deck[upgrade_card].get('Upgraded'):
+                print(f'{player.deck[upgrade_card]} is already upgraded.')
+                sleep(1.5)
+                system("clear")
+                continue
+            if player.deck[upgrade_card].get('Type') == 'Curse':
+                print(f'{player.deck[upgrade_card]} is a Curse.')
+                sleep(1.5)
+                system("clear")
+                continue
+            player.card_actions(player.deck[upgrade_card], 'Upgrade')
+            break
+        if option == 'leave':
+            print('You ignore the shrine.')
+            break
+        ansiprint('<red>Valid inputs: ["pray", "leave"]</red>')
+        sleep(1.5)
+        system("clear")
+    sleep(1.5)
+    system("clear")
+
+def event_WeMeetAgain():
+    while True:
+        ansiprint('<bold>We Meet Again!</bold>')
+        sleep(0.8)
+        ansiprint(""""We meet again!"
+                  
+A cheery disheveled fellow approaches you gleefully. You do not know this man.
+
+"It's me, <yellow>Ranwid!</yellow> Have any goods for me today? The usual? A fella like me can't make it alone, you know?
+
+You eye him suspiciously and consider your options...""")
+        sleep(0.8)
+        ansiprint("<bold>[Give Potion]</bold> <red>Lose a potion.</red> <green>Recieve a relic.</green> \n<bold>[Give Gold]</gold> <red>Lose a varying amount of gold.</red> <green>Recieve a relic.</green> \n<bold>[Give Card]</bold> <red>Lose a card.</red> <green>Recieve a relic.</green> \n<bold>[Attack]</bold> Nothing happens.")
+        option = input('').lower()
+        if 'give' in option:
+            relic_rewards = [relic for relic in relics if relic.get('Rarity') in ('Common', 'Uncommon', 'Rare')]
+            if 'potion' in option:
+                if len(player.potions) == 0:
+                    print("You don't have any potions.")
+                    sleep(1.5)
+                    system("clear")
+                    continue
+                remove_potion = random.choice(player.potions)
+                print(f"You lost {remove_potion.get('Name')}")
+                player.potions.remove(remove_potion)
+                ansiprint("""<bold>Ranwid</bold>: "Exquisite! Was feeling parched."
+                          
+<light-blue>Glup glup glup</light-blue>
+
+He downs the potion in one go and lets out a satisfied burp.""")
+            if 'gold' in option:
+                if player.gold > 50:
+                    print("You don't have enough gold.")
+                    sleep(1.5)
+                    system("clear")
+                    continue
+                if player.gold < 150:
+                    gold_max = player.gold
+                else:
+                    gold_max = 150
+                gold_loss = random.randint(50, gold_max)
+                player.gold -= gold_loss
+                print(f'You lost {gold_loss - abs(player.gold)} Gold.')
+                player.gold = max(0, player.gold)
+                print(f'You now have {player.gold} Gold.')
+                ansiprint('Ranwid: "Magnificent! This will be quite handy if I run into those <red>mask wearing hoodlums</red> again."')
+            if 'card' in option:
+                valid_cards = [card for card in player.deck if card.get('Rarity') not in ('Curse', 'Basic') and card.get('Bottled') is False]
+                spend_card = random.choice(valid_cards)
+                print(f"You lost {spend_card.get('Name')}")
+                player.deck.remove(spend_card)
+                print('<bold>Ranwid</bold>: "Exemplary! I shall study this further in my chambers."')
+            sleep(0.9)
+            ansiprint('''He rummages around his various pockets...
+
+<bold>Ranwid</bold>: "Here, look what I've got for you today! Take it take it!"''')
+            player.relics.append(random.choice(relic_rewards))
+            print(f'You obtained {player.relics[-1].get("Name")}.')
+            sleep(1)
+            break
+        if option == 'attack':
+            print('''<bold>Ranwid</bold>: "Aaaaagghh!! What a jerk you are sometimes!"
+                  
+                  He runs away.''')
+            break
+        ansiprint("<red>Valid inputs: ['give potion', 'give gold', 'give card', 'attack']</red>")
+        sleep(1.5)
+        system("clear")
+    sleep(1.5)
+    system("clear")
+
+def event_TheWomanInBlue():
+    valid_potions = [potion for potion in potions if potion.get('Class') == player.player_class]
+    while True:
+        ansiprint('<bold>The Woman in Blue</bold>')
+        sleep(0.8)
+        ansiprint("""From the darkness, an arm pulls you into a small shop. As your eyes adjust, you see a pale woman in sharp clothes gesturing towards a wall of potions.
+              
+<bold>Pale Woman</bold>: 'Buy a potion. <italic>Now!</italic>' she states.""")
+        print()
+        sleep(0.8)
+        ansiprint('<bold>[Buy 1 Potion]</bold> 20 Gold \n<bold>[Buy 2 Potions]</bold> 30 Gold. \n<bold>[Buy 3 Potions]</bold> 40 Gold. \n<bold>[Leave]</bold> Nothing happens.')
+        option = input('').lower()
+        if 'potion' in option:
+            if '1' in option:
+                claim_potions(True, 1, valid_potions, player, False)
+                break
+            if '2' in option:
+                claim_potions(True, 2, valid_potions, player, False)
+                break
+            if '3' in option:
+                claim_potions(True, 3, valid_potions, player, False)
+                break
+            print('Invalid potion amount.')
+            sleep(1.5)
+            system("clear")
+    ansiprint('''<bold>Pale Woman</bold>: "Good, now leave."
+                      
+You exit the shop cautiously.''')
+    sleep(1.5)
+    system("clear")
+
+def event_BigFish():
+    # valid_relics = [relic for relic in relics if relic.get('Rarity') not in ('Special', 'Event')]
+    ansiprint('''As you make your way down a long corridor you see a <yellow>banana</yellow>, a <yellow>donut</yellow>, and a <yellow>box</yellow> floating about. No... upon closer inspection they are tied to strings coming from holes in the ceiling. There is a quiet cackling from above as you approach the objects.
+
+What do you do?''')
+    print()
+    sleep(0.8)
+    ansiprint()

@@ -5,7 +5,7 @@ from time import sleep
 from os import system
 from ansimarkup import ansiprint
 
-from utility import damage, active_enemies, combat_turn, integer_input
+from utility import damage, active_enemies, combat_turn, list_input, remove_color_tags
 
 
 class Player:
@@ -20,7 +20,7 @@ class Player:
     max_energy/energy_gain: The base amount of energy the player gains at the start of their turn
     deck: All the cards the player has
     potions: Consumables that have varying effects.
-    potion_bag: The max amount of potions the player can have
+    max_potions: The max amount of potions the player can have
     """
 
     def __init__(self, health: int, block: int, max_energy: int, deck: list):
@@ -36,7 +36,7 @@ class Player:
         self.deck = deck
         self.potions = []
         self.relics = []
-        self.potion_bag = 3
+        self.max_potions = 3
         self.hand = []
         self.draw_pile = []
         self.discard_pile = []
@@ -63,7 +63,7 @@ class Player:
         self.confused = False
         self.dexterity = 0
         self.dexterity_down = 0
-        self.ritual = 0 # Gain X Strength at the end of your turn
+        self.ritual = 0
         self.focus = 0
         self.no_draw = False
         self.poison = 0
@@ -73,6 +73,17 @@ class Player:
         self.vigor = 0
         self.thorns = 0
         self.plated_armor = 0
+        self.mantra = 0
+        # Relic buffs
+        self.pen_nib_attacks = 0
+        self.ancient_tea_set = False
+        self.attacks_played_this_turn = False # Used for the Art of War relic
+        self.taken_damage = False # Used for the Centennial Puzzle relic
+        self.gold_on_card_add = False # Used for the Ceramic Fish relic
+        self.happy_flower = 0
+        self.block_curses = 0 # Used for the Omamori relic
+        self.nunckaku_attacks = 0
+        self.starting_strength = 0 # User for the Red Skull and Vajra relic.
 
     def use_card(self, card: dict, target: object, exhaust, pile):
         """
@@ -87,8 +98,16 @@ class Player:
             card['Function'](active_enemies, card)
         else:
             card['Function'](card)
+        if card.get('Type') == 'Attack' and relics['Pen Nib'] in self.relics:
+            self.pen_nib_attacks += 1
+        if card.get('Type') == 'Attack' and relics['Nunckaku'] in self.relics:
+            self.nunckaku_attacks += 1
+            if self.nunckaku_attacks == 10:
+                self.energy += 1
+                ansiprint('You gained 1 Energy from <bold>Nunckaku</bold>.')
+                self.nunckaku_attacks = 0
 
-        if exhaust is True:
+        if exhaust is True or card.get('Exhaust') is True:
             ansiprint(f"{card['Name']} was <bold>Exhausted</bold>.")
             self.move_card(card, self.exhaust_pile, pile, True)
         else:
@@ -101,7 +120,6 @@ class Player:
             base_damage += 3
         print()
         damage(base_damage, targeted_enemy, player)
-        # Takes the card's energy cost away from the player's energy
         print()
         sleep(1)
         system("clear")
@@ -117,7 +135,6 @@ class Player:
         print()
         damage(base_damage, targeted_enemy, player)
         self.debuff("Vulnerable", base_vulnerable, targeted_enemy, True)
-        # prevents the enemy's health from going below 0
         print()
         sleep(1.5)
         system("clear")
@@ -150,7 +167,7 @@ class Player:
         print()
         while True:
             for card in self.hand:
-                if card.get("Type") is None:
+                if not card.get("Type"):
                     system("clear")
                     ansiprint("<light-red>PythonRail, *sigh* you forgot the 'Type' key-value pair")
                     sys.exit(2)
@@ -164,7 +181,7 @@ class Player:
 
     def use_heavyblade(self, targeted_enemy, using_card):
         '''Deal 14(18) damage. Strength affects this card 3(5) times'''
-        strength_multi = 3
+        strength_multi = cards['Heavy Blade']['Strength Multi']
         if '+' in using_card['Name']:
             strength_multi += 2
         damage(using_card['Damage'] * strength_multi, targeted_enemy, self)
@@ -172,8 +189,8 @@ class Player:
         system("clear")
 
     def use_cleave(self, enemies, using_card):
-        '''Deal 8 damage to ALL enemies.'''
-        base_damage = using_card['Damage']
+        '''Deal 8(11) damage to ALL enemies.'''
+        base_damage = using_card['Damage'] # 8
         if "+" in using_card['Name']:
             base_damage += 3
         print()
@@ -184,8 +201,8 @@ class Player:
 
     def use_perfectedstrike(self, targeted_enemy, using_card):
         '''Deal 6 damage. Deals 2(3) additional damage for ALL your cards containing "Strike"'''
-        damage_per_strike = using_card['Damage Per "Strike"']
-        base_damage = using_card['Damage']
+        damage_per_strike = using_card['Damage Per "Strike"'] # 2
+        base_damage = using_card['Damage'] # 6
         if "+" in using_card['Name']:
             damage_per_strike = using_card['Damage Per "Strike"'] + 1
         print()
@@ -198,7 +215,7 @@ class Player:
 
     def use_anger(self, targeted_enemy, using_card):
         '''Deal 6(8) damage. Add a copy of this card to your discard pile.'''
-        base_damage = using_card['Damage']
+        base_damage = using_card['Damage'] # 6
         if '+' in using_card['Name']:
             base_damage += 2
         print()
@@ -209,8 +226,8 @@ class Player:
 
     def use_clothesline(self, targeted_enemy, using_card):
         '''Deal 12(14) damage. Apply 2(3) Weak'''
-        base_damage = using_card['Damage']
-        base_weak = using_card['Weak']
+        base_damage = using_card['Damage'] # 12
+        base_weak = using_card['Weak'] # 2
         if '+' in using_card['Name']:
             base_damage += 2
             base_weak += 1
@@ -222,7 +239,7 @@ class Player:
 
     def use_havoc(self, using_card):
         '''Play the top card of your draw pile and Exhaust it.'''
-        base_energy = using_card['Energy']
+        base_energy = using_card['Energy'] # 1
         if '+' in using_card['Name']:
             base_energy -= 1
         print()
@@ -232,14 +249,14 @@ class Player:
 
     def use_flex(self, using_card):
         '''Gain 2(4) Strength. At the end of your turn, lose 2(4) Strength'''
-        base_temp_strength = 2
+        base_temp_strength = 2 # Using a literal because it has 2 values
         if '+' in using_card['Name']:
             base_temp_strength += 2
         self.buff("Strength(Temp)", base_temp_strength, True)
 
     def use_headbutt(self, targeted_enemy, using_card):
         '''Deal 9(12) damage. Put a card from your discard pile on top of your draw pile.'''
-        base_damage = 9
+        base_damage = using_card['Damage'] # 9
         if '+' in using_card['Name']:
             base_damage += 3
         counter = 1
@@ -249,7 +266,7 @@ class Player:
                 ansiprint(f"{counter}: <light-black>{card['Type']}</light-black> | <blue>{card['Name']}</blue> | <light-red>{card['Energy']} Energy</light-red> | <yellow>{card['Info']}</yellow>")
                 counter += 1
                 sleep(0.05)
-            choice = integer_input('What card do you want to put on top of your draw pile? > ', self.discard_pile)
+            choice = list_input('What card do you want to put on top of your draw pile? > ', self.discard_pile)
             if choice is False:
                 system("clear")
                 continue
@@ -260,7 +277,7 @@ class Player:
 
     def use_shrugitoff(self, using_card):
         '''Gain 8(11) Block. Draw 1 card.'''
-        base_block = 8
+        base_block = using_card['Block'] # 8
         if '+' in using_card['Name']:
             base_block += 3
         self.blocking(base_block)
@@ -270,7 +287,7 @@ class Player:
 
     def use_swordboomerang(self, enemies, using_card):
         '''Deal 3 damage to a random enemy 3(4) times.'''
-        base_times = 3
+        base_times = using_card['Times'] # 3
         if '+' in using_card['Name']:
             base_times += 1
         for _ in range(base_times):
@@ -280,7 +297,7 @@ class Player:
 
     def use_thunderclap(self, enemies, using_card):
         '''Deal 4(7) damage and apply 1 Vulnerable to ALL enemies.'''
-        base_damage = 4
+        base_damage = using_card['Damage'] # 4
         if '+' in using_card['Name']:
             base_damage += 3
         for enemy in enemies:
@@ -289,11 +306,11 @@ class Player:
         sleep(0.5)
         system("clear")
 
-    def use_ironwave(self, targeted_enemy, card):
+    def use_ironwave(self, targeted_enemy, using_card):
         '''Gain 5(7) Block. Deal 5(7) damage.'''
-        base_block = 5
-        base_damage = 5
-        if '+' in card['Name']:
+        base_block = using_card['Block'] # 5
+        base_damage = using_card['Damage'] # 5
+        if '+' in using_card['Name']:
             base_block += 2
             base_damage += 2
         damage(base_damage, targeted_enemy, self)
@@ -303,8 +320,8 @@ class Player:
 
     def use_pommelstrike(self, targeted_enemy, using_card):
         '''Deal 9(10) damage. Draw 1(2) cards.'''
-        base_damage = 9
-        base_cards = 1
+        base_damage = using_card['Damage'] # 9
+        base_cards = using_card['Cards'] # 1
         if '+' in using_card['Name']:
             base_damage += 1
             base_cards += 1
@@ -323,6 +340,10 @@ class Player:
                 break
             if middle_of_turn is False:
                 draw_cards += self.draw_up
+                if relics['Bag of Preparation'] in self.relics:
+                    draw_cards += 2
+                if relics['Ring of the Snake'] in self.relics:
+                    draw_cards += 2
             if len(player.draw_pile) < draw_cards:
                 player.draw_pile.extend(random.sample(player.discard_pile, len(player.discard_pile)))
                 player.discard_pile = []
@@ -335,28 +356,28 @@ class Player:
 
     def blocking(self, block: int, card=True):
         '''Gains [block] Block. Cards are affected by Dexterity and Frail.'''
-        block += self.dexterity
-        if self.frail > 0:
+        block_affected_by = ''
+        if card:
+            block += self.dexterity
+            if self.dexterity > 0:
+                block_affected_by += f'{self.dexterity} <light-cyan>Dexterity</light-cyan> | '
+        if self.frail > 0 and card:
             block = math.floor(block * 0.75)
+            block_affected_by += '<light-cyan>Frail</light-cyan> (x0.75 block) | '
         self.block += block
-        if self.dexterity > 0 and card is True:
-            ansiprint(f"{self.name} gained <green>{block}</green> <light-blue>Block</light-blue>")
-        elif self.dexterity < 0 or self.frail > 0 and card is True:
-            ansiprint(f"{self.name} gained <red>{block}</red> <light-blue>Block</light-blue>")
-        else:
-            ansiprint(f"{self.name} gained {block} <light-blue>Block</light-blue>")
+        ansiprint(f'{self.name} gained {block} <blue>Block</blue>')
+        print('Affected by:')
+        ansiprint(block_affected_by)
 
     def health_actions(self, heal, heal_type):
         '''If [heal_type] is 'Heal', you heal for [heal] HP. If [heal_type] is 'Max Health', increase your max health by [heal].'''
-        if heal != self.max_health and heal_type == "Heal":
+        if heal_type == "Heal":
             self.health += heal
             self.health = min(self.health, self.max_health)
             ansiprint(f"You heal <green>{min(self.max_health - self.health, heal)}</green> <light-blue>HP</light-blue")
-            self.show_status(False)
-        elif heal == self.max_health and heal_type == "Heal":
-            self.health += heal
-            self.health = min(self.health, self.max_health)
-            ansiprint("You are <green>healed</green> to full HP")
+            if self.health >= math.floor(self.health * 0.5):
+                ansiprint('<bold>Red Skull</bold> <red>deactivates</red>.')
+                self.starting_strength -= 3
             self.show_status(False)
         elif heal_type == "Max Health":
             self.max_health += heal
@@ -364,17 +385,43 @@ class Player:
             ansiprint(f"Your Max HP is increased by <light-blue>{heal}</light-blue>")
             self.show_status(False)
 
-    def card_actions(self, card, action: str):
+    def card_actions(self, card, action, card_pool=None):
         '''[action] == 'Remove', remove [card] from your deck.
         [action] == 'Upgrade', Upgrade [card]
         [action] == 'Transform', transform a card into another random card.
         [action] == 'Store', (Only in the Note From Yourself event) stores a card to be collected from the event in another run.
-        [action] == 'Offer', (Only in the Bonfire Spirits event) offers a card. You recieve a reward based on the rarity.'''
+        '''
+        if card_pool is None:
+            card_pool = cards
         while True:
             if action == "Remove":
                 player.deck.remove(card)
+                break
+            elif action == 'Transform':
+                # Curse cards can only be transformed into other Curses
+                if card.get('Type') == 'Curse':
+                    options = [valid_card for valid_card in cards if valid_card.get('Type') == 'Curse' and valid_card.get('Rarity') != 'Special']
+                else:
+                    options = [valid_card for valid_card in cards if valid_card.get('Class') == card.get('Class') and valid_card.get('Type') not in ('Status', 'Curse') and valid_card.get('Rarity') == 'Special']
+                while True:
+                    new_card = random.choice(options)
+                    if new_card == card:
+                        continue
+                    self.deck.append(new_card)
+                    self.deck.remove(card)
+                    break
+                break
             elif action == 'Upgrade':
-                pass
+                upgraded_cards = [card for card in card_pool if card.get('Name') not in ('Status', 'Curse') and card.get('Upgraded')]
+                for valid_card in upgraded_cards:
+                    stripped_string = card.get('Name')
+                    stripped_string = remove_color_tags(stripped_string)
+                    if card.get('Name') == stripped_string:
+                        self.deck.append(valid_card)
+                        ansiprint(f"{valid_card['Name']} got <green>Upgraded</green>")
+                        self.deck.remove(card)
+                        break
+                break
 
     def show_status(self, full_view=False, combat=True):
         if combat is True:
@@ -389,6 +436,10 @@ class Player:
                 status += f" | <light-cyan>Energized: {self.energized}</light-cyan>"
             if self.artifact > 0:
                 status += f" | <light-cyan>Artifact: {self.artifact}</light-cyan>"
+            if self.pen_nib_attacks in range(1, 10):
+                status += f" | <light-black>Pen Nib: {self.pen_nib_attacks}</light-black"
+            elif self.pen_nib_attacks == 10:
+                status += " | <light-cyan>Pen Nib: <bold>Active</bold></light-cyan"
         else:
             status = f"\n{self.name} (<red>{self.health} </red>/ <red>{self.max_health}</red> | <yellow>{self.gold} Gold</yellow>)"
         ansiprint(status)
@@ -412,10 +463,12 @@ class Player:
                 print(f"Dexterity: You gain {self.dexterity} more Block from cards.")
             if self.barricade is True:
                 print("Barricade: Block is not removed at the start of your turn.")
+        print()
 
     def end_player_turn(self):
-        player.discard_pile.extend(player.hand)
-        player.hand = []
+        self.discard_pile.extend(self.hand)
+        self.hand = []
+        self.end_of_turn_relics()
         sleep(1.5)
         system("clear")
 
@@ -433,6 +486,9 @@ class Player:
             if debuff_name == "Weak":
                 target.weak += amount
             elif debuff_name == "Poison":
+                if relics['Snecko Skull'] in self.relics:
+                    amount += 1
+                    ansiprint('<bold>Snecko Skull</bold> added 1 <light-cyan>Poison</light-cyan>.')
                 target.poison += amount
             elif debuff_name == "Vulnerable":
                 target.vulnerable += amount
@@ -458,6 +514,10 @@ class Player:
             self.strength += amount
         elif buff_name == "Dexterity":
             self.dexterity += amount
+        elif buff_name == 'Focus':
+            self.focus += amount
+        elif buff_name == 'Mantra': # Note: Mantra does nothing right now
+            self.mantra += amount
         elif buff_name == "Artifact":
             self.artifact += amount
         elif buff_name == "Energized":
@@ -487,17 +547,19 @@ class Player:
         sleep(1)
 
     def start_turn(self):
-        print(f"{self.name}:")
+        print(f"<underline><bold>{self.name}</bold></underline>:")
         # Start of turn effects
         self.draw_cards(False, 0)
-        if self.barricade is False: # Barricade: Block is not remove at the start of your turn
-            self.block = 0
-        else:
-            if self.block > 0 and combat_turn > 1:
-                ansiprint("Your Block was not removed because of <light-cyan>Barricade</light-cyan>")
+        if combat_turn > 1:
+            if self.barricade is False: # Barricade: Block is not remove at the start of your turn
+                self.block = 0
+            else:
+                if self.block > 0 and combat_turn > 1:
+                    ansiprint("Your Block was not removed because of <light-cyan>Barricade</light-cyan>")
         if self.next_turn_block > 0:
             self.blocking(self.next_turn_block, False)
             self.next_turn_block = 0
+        self.start_of_turn_relics()
         self.energy += self.energy_gain + self.energized
         if self.energized > 0: # Energized: Gain X Energy next turn
             ansiprint(f"You gained {self.energized} extra energy because of <light-cyan>Energized</light-cyan>")
@@ -562,22 +624,55 @@ class Player:
             print("Ritual: ", end='')
             self.buff("Strength", self.ritual, True)
 
-    # def print_list(self, display_type, target_list, combat=True):
-    #     counter = 1
-    #     if display_type == "Potions":
-    #         for potion in target_list:
-    #             ansiprint(f"{counter}: <blue>{potion['Name']}</blue> | {potion['Class']} | <light-black>{potion['Rarity']}</light-black> | <yellow>{potion['Info']}</yellow>")
-    #             counter += 1
-    #             sleep(0.05)
-    #     elif display_type == "Relics":
-    #         for relic in target_list:
-    #             ansiprint(f"{counter}: <blue>{relic['Name']}</blue> | {relic['Class']} |<light-black>{relic['Rarity']}</light-black> | <yellow>{relic['Info']}</yellow>", end='')
-    #             if combat is True:
-    #                 print("\n")
-    #             else:
-    #                 ansiprint(f" | <light-blue><italic>{relic['Flavor']}</italic></light-blue>")
-    #             counter += 1
-    #             sleep(0.05)
+    def start_of_turn_relics(self):
+        if relics['Akabeko'] in self.relics:
+            self.vigor += 8
+            ansiprint(f'+8 <light-cyan>Vigor</light-cyan> from <bold>Akabeko</bold>(Next Attack deals {self.vigor} more damage.)')
+        if relics['Anchor'] in self.relics:
+            self.block += 10
+            ansiprint('You gained 10 <blue>Block</blue> from <bold>Anchor</bold>.')
+        if self.attacks_played_this_turn is False and relics['Art of War'] in self.relics:
+            self.energy += 1
+            ansiprint('You gained 1 Energy from <bold>Art of War</bold>.')
+        if relics['Damaru'] in self.relics:
+            ansiprint('From <bold>Damaru</bold>: ', end='')
+            self.buff('Mantra', 1, False)
+        if relics['Lantern'] in self.relics:
+            ansiprint('From <bold>Lantern</bold: ', end='')
+            self.buff('Energized', 1, False)
+        if relics['Happy Flower'] in self.relics:
+            if self.happy_flower % 3 != 0:
+                self.happy_flower += 1
+                if self.happy_flower == 3:
+                    ansiprint('From <bold>Happy Flower</bold>: ', end='')
+                    self.buff('Energized', 1, False)
+
+    def end_of_turn_relics(self):
+        if relics['Orichaicum'] in self.relics and self.block == 0:
+            ansiprint('From <bold>Orichaicum</bold>: ', end='')
+            self.blocking(6, False)
+
+    def start_of_combat_relics(self):
+        if self.ancient_tea_set is True and relics['Ancient Tea Set'] in self.relics and combat_turn == 1:
+            self.energy += 2
+            ansiprint('You gained 2 Energy from <bold>Ancient Tea Set</bold>')
+        if relics['Bag of Marbles'] in self.relics:
+            for enemy in active_enemies:
+                ansiprint('From <bold>Bag of Marbles</bold>: ', end='')
+                self.debuff('Vulnerable', 1, enemy, False)
+        # Bag of Preparation and Ring of the Snake are coded in the .draw_cards() method above.
+        if relics['Blood Vial'] in self.relics:
+            ansiprint('From <bold>Blood Vial</bold>: ', end='')
+            self.health_actions(2, 'Heal')
+        if relics['Bronze Scales'] in self.relics:
+            ansiprint('From <bold>Bronze Scales</bold>: ', end='')
+            self.buff('Thorns', 3, False)
+        if relics['Oddly Smooth Stone'] in self.relics:
+            ansiprint('From <bold>Oddly Smooth Stone</bold>: ', end='')
+            self.buff('Dexterity', 1, False)
+        if relics['Data Disk'] in self.relics:
+            ansiprint('From <bold>Data Disk</bold>: ', end='')
+            self.buff('Focus', 1, False)
 
 
 
@@ -597,14 +692,15 @@ class Enemy:
     strength: Deal X more damage[int](intensity stack)
     ritual: At the end of it's turn, gains X Strength(intensity stack)
     '''
-    def __init__(self, health: list, block: int, name: str, past_moves: dict):
+    def __init__(self, health: list, block: int, name: str, moves: list[str]):
         self.health = health
         self.max_health = health
         self.block = block
         self.name = name
         if 'louse' in self.name:
             self.damage = [5, 7]
-        self.past_moves = past_moves
+        self.past_moves = ['place', 'place', 'place']
+        self.moves = moves
         self.barricade = False
         self.artifact = 0
         if self.name == "Spheric Guardian":
@@ -621,29 +717,6 @@ class Enemy:
         self.curl_up = 0
         if 'louse' in self.name:
             self.curl_up = random.randint(3, 7)
-        # PArsing to determine the order of moves
-        #for item in self.order:
-        #    # Contains all the items with percent symbols in them
-        #    parsed_order = []
-        #    # Adds the respective items
-        #    if "%" in item:
-        #        parsed_order.append(item)
-        #    # Dictionary is basically (The text before the % symbol: the number after the % symbol)
-        #    # Contains the percent chances for each move
-        #    percent_chances = {text[:text.index("%")]: int(
-        #        text[text.index("%") + 1]) for text in parsed_order}
-        #    # Checks if the first character is a right facing arrow
-        #    if item[:1] == ">":
-        #        # List of all the indexes and extras instructions in between ()s
-        #        repeats = [
-        #            item[item.index["("] + 1: item[item.index[")"]]].split(",")]
-        #        for index in repeats:
-        #            if index.isdigit() is True:
-        #                int(index)
-        #            else:
-        #                if index == "inf":
-        #                    rep_inf = True
-        #                    repeats.remove(index)
 
     def die(self):
         """
@@ -658,72 +731,87 @@ class Enemy:
         """
 
     def enemy_turn(self):
-        if self.name == "Cultist":
-            if self.active_turns == 1:
-                self.buff("Ritual", 3, True, True, "Incantation")
-            else:
+        while True:
+            if self.name == "Cultist":
+                if self.active_turns == 1:
+                    self.buff("Ritual", 3, True, True, "Incantation")
+                    break
                 self.attack(6, 1, True, True, "Dark Strike")
-        elif self.name in ('Acid Slime (L)', 'Acid Slime (M)'):
-            random_num = random.randint(0, 100)
-            if self.health < math.floor(self.max_health * 0.5) and self.name == "Acid Slime (L)":
-                ansiprint("<bold>Split<bold>")
-                self.die()
-                active_enemies.append(Enemy([self.health, self.health], 0, "Acid Slime (M)", []))
-                print("Acid Slime (M) spawned!")
-                active_enemies.append(Enemy([self.health, self.health], 0, "Acid Slime (M)", []))
-                print("Acid Slime (M) spawned!")
-                sleep(1.5)
-                system("clear")
-            elif random_num < 30 and self.past_moves[-2] != "Corrosive Spit":
-                self.attack(11, 1, True, False, "Corrosive Spit")
-                self.status(cards["Slimed"], 2, player.discard_pile, False, True)
-                self.past_moves.append("Corrosive Spit")
-            elif random_num > 70 and self.past_moves[-1] != "Lick":
-                self.debuff("Weak", 2, True, True, "Lick")
-                self.past_moves.append("Lick")
-            elif self.past_moves[-1] != "Tackle":
-                self.attack(16, 1, True, True, "Tackle")
-                self.past_moves.append("Tackle")
-            self.active_turns += 1
-        elif self.name == "Acid Slime (S)":
-            random_num = random.randint(0, 100)
-            if random_num < 50 and self.active_turns == 1:
-                self.debuff("Weak", 1, True, True, "Lick")
-                self.past_moves.append("Lick")
-            elif random_num > 50 and self.active_turns == 1:
-                self.attack(3, 1, True, True, "Tackle")
-                self.past_moves.append("Tackle")
-            elif self.past_moves[-1] == "Lick":
-                self.attack(3, 1, True, True, "Tackle")
-                self.past_moves.append("Tackle")
-            elif self.past_moves[-1] == "Tackle":
-                self.debuff("Weak", 1, True, True, "Lick")
-                self.past_moves.append("Lick")
-            self.active_turns += 1
-        elif self.name == "Jaw Worm":
-            random_num = random.randint(0, 100)
-            if self.active_turns == 1 or (random_num > 75 and self.past_moves != "Chomp"):
-                self.attack(11, 1, True, True, "Chomp")
-                self.past_moves.append("Chomp")
-            elif random_num < 45 and self.past_moves[-1] != "Bellow":
-                self.buff("Strength", 3, True, False, "Bellow")
-                self.blocking(6, False, True)
-                self.past_moves.append("Bellow")
-            elif self.past_moves[-2] != "Thrash":
-                self.attack(7, 1, True, False, "Thrash")
-                self.blocking(5, False, True)
-                self.past_moves.append("Thrash")
-        elif 'louse' in self.name.lower():
-            random_num = random.randint(0, 100)
-            if random_num < 75 and self.past_moves[-2] != "Bite":
-                self.attack(self.damage, 1, True, True, "Bite")
-                self.past_moves.append("Bite")
-            elif self.past_moves[-2] != "Grow" and self.name == "Red Louse":
-                self.buff("Strength", 3, True, True, "Grow")
-                self.past_moves.append("Grow")
-            elif self.past_moves[-2] != "Spit Web" and self.name == "Green Louse":
-                self.debuff("Weak", 2, True, True, "Spit Web")
-                self.past_moves.append("Spit Web")
+            elif self.name in ('Acid Slime (L)', 'Acid Slime (M)'):
+                random_num = random.randint(0, 100)
+                if self.health < math.floor(self.max_health * 0.5) and self.name == "Acid Slime (L)":
+                    ansiprint("<bold>Split<bold>")
+                    self.die()
+                    active_enemies.append(Enemy([self.health, self.health], 0, "Acid Slime (M)", [['self.attack(7, 1, True, False)', "self.status(cards['Slimed'], 1, player.discard_pile, False, True)"], ['self.debuff("Weak", 1, True, True, "Lick")'], ['self.attack(10, 1, True, True, "Tackle")']]))
+                    print("Acid Slime (M) spawned!")
+                    active_enemies.append(Enemy([self.health, self.health], 0, "Acid Slime (M)", [['self.attack(7, 1, True, False)', "self.status(cards['Slimed'], 1, player.discard_pile, False, True)"], ['self.debuff("Weak", 1, True, True, "Lick")'], ['self.attack(10, 1, True, True, "Tackle")']]))
+                    print("Acid Slime (M) spawned!")
+                    sleep(1.5)
+                    system("clear")
+                    break
+                if random_num < 30 and self.past_moves[-2] != "Corrosive Spit":
+                    self.attack(11, 1, True, False, "Corrosive Spit")
+                    self.status(cards["Slimed"], 2, player.discard_pile, False, True)
+                    self.past_moves.append("Corrosive Spit")
+                    break
+                if random_num > 70 and self.past_moves[-1] != "Lick":
+                    self.debuff("Weak", 2, True, True, "Lick")
+                    self.past_moves.append("Lick")
+                    break
+                if self.past_moves[-1] != "Tackle":
+                    self.attack(16, 1, True, True, "Tackle")
+                    self.past_moves.append("Tackle")
+                    break
+                self.active_turns += 1
+            elif self.name == "Acid Slime (S)":
+                random_num = random.randint(0, 100)
+                if random_num < 50 and self.active_turns == 1:
+                    self.debuff("Weak", 1, True, True, "Lick")
+                    self.past_moves.append("Lick")
+                    break
+                if random_num > 50 and self.active_turns == 1:
+                    self.attack(3, 1, True, True, "Tackle")
+                    self.past_moves.append("Tackle")
+                    break
+                if self.past_moves[-1] == "Lick":
+                    self.attack(3, 1, True, True, "Tackle")
+                    self.past_moves.append("Tackle")
+                    break
+                if self.past_moves[-1] == "Tackle":
+                    self.debuff("Weak", 1, True, True, "Lick")
+                    self.past_moves.append("Lick")
+                    break
+                self.active_turns += 1
+            elif self.name == "Jaw Worm":
+                random_num = random.randint(0, 100)
+                if self.active_turns == 1 or (random_num > 75 and self.past_moves != "Chomp"):
+                    self.attack(11, 1, True, True, "Chomp")
+                    self.past_moves.append("Chomp")
+                    break
+                if random_num < 45 and self.past_moves[-1] != "Bellow":
+                    self.buff("Strength", 3, True, False, "Bellow")
+                    self.blocking(6, False, True)
+                    self.past_moves.append("Bellow")
+                    break
+                if self.past_moves[-2] != "Thrash":
+                    self.attack(7, 1, True, False, "Thrash")
+                    self.blocking(5, False, True)
+                    self.past_moves.append("Thrash")
+                    break
+            elif 'louse' in self.name.lower():
+                random_num = random.randint(0, 100)
+                if random_num < 75 and self.past_moves[-2] != "Bite":
+                    self.attack(self.damage, 1, True, True, "Bite")
+                    self.past_moves.append("Bite")
+                    break
+                if self.past_moves[-2] != "Grow" and self.name == "Red Louse":
+                    self.buff("Strength", 3, True, True, "Grow")
+                    self.past_moves.append("Grow")
+                    break
+                if self.past_moves[-2] != "Spit Web" and self.name == "Green Louse":
+                    self.debuff("Weak", 2, True, True, "Spit Web")
+                    self.past_moves.append("Spit Web")
+                    break
 
 
     def show_status(self):
@@ -808,7 +896,7 @@ class Enemy:
         else:
             sleep(1)
     def start_turn(self):
-        print(f"{self.name}:")
+        ansiprint(f"<underline><bold>{self.name}</bold></underline>:")
         if self.barricade is False:
             self.block = 0
         else:
@@ -824,6 +912,7 @@ class Enemy:
             ansiprint("<light-cyan>-1 Weak</light-cyan>")
             if self.weak == 0:
                 print("Weak wears off")
+        print()
 
 
 # Characters
@@ -940,7 +1029,7 @@ potions = {
     'Regen Potion': {'Name': 'Regen Potion', 'Regen': 5, 'Class': 'All', 'Rarity': 'Common', 'Info': 'Gain 5 Regeneration'},
     # Rare | All Classes
     'Cultist Potion': {'Name': 'Cultist Potion', 'Ritual': 1, 'Class': 'All', 'Rarity': 'Rare', 'Info': 'Gain 1 Ritual'},
-    'Entropic Brew': {'Name': 'Entropic Brew', 'Potions': player.potion_bag - len(player.potions), 'Class': 'All', 'Rarity': 'Rare', 'Info': 'Fill all your empty potion slots with random potions'},
+    'Entropic Brew': {'Name': 'Entropic Brew', 'Potions': player.max_potions - len(player.potions), 'Class': 'All', 'Rarity': 'Rare', 'Info': 'Fill all your empty potion slots with random potions'},
     'Fairy in a Bottle': {'Name': 'Fairy in a Bottle', 'Playable': False, 'Health': 30, 'Class': 'All', 'Rarity': 'Rare', 'Info': f'When you would die, heal to 30 percent of your Max HP({math.floor(player.max_health * 0.30)}) instead and discard this potion'},
     'Fruit Juice': {'Name': 'Fruit Juice', 'Playable Everywhere?': True, 'Max Health': 5, 'Class': 'All', 'Rarity': 'Rare', 'Info': 'Gain 5 Max HP'},
     'Smoke Bomb': {'Name': 'Smoke Bomb', 'Escape from boss': False, 'Target': 'Nothing', 'Class': 'All', 'Rarity': 'Rare', 'Info': 'Escape from a non-boss combat. You recieve no rewards.'},
@@ -992,12 +1081,19 @@ relics = {
     'Pen Nib': {'Name': 'Pen Nib', 'Class': 'Any', 'Rarity': 'Common', 'Attacks': 10, 'Info': 'Every 10th attack you play deals double damage.', 'Flavor': 'Holding the nib, you can see everyone ever slain by a previous owner of the pen. A violent history.'},
     'Potion Belt': {'Name': 'Potion Belt', "Class": 'Any', 'Rarity': 'Common', 'Potion Slots': 2, 'Info': 'Upon pickup, gain 2 potion slots.', 'Flavor': 'I can hold more potions using this belt!'},
     'Preserved Insect': {'Name': 'Preserved Insect', 'Class': 'Any', 'Rarity': 'Common', 'Hp Percent Loss': 25, 'Info': 'Enemies in Elite rooms have 20% less health.', 'Flavor': 'The insect seems to create a shrinking aura that targets particularly large enemies.'},
-    'Regal Pillow': {'Name': 'Regal Pillow', 'Class': 'Any', 'Rarity': 'Common', '+Rest HP': 15, 'Info': 'Heal an additional 15 HP when you Rest.', 'Flavor': "Now you can get a proper night's rest."},
+    'Regal Pillow': {'Name': 'Regal Pillow', 'Class': 'Any', 'Rarity': 'Common', 'Heal HP': 15, 'Info': 'Heal an additional 15 HP when you Rest.', 'Flavor': "Now you can get a proper night's rest."},
     'Smiling Mask': {'Name': 'Smiling Mask', 'Class': 'Any', 'Rarity': 'Common', 'Info': "The merchant's card removal service now always costs 50 Gold.", 'Flavor': 'Mask worn by the merchant. He must have spares...'},
     'Strawberry': {'Name': 'Strawberry', 'Class': 'Any', 'Rarity': 'Common', 'Max HP': 7, 'Flavor': "'Delicious! Haven't seen any of these since the blight.' - Ranwid"},
     'The Boot': {'Name': 'The Boot', 'Class': 'Any', 'Rarity': 'Common', 'Info': 'When you would deal 4 or less unblocked Attack damage, increase it to 5.', 'Flavor': 'When wound up, the boot grows larger in size.'},
-    'Tiny Chest': {'Name': 'Tiny Chest', 'Class': 'Any', 'Rarity': 'Common', 'Info': 'Every 4th <bold>?</bold> room is a <bold>Treasure</bold> room.', 'Flavor': '"A fine prototype." - The Architect'}
+    'Tiny Chest': {'Name': 'Tiny Chest', 'Class': 'Any', 'Rarity': 'Common', 'Info': 'Every 4th <bold>?</bold> room is a <bold>Treasure</bold> room.', 'Flavor': '"A fine prototype." - The Architect'},
+    'Red Skull': {'Name': 'Red Skull', 'Class': 'Ironclad', 'Rarity': 'Common', 'Info': 'While your HP is at or below 50%, you have 3 additional <bold>Strength</bold>.', 'Flavor': 'A small skull covered in ornamental paint.'},
+    'Snecko Skull': {'Name': 'Snecko Skull', 'Class': 'Silent', 'Rarity': 'Common', 'Info': 'Whenever you apply <bold>Poison</bold>, apply an additional 1 <bold>Poison</bold>', 'Flavor': 'A snecko skull in pristine condition. Mysteriously clean and smooth, dirt and grime fall off inexplicably.'},
+    'Data Disk': {'Name': 'Data Disk', 'Class': 'Defect', 'Rarity': 'Common', 'Info': 'Start each combat with 1 <bold>Focus</bold>.', 'Flavor': 'This dish contains precious data on birds and snakes.'},
+    'Damaru': {'Name': 'Damaru', 'Class': 'Watcher', 'Rarity': 'Common', 'Info': 'At the start of your turn, gain 1 <bold>Mantra</bold>.', 'Flavor': 'The sound of the small drum keeps your mind awake, revealing a path forward.'},
+    # Event relics
+    'Warped Tongs': {'Name': 'Warped Tongs', 'Class': 'Any', 'Rarity': 'Event', 'Info': 'At the start of your turn, upgrade a random card in your hand for the rest of combat.', 'Flavor' : 'The cursed tongs emit a strong desire to return to where they were stolen from.'}
 }
 player.deck = [cards['Strike'], cards['Strike'], cards['Strike'], cards['Strike'], cards['Strike'], cards['Defend'], cards['Defend'], cards['Defend'], cards['Defend'], cards['Bash']]
 # Enemies
-encounters = [[Enemy([48, 54], 0, "Cultist", ['place', 'place', 'place'])], [Enemy([40, 44], 0, "Jaw Worm", ['place', 'place', 'place'])]]
+enemy_encounters = [[Enemy([48, 54], 0, "Cultist", [['self.buff("Ritual", 3, True, True, "Incantation")'], ['self.attack(6, 1, True, True, "Dark Strike")']])], 
+              [Enemy([40, 44], 0, "Jaw Worm", [['self.attack(11, 1, True, False, "Chomp")'], ['self.attack(7, 1, True, False, "Thrash")', 'self.blocking(5, False, True)'], ['self.buff("Strength", 3, True, False, "Bellow")', 'self.blocking(6, False, True)']])]]
