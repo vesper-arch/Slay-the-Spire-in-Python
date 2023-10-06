@@ -3,17 +3,18 @@ from time import sleep
 import math
 import random
 from ansimarkup import ansiprint
+import events
 from entities import player, enemy_encounters, cards, potions, relics
 from utility import display_ui, active_enemies, combat_turn, combat_potion_dropchance, start_combat, list_input, claim_potions, card_rewards
 
 
 
-def combat(tier):
+def combat(tier) -> None:
     """There's too much to say here."""
     global combat_turn, combat_potion_dropchance
-    killed_enemies = False
+    killed_enemies: bool = False
     # The Smoke Bomb potion allows you to escape from a non-boss encounter but you recieve no rewards.
-    escaped = False
+    escaped: bool = False
     # Spawns enemies and shuffles the player's deck into their draw pile.
     start_combat(player, enemy_encounters)
     if relics['Preserved Insect'] in player.relics and tier == 'Elite':
@@ -49,10 +50,10 @@ def combat(tier):
             system("clear")
             continue
         if killed_enemies is True and escaped is False:
-            player.hand = []
-            player.discard_pile = []
-            player.draw_pile = []
-            player.exhaust_pile = []
+            player.hand.clear()
+            player.discard_pile.clear()
+            player.draw_pile.clear()
+            player.exhaust_pile.clear()
             potion_chance = random.randint(0, 100)
             ansiprint("<green>Combat finished!</green>")
             player.gain_gold(random.randint(10, 20))
@@ -82,7 +83,6 @@ def combat(tier):
             system("clear")
         combat_turn += 1
 
-
 def rest():
     """
     Actions:
@@ -101,7 +101,7 @@ def rest():
         ansiprint("You come across a <green>Rest Site</green>")
         sleep(1)
         player.show_status(False)
-        ansiprint(f"<bold>[Rest]</bold> Heal for 30 percent of your Max HP({math.floor(player.max_health * 0.30)}) \n<bold>[Upgrade]</bold> Upgrade a card in your deck > ", end='')
+        ansiprint(f"<bold>[Rest]</bold> Heal for 30 percent of your Max HP({math.floor(player.max_health * 0.30)} {'+ 15 from <bold>Regal Pillow</bold>' if relics['Regal Pillow'] in player.relics else ''}) \n<bold>[Upgrade]</bold> Upgrade a card in your deck > ", end='')
         action = input('').lower()
         if action == 'rest':
             # heal_amount is equal to 30% of the player's max health rounded down.
@@ -145,6 +145,33 @@ def rest():
             print("Invalid input")
             sleep(1.5)
             system("clear")
+
+def unknown() -> None:
+    # CHances
+    normal_combat: float = 0.1
+    treasure_room: float = 0.02
+    merchant: float = 0.03
+    # Event chance is equal to 1 minus all the previous chances
+    random_number = random.random()
+    valid_events = events.global_events
+    valid_events.extend(events.act1_events)
+
+    if random_number < normal_combat:
+        normal_combat = 0.1
+        treasure_room += 0.02
+        merchant += 0.03
+        combat('Normal')
+    elif random_number < treasure_room:
+        treasure_room = 0.02
+        normal_combat += 0.1
+        merchant += 0.03
+    elif random_number < merchant:
+        merchant = 0.03
+        treasure_room += 0.02
+        normal_combat += 0.1
+    else:
+        chosen_event = random.choice(valid_events)
+        chosen_event()
 
 
 def view_piles(pile, end=False, upgraded=False):
@@ -195,6 +222,16 @@ def play_card():
         print()
         view_piles(player.hand, False)
         card_used = list_input('What card do you want to play?', player.hand)
+        if player.hand[card_used].get('Type') == 'Curse' and relics['Blue Candle'] not in player.relics:
+            print('<red>This card is a <bold>Curse</bold>.</red>')
+            sleep(1.5)
+            system('clear')
+            continue
+        if player.hand[card_used].get('Type') == 'Status' and not player.hand[card_used].get('Playable') and relics['Medical Kit'] not in player.relics:
+            print('This card is an <bold>Unplayable Status</bold> card.')
+            sleep(1)
+            system('clear')
+            continue
         if not card_used:
             sleep(1.5)
             system("clear")
@@ -207,11 +244,15 @@ def play_card():
             system("clear")
             continue
         # Lets the player go back if they don't want to use the card.
-        option = input("Are you sure? (y|n) > ").lower()
+        option = input("Are you sure? (y|n) Type 'end' to cancel. > ").lower()
         if option == 'n':
             sleep(1.5)
             system("clear")
             continue
+        if option == 'end':
+            sleep(1)
+            system('clear')
+            break
         # Cards that either target the player or target all enemies won't ask for a target.
         if playing_card.get("Target") is None and len(active_enemies) > 1:
             target = list_input("What enemy do you want to use it on? >", active_enemies)
@@ -227,10 +268,9 @@ def play_card():
 
 
 
-order_of_encounters = [combat, rest, combat, combat, rest, rest, combat, combat, combat]
+order_of_encounters = [combat, unknown, rest, combat, combat, unknown, rest]
 for encounter in order_of_encounters:
-    if callable(encounter):
-        if encounter == combat:
-            encounter('Normal')
-        elif encounter == rest:
-            encounter()
+    if encounter.__name__ == 'combat':
+        encounter('Normal')
+    else:
+        encounter()
