@@ -166,7 +166,7 @@ all_effects.extend(enemy_buffs)
 all_effects.extend(enemy_debuffs)
 all_effects = tuple(all_effects)
 
-def generate_card_rewards(reward_tier, amount, card_pool, entity) -> list[dict]:
+def generate_card_rewards(reward_tier, amount, entity, card_pool) -> list[dict]:
     """
     Normal combat rewards:
     Rare: 3% | Uncommon: 37% | Common: 60%
@@ -217,7 +217,8 @@ def generate_card_rewards(reward_tier, amount, card_pool, entity) -> list[dict]:
             rewards.append(random_key[random_value])
     return rewards
 
-def generate_potion_rewards(amount, potion_pool, entity, chance_based=True) -> list[dict]:
+
+def generate_potion_rewards(amount, entity, potion_pool, chance_based=True) -> list[dict]:
     """You have a 40% chance to get a potion at the end of combat.
     -10% when you get a potion.
     +10% when you don't get a potion."""
@@ -242,7 +243,8 @@ def generate_potion_rewards(amount, potion_pool, entity, chance_based=True) -> l
             rewards.append(random.choice(all_potions))
     return rewards
 
-def generate_relic_rewards(source, amount, relic_pool, entity, chance_based=True) -> list[dict]:
+
+def generate_relic_rewards(source, amount, entity, relic_pool, chance_based=True) -> list[dict]:
     common_relics = [relic for relic in relic_pool if relic.get('Rarity') == 'Common' and relic.get('Class') == entity.player_class]
     uncommon_relics = [relic for relic in relic_pool if relic.get('Rarity') == 'Uncommon' and relic.get('Class') == entity.player_class]
     rare_relics = [relic for relic in relic_pool if relic.get('Rarity') == 'Rare' and relic.get('Class') == entity.player_class]
@@ -387,24 +389,53 @@ def card_rewards(tier, choice, entity, card_pool, rewards=None):
         rewards.clear()
         sleep(1)
 
-def damage(dmg: int, target: object, user: object, ignore_block: bool=False, card: bool=True):
+def view_piles(pile, entity, end=False, upgraded=False):
+    """Prints a numbered list of all the cards in a certain pile."""
+    if pile == entity.draw_pile:
+        pile = random.sample(pile, len(pile))
+    counter = 1
+    for card in pile:
+        if upgraded is True and card.get('Upgraded'):
+            ansiprint(f"{counter}: <blue>{card['Name']}</blue> | <light-cyan>{card['Type']}</light-cyan> | <light-red>{card['Energy']} Energy</light-red> | <yellow>{card['Info']}</yellow>".replace('Σ', '').replace('꫱', ''))
+            counter += 1
+            sleep(0.05)
+        else:
+            ansiprint(f"{counter}: <blue>{card['Name']}</blue> | <light-cyan>{card['Type']}</light-cyan> | <light-red>{card['Energy']} Energy</light-red> | <yellow>{card['Info']}</yellow>".replace('Σ', '').replace('꫱', ''))
+            counter += 1
+            sleep(0.05)
+    if end:
+        input("Press enter to continue > ")
+    sleep(1.0)
+    if end:
+        sleep(0.5)
+        system("clear")
+
+def damage(dmg: int, target: object, user: object, ignore_block: bool=False, card: dict=None):
     dmg_affected_by: str = ''
-    if card:
-        dmg = dmg + user.strength + user.vigor
+    if card is not None:
+        dmg = dmg + user.strength * card.get("Strength Multi", 1) + user.vigor
+        if "Body Slam" in card.get('Name'):
+            dmg += user.block
+            dmg_affected_by += f"Body Slam(+{user.block} dmg) | "
+        if "Perfected Strike" in card.get('Name'):
+            perfected_dmg = len([card for card in user.deck if 'strike' in card.get('Name').lower()]) * card.get('Damage Per "Strike"')
+            dmg += perfected_dmg
+            dmg_affected_by += f"Perfected Strike(+{perfected_dmg} dmg) | "
         if user.buffs["Strength"] != 0:
             dmg_affected_by += f"{'<red>' if user.buffs['Strength'] < 0 else ''}{user.strength}{'</red>' if user.buffs['Strength'] < 0 else ''} <light-cyan>Strength</light-cyan> | "
+            if "Heavy Blade" in card.get('Name'):
+                dmg_affected_by += f"Heavy Blade(x{card.get('Strength Multi')} Strength gain) | "
         if user.buffs["Vigor"] > 0:
-            dmg_affected_by += f"{user.vigor} <light-cyan>Vigor</light-cyan> | "
+            dmg_affected_by += f"{user.vigor} <light-cyan>Vigor</light-cyan>(+{user.vigor} dmg) | "
         if user.debuffs["Weak"] > 0 and card:
             dmg = math.floor(dmg * 0.75)
             dmg_affected_by += "<light-cyan>Weak</light-cyan>(x0.75 dmg) | "
         if target.debuffs["Vulnerable"] > 0:
             dmg = math.floor(dmg * 1.50)
             dmg_affected_by += "<light-cyan>Vulnerable</light-cyan>(x1.5 dmg) | "
-        if hasattr(user, 'pen_nib_attacks'):
-            if user.buffs["Pen Nib"] > 0:
-                dmg *= 2
-                dmg_affected_by += "<light-cyan>Pen Nib</light-cyan>(x2 dmg) | "
+        if user.buffs["Pen Nib"] > 0:
+            dmg *= 2
+            dmg_affected_by += "<light-cyan>Pen Nib</light-cyan>(x2 dmg) | "
     if not ignore_block:
         if target.block < dmg:
             print(f"{user.name} dealt {dmg:.0f}({max(dmg, target.block)} blocked) damage to {target.name}")
@@ -418,12 +449,15 @@ def damage(dmg: int, target: object, user: object, ignore_block: bool=False, car
         elif dmg > target.block:
             dmg -= target.block
             target.block = 0
-            if dmg in (4, 3, 2, 1) and card:
+            if dmg in (4, 3, 2, 1) and card is not None:
                 dmg = 5
                 dmg_affected_by += '<bold>The Boot</bold> (Unblocked damage increased to 5) | '
             if user.dmg_reduce_by_1 is True and hasattr(target, 'dmg_reduce_by_1'):
                 dmg -= 1
                 dmg_affected_by += '<bold>Tungsten Rod</bold> (Reduced unblocked damage by 1)'
+            if hasattr(user, 'player_class') and user.buffs['Envenom'] > 0 and user != target:
+                target.debuffs['Poison'] += 1
+                ansiprint(f"<light-cyan>Envenom</light-cyan> applied 1 <red>Poison</red> to {target.name}")
             target.health -= dmg
             if hasattr(user, 'taken_damage'):
                 if user.taken_damage is False:
@@ -444,7 +478,7 @@ def damage(dmg: int, target: object, user: object, ignore_block: bool=False, car
     if user.buffs['Vigor'] > 0:
         user.buffs['Vigor'] = 0
         ansiprint("\n<light-cyan>Vigor</light-cyan> wears off")
-    if hasattr(user, 'pen_nib_attacks'):
+    if hasattr(user, 'pen_nib_attacks') and card is not None:
         if user.buffs["Pen Nib"] == 10:
             user.buffs["Pen Nib"] = 0
             ansiprint('<light-cyan>Pen Nib</light-cyan> wears off.')
@@ -519,7 +553,7 @@ def start_combat(entity, enemy_list):
         enemy.max_health = enemy.health
     entity.start_of_combat_relics()
 
-def list_input(input_string, array) -> None:
+def list_input(input_string, array) -> str:
     try:
         if array:
             option = int(input(input_string)) - 1
@@ -539,3 +573,47 @@ def remove_color_tags(string) -> str:
         string = string.replace(color, '') # Removes all of the colors found by the findall() function
     string = string.replace('<', '').replace('>', '').replace('/', '') # Removes all color tag symbols
     return string
+
+def calculate_actual_damage(string: str, target, entity: object, card) -> tuple[str, str]:
+    match = re.search(r"Σ(\d+)", string)
+    affected_by = ''
+    if match:
+        original_damage: str = match.group()
+        damage_value = int(original_damage)
+        if "Body Slam" in card.get('Name'):
+            damage_value += entity.block
+        if "Perfected Strike" in card.get('Name'):
+            perfected_strike_dmg = len([card for card in entity.deck if 'strike' in card.get('Name')]) * card.get('Damage Per "Strike"')
+            damage_value += perfected_strike_dmg
+            affected_by += f"Perfected Strike(+{perfected_strike_dmg} dmg)"
+        if entity.buffs['Strength'] != 0:
+            damage_value += entity.buffs['Strength'] * card.get("Strength Multi", 1)
+            affected_by += f"<{'<light-cyan>' if entity.buffs['Strength'] > 0 else '<red>'}Strength{'</light-cyan>' if entity.buffs['Strength'] > 0 else '</red>'}>({'+' if entity.buffs['Strength'] > 0 else '-'}{abs(entity.buffs['Strength']) * card.get('Strength Multi', 1)} dmg) | "
+            if card.get("Strength Multi", 1) > 1:
+                affected_by += f"Heavy Blade(x{card.get('Strength Multi')} Strength gain)"
+        if entity.buffs['Vigor'] > 0:
+            damage_value += entity.buffs['Vigor']
+            affected_by += f"<light-cyan>Vigor</light-cyan>(+{entity.buffs['Vigor']} dmg) | "
+        if target.debuffs['Vulnerable'] > 0:
+            damage_value = math.floor(damage_value * 1.5)
+            affected_by += "Target's <light-cyan>Vulnerable</light-cyan>(x1.50 dmg) | "
+        if entity.debuffs['Weak'] > 0:
+            damage_value = math.floor(damage_value * 0.75)
+            affected_by += "<red>Weak</red>(x0.75 dmg)"
+        string = string.replace(original_damage, str(damage_value))
+    return string, affected_by
+
+def calculate_actual_block(string: str, entity) -> tuple[str, str]:
+    match = re.search(r"꫱(\d+)", string)
+    affected_by = ''
+    if match:
+        original_damage = match.group()
+        block_value = int(original_damage)
+        if entity.buffs["Dexterity"] != 0:
+            block_value += entity.buffs['Dexterity']
+            affected_by += f"{'<light-cyan>' if entity.buffs['Dexterity'] > 0 else '<red>'}Dexterity{'</light-cyan>' if entity.buffs['Dexterity'] > 0 else '<red>'}({'+' if entity.buffs['Dexterity'] > 0 else '-'}{abs(entity.buffs['Dexterity'])} block)"
+        if entity.debuff['Frail'] > 0:
+            block_value = math.floor(block_value * 0.75)
+            affected_by += "<red>Frail</red>(x0.75 block)"
+        string = string.replace(original_damage, str(block_value))
+    return string, affected_by

@@ -4,10 +4,12 @@ import math
 import random
 from ansimarkup import ansiprint
 import events
-from entities import player, enemy_encounters, cards, potions, relics
-from utility import display_ui, active_enemies, combat_turn, combat_potion_dropchance, start_combat, list_input, claim_potions, card_rewards
+from items import relics, potions, cards, golden_multi
+from entities import player, enemy_encounters
+from utility import display_ui, active_enemies, combat_turn, combat_potion_dropchance, start_combat, list_input, claim_potions, card_rewards, view_piles, calculate_actual_damage, calculate_actual_block
 
-
+if relics['Golden Bark'] in player.relics:
+    golden_multi += 1
 
 def combat(tier) -> None:
     """There's too much to say here."""
@@ -134,7 +136,7 @@ def rest():
     while True:
         option = input("[View Deck] or [Leave]").lower()
         if option == 'view deck':
-            view_piles(player.deck)
+            view_piles(player.deck, player)
         elif option == 'leave':
             print("You leave...")
             print()
@@ -156,12 +158,7 @@ def unknown() -> None:
     valid_events = events.global_events
     valid_events.extend(events.act1_events)
 
-    if random_number < normal_combat:
-        normal_combat = 0.1
-        treasure_room += 0.02
-        merchant += 0.03
-        combat('Normal')
-    elif random_number < treasure_room:
+    if random_number < treasure_room:
         treasure_room = 0.02
         normal_combat += 0.1
         merchant += 0.03
@@ -169,31 +166,14 @@ def unknown() -> None:
         merchant = 0.03
         treasure_room += 0.02
         normal_combat += 0.1
+    elif random_number < normal_combat:
+        normal_combat = 0.1
+        treasure_room += 0.02
+        merchant += 0.03
+        combat('Normal')
     else:
         chosen_event = random.choice(valid_events)
         chosen_event()
-
-
-def view_piles(pile, end=False, upgraded=False):
-    """Prints a numbered list of all the cards in a certain pile."""
-    if pile == player.draw_pile:
-        pile = random.sample(pile, len(pile))
-    counter = 1
-    for card in pile:
-        if upgraded is True and card.get('Upgraded'):
-            ansiprint(f"{counter}: <light-black>{card['Type']}</light-black> | <blue>{card['Name']}</blue> | <light-red>{card['Energy']} Energy</light-red> | <yellow>{card['Info']}</yellow>")
-            counter += 1
-            sleep(0.05)
-        else:
-            ansiprint(f"{counter}: <light-black>{card['Type']}</light-black> | <blue>{card['Name']}</blue> | <light-red>{card['Energy']} Energy</light-red> | <yellow>{card['Info']}</yellow>")
-            counter += 1
-            sleep(0.05)
-    if end:
-        input("Press enter to continue > ")
-    sleep(1.0)
-    if end:
-        sleep(0.5)
-        system("clear")
 
 def view_relics():
     counter = 1
@@ -220,7 +200,7 @@ def play_potion():
 def play_card():
     while True:
         print()
-        view_piles(player.hand, False)
+        view_piles(player.hand, player)
         card_used = list_input('What card do you want to play?', player.hand)
         if player.hand[card_used].get('Type') == 'Curse' and relics['Blue Candle'] not in player.relics:
             print('<red>This card is a <bold>Curse</bold>.</red>')
@@ -243,17 +223,6 @@ def play_card():
             sleep(1.5)
             system("clear")
             continue
-        # Lets the player go back if they don't want to use the card.
-        option = input("Are you sure? (y|n) Type 'end' to cancel. > ").lower()
-        if option == 'n':
-            sleep(1.5)
-            system("clear")
-            continue
-        if option == 'end':
-            sleep(1)
-            system('clear')
-            break
-        # Cards that either target the player or target all enemies won't ask for a target.
         if playing_card.get("Target") is None and len(active_enemies) > 1:
             target = list_input("What enemy do you want to use it on? >", active_enemies)
             if not target:
@@ -263,6 +232,18 @@ def play_card():
             target = 0
         else:
             target = 0
+        # Lets the player go back if they don't want to use the card.
+        if player.hand[card_used].get("Block") is None:
+            effect, affected_by = calculate_actual_damage(player.hand[card_used]['Info'], active_enemies[target], player, player.hand[card_used])
+        else:
+            effect, affected_by = calculate_actual_block(player.hand[card_used]['Info'], player)
+        ansiprint(f"True effect | {effect}")
+        ansiprint(affected_by)
+        option = input("Are you sure? (y|n) > ").lower()
+        if option == 'n':
+            sleep(1.5)
+            system("clear")
+            continue
         player.use_card(playing_card, active_enemies[target], False, player.hand)
         break
 
