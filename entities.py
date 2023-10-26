@@ -140,7 +140,7 @@ class Player:
                 self.draw_cards(True, 1)
                 self.inked_cards = 0
 
-    def draw_cards(self, middle_of_turn: bool, draw_cards: int):
+    def draw_cards(self, middle_of_turn: bool, draw_cards: int = 0):
         '''Draws [draw_cards] cards.'''
         if draw_cards == 0:
             draw_cards = self.draw_strength
@@ -241,9 +241,9 @@ class Player:
                     status += f" | <light-cyan>{buff}</light-cyan>"
             for debuff in self.debuffs:
                 if debuff not in non_stacking_effects and self.debuffs[debuff] > 0:
-                    status += f" | <light-cyan>{debuff}</light-cyan>: {self.debuffs[debuff]}"
+                    status += f" | <red>{debuff}</red>: {self.debuffs[debuff]}"
                 elif debuff in non_stacking_effects and self.debuffs[debuff] is True:
-                    status += f" | <light-cyan>{debuff}</light-cyan>"
+                    status += f" | <red>{debuff}</red>"
         else:
             status = f"\n{self.name} (<red>{self.health} </red>/ <red>{self.max_health}</red> | <yellow>{self.gold} Gold</yellow>)"
         ansiprint(status)
@@ -253,10 +253,10 @@ class Player:
             for buff in self.buffs:
                 # .replace() method is used to replace any variable values with their current values
                 if int(self.buffs[buff]) > 0:
-                    ansiprint(f"{buff}: {all_effects[buff]}".replace("X", self.buffs[buff]))
+                    ansiprint(f"<light-cyan>{buff}</light-cyan>: {all_effects[buff]}".replace("X", self.buffs[buff]))
             for debuff in self.debuffs:
                 if int(self.debuffs[debuff]) > 0:
-                    ansiprint(f"{debuff}: {all_effects[debuff]}".replace("X", self.debuffs[debuff]))
+                    ansiprint(f"<red>{debuff}</red>: {all_effects[debuff]}".replace("X", self.debuffs[debuff]))
         print()
 
     def end_player_turn(self):
@@ -666,7 +666,8 @@ class Enemy:
                 if self.active_turns == 1:
                     self.buff("Ritual", 3, True, "Incantation")
                     break
-                self.attack(6, 1, True, "Dark Strike")
+                else:
+                    self.attack(6, 1, True, "Dark Strike")
             elif self.name in ('Acid Slime (L)', 'Acid Slime (M)'):
                 random_num = random.randint(0, 100)
                 if self.health < math.floor(self.max_health * 0.5) and self.name == "Acid Slime (L)":
@@ -734,15 +735,30 @@ class Enemy:
                     continue
             break
 
-    def show_status(self):
-        status = f"{self.name} (<red>{self.health} / {self.max_health}</red> | <light-blue>{self.block} Block</light-blue>)"
-        if self.buffs["Barricade"] is True:
-            status += " | <light-cyan>Barricade</light-cyan>"
-        if self.buffs['Artifact'] > 0:
-            status += f" | <light-cyan>Artifact: {self.buffs['Artifact']}</light-cyan>"
-        if self.debuffs["Vulnerable"] > 0:
-            status += f" | <red>Vulnerable: {self.debuffs['Vulnerable']}</red>"
-        ansiprint(status, "\n")
+    def show_status(self, full_view=False):
+        status = f"\n{self.name} (<red>{self.health} </red>/ <red>{self.max_health}</red> | <light-blue>{self.block} Block</light-blue>)"
+        for buff in self.buffs:
+            if buff not in non_stacking_effects and self.buffs[buff] > 0:
+                status += f" | <light-cyan>{buff}</light-cyan>: {self.buffs[buff]}"
+            elif buff in non_stacking_effects and self.buffs[buff] is True:
+                status += f" | <light-cyan>{buff}</light-cyan>"
+        for debuff in self.debuffs:
+            if debuff not in non_stacking_effects and self.debuffs[debuff] > 0:
+                status += f" | <red>{debuff}</red>: {self.debuffs[debuff]}"
+            elif debuff in non_stacking_effects and self.debuffs[debuff] is True:
+                status += f" | <red>{debuff}</red>"
+        ansiprint(status)
+        print()
+        if full_view is True:
+            # int() function used to account for True|False variables.
+            for buff in self.buffs:
+                # .replace() method is used to replace any variable values with their current values
+                if int(self.buffs[buff]) > 0:
+                    ansiprint(f"<light-cyan>{buff}</light-cyan>: {all_effects[buff]}".replace("X", self.buffs[buff]))
+            for debuff in self.debuffs:
+                if int(self.debuffs[debuff]) > 0:
+                    ansiprint(f"<red>{debuff}<red>: {all_effects[debuff]}".replace("X", self.debuffs[debuff]))
+        print()
 
     def attack(self, dmg, times, start, name=""):
         dmg_affected_by = ''

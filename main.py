@@ -27,7 +27,6 @@ def combat(tier) -> None:
         for enemy in active_enemies:
             # Removes block, ticks debuffs and buffs, and triggers buffs and debuffs.
             enemy.start_turn()
-        killed_enemies = True
         while True:
             print(f"Turn {combat_turn}: ")
             # Shows the player's potions, cards(in hand), amount of cards in discard and draw pile, and shows the status for you and the enemies.
