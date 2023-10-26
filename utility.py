@@ -1,5 +1,6 @@
 from time import sleep
 from os import system
+from copy import copy
 import math
 import random
 import re
@@ -19,6 +20,7 @@ player_buffs = {"Artifact": "Negate the next X debuffs",
                 "Buffer": "Prevent the next X times you would lose HP",
                 "Dexterity": "Increases <bold>Block</bold> gained from cards by X",
                 "Draw Card": "Draw X aditional cards next turn",
+                "Draw Up": "Draw X additional cards each turn",
                 "Energized": "Gain X additional <bold>Energy</bold> next turn",
                 "Focus": "Increases the effectiveness of <bold>Orbs</bold> by X",
                 "Intangible": "Reduce ALL damage and HP loss to 1 for X turns",
@@ -166,7 +168,7 @@ all_effects.extend(enemy_buffs)
 all_effects.extend(enemy_debuffs)
 all_effects = tuple(all_effects)
 
-def generate_card_rewards(reward_tier, amount, entity, card_pool) -> list[dict]:
+def generate_card_rewards(reward_tier: str, amount: int, entity: object, card_pool: dict) -> list[dict]:
     """
     Normal combat rewards:
     Rare: 3% | Uncommon: 37% | Common: 60%
@@ -177,9 +179,9 @@ def generate_card_rewards(reward_tier, amount, entity, card_pool) -> list[dict]:
     Boss combat rewards:
     Rare: 100% | Uncommon: 0% | Common: 0%
     """
-    common_cards = {card: attr for card, attr in card_pool.items() if attr.get("Rarity") == "Common" and attr.get("Type") not in ('Status', 'Curse') and not attr.get('Upgraded') and attr.get('Class') == entity.player_class}
-    uncommon_cards = {card: attr for card, attr in card_pool.items() if attr.get("Rarity") == "Uncommon" and attr.get("Type") not in ('Status', 'Curse') and not attr.get('Upgraded') and attr.get('Class') == entity.player_class}
-    rare_cards = {card: attr for card, attr in card_pool.items() if attr.get("Rarity") == "Rare" and attr.get("Type") not in ('Status', 'Curse') and not attr.get('Upgraded') and attr.get('Class') == entity.player_class}
+    common_cards = [card for card in card_pool.values() if card.get("Rarity") == "Common" and card.get("Type") not in ('Status', 'Curse') and not card.get('Upgraded') and card.get('Class') == entity.player_class]
+    uncommon_cards = [card for card in card_pool.values() if card.get("Rarity") == "Uncommon" and card.get("Type") not in ('Status', 'Curse') and not card.get('Upgraded') and card.get('Class') == entity.player_class]
+    rare_cards = [card for card in card_pool.values() if card.get("Rarity") == "Rare" and card.get("Type") not in ('Status', 'Curse') and not card.get('Upgraded') and card.get('Class') == entity.player_class]
 
     rewards = []
 
@@ -218,13 +220,13 @@ def generate_card_rewards(reward_tier, amount, entity, card_pool) -> list[dict]:
     return rewards
 
 
-def generate_potion_rewards(amount, entity, potion_pool, chance_based=True) -> list[dict]:
+def generate_potion_rewards(amount: int, entity: object, potion_pool: dict, chance_based=True) -> list[dict]:
     """You have a 40% chance to get a potion at the end of combat.
     -10% when you get a potion.
     +10% when you don't get a potion."""
-    common_potions = [potion for potion in potion_pool if potion.get("Rarity") == "Common" and (potion.get("Class") == "All" or entity.entity_class in potion.get('Class'))]
-    uncommon_potions = [potion for potion in potion_pool if potion.get("Rarity") == "Uncommon" and (potion.get("Class") == "All" or entity.entity_class in potion.get('Class'))]
-    rare_potions = [potion for potion in potion_pool if potion.get("Rarity") == "Rare" and (potion.get("Class") == "All" or entity.entity_class in potion.get('Class'))]
+    common_potions = [potion for potion in potion_pool.values() if potion.get("Rarity") == "Common" and (potion.get("Class") == "All" or entity.player_class in potion.get('Class'))]
+    uncommon_potions = [potion for potion in potion_pool.values() if potion.get("Rarity") == "Uncommon" and (potion.get("Class") == "All" or entity.player_class in potion.get('Class'))]
+    rare_potions = [potion for potion in potion_pool.values() if potion.get("Rarity") == "Rare" and (potion.get("Class") == "All" or entity.player_class in potion.get('Class'))]
     all_potions = []
     all_potions.extend(common_potions)
     all_potions.extend(uncommon_potions)
@@ -245,10 +247,10 @@ def generate_potion_rewards(amount, entity, potion_pool, chance_based=True) -> l
 
 
 def generate_relic_rewards(source, amount, entity, relic_pool, chance_based=True) -> list[dict]:
-    common_relics = [relic for relic in relic_pool if relic.get('Rarity') == 'Common' and relic.get('Class') == entity.player_class]
-    uncommon_relics = [relic for relic in relic_pool if relic.get('Rarity') == 'Uncommon' and relic.get('Class') == entity.player_class]
-    rare_relics = [relic for relic in relic_pool if relic.get('Rarity') == 'Rare' and relic.get('Class') == entity.player_class]
-    all_relics = [relic for relic in relic_pool if relic.get('Rarity') in ('Common', 'Uncommon', 'Rare') and relic.get('Class') == entity.player_class]
+    common_relics = [relic for relic in relic_pool.values() if relic.get('Rarity') == 'Common' and relic.get('Class') == entity.player_class]
+    uncommon_relics = [relic for relic in relic_pool.values() if relic.get('Rarity') == 'Uncommon' and relic.get('Class') == entity.player_class]
+    rare_relics = [relic for relic in relic_pool.values() if relic.get('Rarity') == 'Rare' and relic.get('Class') == entity.player_class]
+    all_relics = [relic for relic in relic_pool.values() if relic.get('Rarity') in ('Common', 'Uncommon', 'Rare') and relic.get('Class') == entity.player_class]
     rewards = []
     if source == 'Chest':
         common_chance = 49
@@ -270,18 +272,17 @@ def generate_relic_rewards(source, amount, entity, relic_pool, chance_based=True
             rewards.append(random.choice(all_relics))
     return rewards
 
-def claim_relics(choice, entity, relic_amount, relic_pool, rewards=None, chance_based=True):
+def claim_relics(choice: bool, entity: object, relic_amount: int, relic_pool: dict, rewards: list=None, chance_based=True):
     if not rewards:
-        rewards = generate_relic_rewards('Other', relic_amount, relic_pool, entity, chance_based)
+        rewards = generate_relic_rewards('Other', relic_amount, entity, relic_pool, chance_based)
     if not choice:
         for i in range(relic_amount):
             entity.relics.append(rewards[i])
-            print(f"{entity.name} obtained {rewards[i]['Name']} | {rewards[i]['Info']}")
+            ansiprint(f"{entity.name} obtained {rewards[i]['Name']} | {rewards[i]['Info']}")
             rewards.remove(rewards[i])
-            sleep(0.6)
-        sleep(1)
-        system('clear')
-    while len(rewards) > 0:
+            sleep(0.5)
+        sleep(0.5)
+    while len(rewards) > 0 and choice:
         counter = 1
         for relic in rewards:
             ansiprint(f"{counter}: {relic['Name']} | {relic['Class']} | <light-black>{relic['Rarity']}</light-black> | <yellow>{relic['Info']}</yellow> | <blue><italic>{relic['Flavor']}</italic></blue>")
@@ -290,7 +291,8 @@ def claim_relics(choice, entity, relic_amount, relic_pool, rewards=None, chance_
         option = list_input('What relic do you want? > ', rewards)
         if not option:
             sleep(1.5)
-            system('clear')
+            clear()
+            continue
         entity.relics.append(rewards[option])
         print(f"{entity.name} obtained {rewards[option]['Name']}.")
         if rewards[option] == relic_pool.get('Ceramic Fish'):
@@ -299,42 +301,51 @@ def claim_relics(choice, entity, relic_amount, relic_pool, rewards=None, chance_
             entity.max_potions += 2
         if rewards[option] == relic_pool.get('Vajra'):
             entity.starting_strength += 1
+        if 'Bottled' in rewards[option].get('Name'):
+            entity.bottle_card(rewards[option]['Card Type'])
+        if 'Egg' in rewards[option].get('Name'):
+            relic_variables = {relic_pool['Molten Egg']: entity.upgrade_attacks,
+                              relic_pool['Frozen Egg']: entity.upgrade_skills,
+                              relic_pool['Toxic Egg']: entity.upgrade_powers}
+            relic_variables[rewards[option]] = True
 
         if rewards[option] == relic_pool.get('War Paint'):
             skill_cards = [card for card in entity.deck if card.get('Type') == 'Skill']
+            ansiprint("<bold>War Paint</bold>:")
             for _ in range(min(len(skill_cards), 2)):
                 entity.card_actions(random.choice(skill_cards), 'Upgrade', skill_cards)
-
+        if rewards[option] == relic_pool.get('Pear'):
+            ansiprint("<bold>Pear</bold> caused: ", end='')
+            entity.health_actions(10, "Max Health")
         if rewards[option] == relic_pool.get('Whetstone'):
-            attack_cards = [card for card in entity.deck if card.get('Type') == 'Attack']
+            attack_cards = {card: stats for card, stats in entity.deck.items() if stats.get('Type') == 'Attack'}
+            ansiprint("<bold>Whetstone</bold>:")
             for _ in range(min(len(attack_cards), 2)):
+                choice = attack_cards[random.choice(attack_cards.keys())]
                 entity.card_actions(random.choice(attack_cards), 'Upgrade', attack_cards)
         rewards.remove(rewards[i])
-        sleep(1)
-        system('clear')
 
 def claim_potions(choice, potion_amount, potion_pool, entity, rewards=None, chance_based=True):
     if not rewards:
-        rewards = generate_potion_rewards(potion_amount, potion_pool, entity, chance_based)
+        rewards = generate_potion_rewards(potion_amount, entity, potion_pool, chance_based)
     if not choice:
         for i in range(potion_amount):
             entity.potions.append(rewards[i])
             print(f"{entity.name} obtained {rewards[i]['Name']} | {rewards[i]['Info']}")
             rewards.remove(rewards[i])
         sleep(1.5)
-        system("clear")
+        clear()
     while len(rewards) > 0:
         counter = 1
-        print("Potion Bag:")
+        print(f"Potion Bag: ({len(entity.potions)} / {entity.max_potions})")
         for potion in entity.potions:
-            ansiprint(f"{counter}: <light-black>{potion['Rarity']}</light-black> | <green>{potion['Class']}</green> | <blue>{potion['Name']}</blue> | <yellow>{potion['Info']}")
+            ansiprint(f"{counter}: <blue>{potion['Name']}</blue> | <light-black>{potion['Rarity']}</light-black> | <green>{potion['Class']}</green> | <yellow>{potion['Info']}</yellow>")
             counter += 1
-        print(f"{len(entity.potions)} / {entity.max_potions}")
         print()
         print("Potion reward(s):")
         counter = 1
         for potion in rewards:
-            ansiprint(f"{counter}: <light-black>{potion['Rarity']}</light-black> | Class: <green>{potion['Class']}</green> | <blue>{potion['Name']}</blue> | <yellow>{potion['Info']}</yellow>")
+            ansiprint(f"{counter}: <blue>{potion['Name']}</blue> | <light-black>{potion['Rarity']}</light-black> | <green>{potion['Class']}</green> | <yellow>{potion['Info']}</yellow>")
             counter += 1
         print()
         option = list_input('What potion you want? >', rewards)
@@ -351,16 +362,15 @@ def claim_potions(choice, potion_amount, potion_pool, entity, rewards=None, chan
                 print(f"Discarded {entity.potions[option]['Name']}.")
                 entity.potions.remove(entity.potions[option])
                 sleep(1.5)
-                system("clear")
+                clear()
             else:
                 sleep(1.5)
-                system("clear")
+                clear()
             continue
         entity.potions.append(rewards[option])
-        print(f"{entity.name} obtained {rewards[option]['Name']}")
         rewards.remove(rewards[option])
-        sleep(1.5)
-        system("clear")
+        sleep(0.2)
+        clear()
 
 def card_rewards(tier, choice, entity, card_pool, rewards=None):
     if not rewards:
@@ -372,6 +382,12 @@ def card_rewards(tier, choice, entity, card_pool, rewards=None):
             counter += 1
         if choice:
             chosen_reward = list_input('What card do you want? > ', rewards)
+            if entity.upgrade_attacks and rewards[chosen_reward]['Type'] == 'Attack':
+                entity.card_actions(rewards[chosen_reward], 'Upgrade')
+            elif entity.upgrade_skills and rewards[chosen_reward]['Type'] == 'Skill':
+                entity.card_actions(rewards[chosen_reward], 'Upgrade')
+            elif entity.upgrade_powers and rewards[chosen_reward]['Type'] == 'Power':
+                entity.card_actions(rewards[chosen_reward], 'Upgrade')
             entity.deck.append(rewards[chosen_reward])
             print(f"{entity.name} obtained {rewards[chosen_reward]['Name']}")
         else:
@@ -381,26 +397,31 @@ def card_rewards(tier, choice, entity, card_pool, rewards=None):
                     entity.block_curses -= 1
                     if entity.block_curses == 0:
                         ansiprint('<bold>Omamori</bold> is depleted.')
-                entity.deck.append(rewards[chosen_reward])
-                print(f"{entity.name} obtained {rewards[chosen_reward]['Name']}")
+                    continue
+                if card.get('Type') == 'Curse' and entity.darkstone_health:
+                    ansiprint("<bold>Darkstone Periapt</bold> activated.")
+                    entity.health_actions(6, "Max Health")
+                entity.deck.append(card)
+                print(f"{entity.name} obtained {card['Name']}")
+                rewards.remove(card)
         if entity.gold_on_card_add:
             entity.gold += 9
             ansiprint('You gained 9 <yellow>Gold</yellow> from <bold>Ceramic Fish</bold>.')
         rewards.clear()
         sleep(1)
 
-def view_piles(pile, entity, end=False, upgraded=False):
+def view_piles(pile, entity, end=False, condition='True'):
     """Prints a numbered list of all the cards in a certain pile."""
     if pile == entity.draw_pile:
         pile = random.sample(pile, len(pile))
     counter = 1
     for card in pile:
-        if upgraded is True and card.get('Upgraded'):
-            ansiprint(f"{counter}: <blue>{card['Name']}</blue> | <light-cyan>{card['Type']}</light-cyan> | <light-red>{card['Energy']} Energy</light-red> | <yellow>{card['Info']}</yellow>".replace('Σ', '').replace('꫱', ''))
+        if eval(condition):
+            ansiprint(f"{counter}: <{'blue' if not card.get('Upgraded') else 'green'}>{card['Name']}</{'blue' if not card.get('Upgraded') else 'green'}> | <light-cyan>{card['Type']}</light-cyan> | <light-red>{card['Energy']}{' Energy' if isinstance(card.get('Energy'), int) else ''}</light-red> | <yellow>{card['Info']}</yellow>".replace('Σ', '').replace('꫱', ''))
             counter += 1
             sleep(0.05)
         else:
-            ansiprint(f"{counter}: <blue>{card['Name']}</blue> | <light-cyan>{card['Type']}</light-cyan> | <light-red>{card['Energy']} Energy</light-red> | <yellow>{card['Info']}</yellow>".replace('Σ', '').replace('꫱', ''))
+            ansiprint(f"{counter}: <light-black>{card['Name']} | {card['Type']} | {card['Energy']}{' Energy' if isinstance(card.get('Energy'), int) else ''} | {card['Info']}</light-black>".replace('Σ', '').replace('꫱', ''))
             counter += 1
             sleep(0.05)
     if end:
@@ -408,110 +429,27 @@ def view_piles(pile, entity, end=False, upgraded=False):
     sleep(1.0)
     if end:
         sleep(0.5)
-        system("clear")
-
-def damage(dmg: int, target: object, user: object, ignore_block: bool=False, card: dict=None):
-    dmg_affected_by: str = ''
-    if card is not None:
-        dmg = dmg + user.strength * card.get("Strength Multi", 1) + user.vigor
-        if "Body Slam" in card.get('Name'):
-            dmg += user.block
-            dmg_affected_by += f"Body Slam(+{user.block} dmg) | "
-        if "Perfected Strike" in card.get('Name'):
-            perfected_dmg = len([card for card in user.deck if 'strike' in card.get('Name').lower()]) * card.get('Damage Per "Strike"')
-            dmg += perfected_dmg
-            dmg_affected_by += f"Perfected Strike(+{perfected_dmg} dmg) | "
-        if user.buffs["Strength"] != 0:
-            dmg_affected_by += f"{'<red>' if user.buffs['Strength'] < 0 else ''}{user.strength}{'</red>' if user.buffs['Strength'] < 0 else ''} <light-cyan>Strength</light-cyan> | "
-            if "Heavy Blade" in card.get('Name'):
-                dmg_affected_by += f"Heavy Blade(x{card.get('Strength Multi')} Strength gain) | "
-        if user.buffs["Vigor"] > 0:
-            dmg_affected_by += f"{user.vigor} <light-cyan>Vigor</light-cyan>(+{user.vigor} dmg) | "
-        if user.debuffs["Weak"] > 0 and card:
-            dmg = math.floor(dmg * 0.75)
-            dmg_affected_by += "<light-cyan>Weak</light-cyan>(x0.75 dmg) | "
-        if target.debuffs["Vulnerable"] > 0:
-            dmg = math.floor(dmg * 1.50)
-            dmg_affected_by += "<light-cyan>Vulnerable</light-cyan>(x1.5 dmg) | "
-        if user.buffs["Pen Nib"] > 0:
-            dmg *= 2
-            dmg_affected_by += "<light-cyan>Pen Nib</light-cyan>(x2 dmg) | "
-    if not ignore_block:
-        if target.block < dmg:
-            print(f"{user.name} dealt {dmg:.0f}({max(dmg, target.block)} blocked) damage to {target.name}")
-        else:
-            ansiprint('<blue>Blocked</blue>')
-    # Manages Block
-    if not ignore_block:
-        if dmg <= target.block:
-            target.block -= dmg
-            dmg = 0
-        elif dmg > target.block:
-            dmg -= target.block
-            target.block = 0
-            if dmg in (4, 3, 2, 1) and card is not None:
-                dmg = 5
-                dmg_affected_by += '<bold>The Boot</bold> (Unblocked damage increased to 5) | '
-            if user.dmg_reduce_by_1 is True and hasattr(target, 'dmg_reduce_by_1'):
-                dmg -= 1
-                dmg_affected_by += '<bold>Tungsten Rod</bold> (Reduced unblocked damage by 1)'
-            if hasattr(user, 'player_class') and user.buffs['Envenom'] > 0 and user != target:
-                target.debuffs['Poison'] += 1
-                ansiprint(f"<light-cyan>Envenom</light-cyan> applied 1 <red>Poison</red> to {target.name}")
-            target.health -= dmg
-            if hasattr(user, 'taken_damage'):
-                if user.taken_damage is False:
-                    user.taken_damage = True
-    else:
-        if user.dmg_reduce_by_1 is True and hasattr(target, 'dmg_reduce_by_1'):
-            dmg -= 1
-            dmg_affected_by += '<bold>Tungsten Rod</bold> (Reduced unblocked damage by 1)'
-        target.health -= dmg
-    print('Affected by:')
-    print(dmg_affected_by)
-    if hasattr(user, 'player_class'):
-        if user.health < math.floor(user.health * 0.5):
-            ansiprint('From <bold>Red Skull</red>: ', end='')
-            user.starting_strength += 3
-            user.buff('Strength', 3, False)
-    # Removes buffs that trigger on attack.
-    if user.buffs['Vigor'] > 0:
-        user.buffs['Vigor'] = 0
-        ansiprint("\n<light-cyan>Vigor</light-cyan> wears off")
-    if hasattr(user, 'pen_nib_attacks') and card is not None:
-        if user.buffs["Pen Nib"] == 10:
-            user.buffs["Pen Nib"] = 0
-            ansiprint('<light-cyan>Pen Nib</light-cyan> wears off.')
-    # Makes health not able to be negative
-    target.health = max(target.health, 0)
-    if target.health <= 0:
-        target.die()
-
-
+        clear()
 
 def display_ui(entity, combat=True):
     # Repeats for every card in the entity's hand
     print("Potions: ")
-    counter = 1
     for potion in entity.potions:
-        ansiprint(f"{counter}: {potion['Name']} | {potion['Class']} | <light-black>{potion['Rarity']}</light-black> | <yellow>{potion['Info']}</yellow>")
-        counter += 1
+        ansiprint(f"<blue>{potion['Name']}</blue> | <green>{potion['Class']}</green> | <light-black>{potion['Rarity']}</light-black> | <yellow>{potion['Info']}</yellow>")
         sleep(0.05)
     # Fills the empty potion slots with '(Empty)'
     for _ in range(entity.max_potions - len(entity.potions)):
-        ansiprint(f"<light-black>{counter}: (Empty)</light-black>")
-        counter += 1
+        ansiprint("<light-black>(Empty)</light-black>")
         sleep(0.05)
     print()
     ansiprint("<bold>Hand: </bold>")
-    counter = 1
     for card in entity.hand:
-        # Prints in the energy cost in red if the player doesn't have enough energy to use the card
-        if card["Energy"] > entity.energy:
-            ansiprint(f"<blue>{card['Name']}</blue> | <light-black>{card['Type']}</light-black> | <italic><red>{card['Energy']} Energy</red></italic> | <yellow>{card['Info']}</yellow>")
+        # Replaces Energy with a really large number if a card is unplayable(Shown with the string "Unplayable")(elegant solution, i know)
+        if card.get('Energy') if isinstance(card.get('Energy'), int) else 57634576647346 <= entity.energy:
+            ansiprint(f"<{'blue' if card.get('Upgraded') is not True else 'green'}>{card['Name']}</{'blue' if card.get('Upgraded') is not True else 'green'}> | <light-black>{card['Type']}</light-black> | <italic><red>{card['Energy']} {'Energy' if isinstance(card.get('Energy'), int) else ''}</red></italic> | <yellow>{card['Info']}</yellow>".replace('Σ', '').replace('꫱', ''))
         # Otherwise, print in full color
         else:
-            ansiprint(f"<blue>{card['Name']}</blue> | <light-black>{card['Type']}</light-black> | <light-red>{card['Energy']} Energy</light-red> | <yellow>{card['Info']}</yellow>")
+            ansiprint(f"<light-black>{card['Name']} | {card['Type']} | {card['Energy']} {'Energy' if isinstance(card.get('Energy'), int) else ''} | {card['Info']}</light-black>".replace('Σ', '').replace('꫱', ''))
         sleep(0.05)
     print()
     if combat is True:
@@ -524,22 +462,6 @@ def display_ui(entity, combat=True):
     else:
         entity.show_status(False)
     print()
-    counter = 1
-
-def bottle_card(entity, card_type):
-    valid_cards = [card for card in entity.deck if card.get('Type') == card_type]
-    while True:
-        for deck_card in entity.deck:
-            if deck_card.get('Type') == card_type:
-                ansiprint(f"<blue>{deck_card['Name']}</blue> | <light-black>{deck_card['Type']}</light-black> | <light-red>{deck_card['Energy']} Energy</light-red> | <yellow>{deck_card['Info']}</yellow>")
-                sleep(0.05)
-
-        option = list_input('What card do you want to bottle? > ', valid_cards)
-        valid_cards[option]['Bottled'] = True
-        print(f'{valid_cards[option].get("Name")} has been bottled.')
-        sleep(1.5)
-        system('clear')
-        break
 
 def start_combat(entity, enemy_list):
     print("Starting combat")
@@ -547,22 +469,20 @@ def start_combat(entity, enemy_list):
     entity.draw_pile = random.sample(entity.deck, len(entity.deck))
     encounter_enemies = random.choice(enemy_list)
     for enemy in encounter_enemies:
+        enemy = copy(enemy)
         active_enemies.append(enemy)
         # Enemies have 2 health values, [min, max]. This chooses a random number between those min and max values.
         enemy.health = random.randint(enemy.health[0], enemy.health[1])
         enemy.max_health = enemy.health
     entity.start_of_combat_relics()
 
-def list_input(input_string, array) -> str:
+def list_input(input_string, array) -> str | None:
     try:
-        if array:
-            option = int(input(input_string)) - 1
-            array[option] = array[option] # Checks that the number is in range but doesn't really do anything
+        option = int(input(input_string)) - 1
+        array[option] = array[option] # Checks that the number is in range but doesn't really do anything
     except ValueError:
-        print("You have to enter a number")
         return None
     except IndexError:
-        print("Option not in range")
         return None
     return option
 
@@ -579,7 +499,7 @@ def calculate_actual_damage(string: str, target, entity: object, card) -> tuple[
     affected_by = ''
     if match:
         original_damage: str = match.group()
-        damage_value = int(original_damage)
+        damage_value = int(original_damage.replace('Σ', ''))
         if "Body Slam" in card.get('Name'):
             damage_value += entity.block
         if "Perfected Strike" in card.get('Name'):
@@ -608,12 +528,15 @@ def calculate_actual_block(string: str, entity) -> tuple[str, str]:
     affected_by = ''
     if match:
         original_damage = match.group()
-        block_value = int(original_damage)
+        block_value = int(original_damage.replace('꫱', ''))
         if entity.buffs["Dexterity"] != 0:
             block_value += entity.buffs['Dexterity']
             affected_by += f"{'<light-cyan>' if entity.buffs['Dexterity'] > 0 else '<red>'}Dexterity{'</light-cyan>' if entity.buffs['Dexterity'] > 0 else '<red>'}({'+' if entity.buffs['Dexterity'] > 0 else '-'}{abs(entity.buffs['Dexterity'])} block)"
-        if entity.debuff['Frail'] > 0:
+        if entity.debuffs['Frail'] > 0:
             block_value = math.floor(block_value * 0.75)
             affected_by += "<red>Frail</red>(x0.75 block)"
         string = string.replace(original_damage, str(block_value))
     return string, affected_by
+
+def clear():
+    system('clear')

@@ -1,9 +1,7 @@
-import sys
 import random
 from time import sleep
-from os import system
-from ansimarkup import ansiprint
-from utility import damage, list_input
+# from ansimarkup import ansiprint
+from utility import list_input, clear, view_piles
 
 
 def use_strike(targeted_enemy: object, using_card, entity):
@@ -12,10 +10,10 @@ def use_strike(targeted_enemy: object, using_card, entity):
     if "+" in using_card['Name']:
         base_damage += 3
     print()
-    damage(base_damage, targeted_enemy, entity)
+    entity.attack(base_damage, targeted_enemy, using_card)
     print()
     sleep(1)
-    system("clear")
+    clear()
 
 
 def use_bash(targeted_enemy: object, using_card, entity):
@@ -27,11 +25,11 @@ def use_bash(targeted_enemy: object, using_card, entity):
         base_damage += 2
         base_vulnerable += 1
     print()
-    damage(base_damage, targeted_enemy, entity)
+    entity.attack(base_damage, targeted_enemy, using_card)
     entity.debuff("Vulnerable", base_vulnerable, targeted_enemy, True)
     print()
     sleep(1.5)
-    system("clear")
+    clear()
 
 
 def use_defend(using_card, entity):
@@ -43,7 +41,7 @@ def use_defend(using_card, entity):
     entity.blocking(base_block)
     print()
     sleep(1.5)
-    system("clear")
+    clear()
 
 
 def use_bodyslam(targeted_enemy, using_card, entity):
@@ -52,10 +50,10 @@ def use_bodyslam(targeted_enemy, using_card, entity):
     if "+" in using_card['Name']:
         base_energy -= 1
     print()
-    damage(using_card['Damage'], targeted_enemy, entity)
+    entity.attack(using_card['Damage'], targeted_enemy, entity)
     print()
     sleep(1.5)
-    system("clear")
+    clear()
 
 
 def use_clash(targeted_enemy, using_card, entity):
@@ -64,21 +62,9 @@ def use_clash(targeted_enemy, using_card, entity):
     if "+" in using_card['Name']:
         base_damage += 4
     print()
-    while True:
-        for card in entity.hand:
-            if not card.get("Type", entity):
-                system("clear")
-                ansiprint(
-                    "<light-red>PythonRail, *sigh* you forgot the 'Type' key-value pair")
-                sys.exit(2)
-            elif card.get("Type") != "Attack":
-                ansiprint(
-                    "<light-red>You have non-attack cards in your hand</light-red>")
-                break
-        damage(base_damage, targeted_enemy, entity)
-        break
+    entity.attack(base_damage, targeted_enemy, using_card)
     sleep(1.5)
-    system("clear")
+    clear()
 
 
 def use_heavyblade(targeted_enemy, using_card, entity):
@@ -86,9 +72,9 @@ def use_heavyblade(targeted_enemy, using_card, entity):
     strength_multi = cards['Heavy Blade']['Strength Multi']
     if '+' in using_card['Name']:
         strength_multi += 2
-    damage(using_card['Damage'], targeted_enemy, entity)
+    entity.attack(using_card['Damage'], targeted_enemy, using_card)
     sleep(1.5)
-    system("clear")
+    clear()
 
 
 def use_cleave(enemies, using_card, entity):
@@ -98,9 +84,9 @@ def use_cleave(enemies, using_card, entity):
         base_damage += 3
     print()
     for enemy in enemies:
-        damage(base_damage, enemy, entity)
+        entity.attack(base_damage, enemy, using_card)
     sleep(1.5)
-    system("clear")
+    clear()
 
 
 def use_perfectedstrike(targeted_enemy, using_card, entity):
@@ -108,14 +94,11 @@ def use_perfectedstrike(targeted_enemy, using_card, entity):
     damage_per_strike = using_card['Damage Per "Strike"']  # 2
     base_damage = using_card['Damage']  # 6
     if "+" in using_card['Name']:
-        damage_per_strike = using_card['Damage Per "Strike"'] + 1
+        damage_per_strike += 1
     print()
-    for card in entity.deck:
-        if "strike" in card['Name'].lower():
-            base_damage += damage_per_strike
-    damage(base_damage, targeted_enemy, entity)
+    entity.attack(base_damage, targeted_enemy, using_card)
     sleep(1.5)
-    system("clear")
+    clear()
 
 
 def use_anger(targeted_enemy, using_card, entity):
@@ -124,10 +107,10 @@ def use_anger(targeted_enemy, using_card, entity):
     if '+' in using_card['Name']:
         base_damage += 2
     print()
-    damage(base_damage, targeted_enemy, entity)
+    entity.attack(base_damage, targeted_enemy, using_card)
     entity.discard_pile.append(using_card)
     sleep(1.5)
-    system("clear")
+    clear()
 
 
 def use_clothesline(targeted_enemy, using_card, entity):
@@ -138,10 +121,10 @@ def use_clothesline(targeted_enemy, using_card, entity):
         base_damage += 2
         base_weak += 1
     print()
-    damage(base_damage, targeted_enemy, entity)
+    entity.attack(base_damage, targeted_enemy, using_card)
     entity.debuff("Weak", base_weak, targeted_enemy, True)
     sleep(1.5)
-    system("clear")
+    clear()
 
 
 def use_havoc(using_card, entity, enemies):
@@ -150,10 +133,9 @@ def use_havoc(using_card, entity, enemies):
     if '+' in using_card['Name']:
         base_energy -= 1
     print()
-    entity.use_card(
-        entity.draw_pile[-1], random.choice(enemies), True, entity.draw_pile)
+    entity.use_card(entity.draw_pile[-1], random.choice(enemies), True, entity.draw_pile)
     sleep(1.5)
-    system("clear")
+    clear()
 
 
 def use_flex(using_card, entity):
@@ -169,24 +151,17 @@ def use_headbutt(targeted_enemy, using_card, entity):
     base_damage = using_card['Damage']  # 9
     if '+' in using_card['Name']:
         base_damage += 3
-    counter = 1
-    damage(base_damage, targeted_enemy, entity)
+    entity.attack(base_damage, targeted_enemy, using_card)
     while True:
-        for card in entity.discard_pile:
-            ansiprint(
-                f"{counter}: <light-black>{card['Type']}</light-black> | <blue>{card['Name']}</blue> | <light-red>{card['Energy']} Energy</light-red> | <yellow>{card['Info']}</yellow>")
-            counter += 1
-            sleep(0.05)
-        choice = list_input(
-            'What card do you want to put on top of your draw pile? > ', entity.discard_pile)
+        view_piles(entity.discard_pile, entity)
+        choice = list_input('What card do you want to put on top of your draw pile? > ', entity.discard_pile)
         if choice is False:
-            system("clear")
+            clear()
             continue
-        entity.move_card(
-            entity.discard_pile[choice], entity.discard_pile, entity.draw_pile, True)
+        entity.move_card(entity.discard_pile[choice], entity.discard_pile, entity.draw_pile, True)
         break
     sleep(1.5)
-    system("clear")
+    clear()
 
 
 def use_shrugitoff(using_card, entity):
@@ -197,7 +172,7 @@ def use_shrugitoff(using_card, entity):
     entity.blocking(base_block)
     entity.draw_cards(True, 1)
     sleep(1.5)
-    system("clear")
+    clear()
 
 
 def use_swordboomerang(enemies, using_card, entity):
@@ -205,10 +180,10 @@ def use_swordboomerang(enemies, using_card, entity):
     base_times = using_card['Times']  # 3
     if '+' in using_card['Name']:
         base_times += 1
-    for _ in range(base_times, entity):
-        damage(using_card['Damage'], random.choice(enemies), entity)
+    for _ in range(base_times):
+        entity.attack(using_card['Damage'], random.choice(enemies), using_card)
     sleep(1.5)
-    system("clear")
+    clear()
 
 
 def use_thunderclap(enemies, using_card, entity):
@@ -217,10 +192,10 @@ def use_thunderclap(enemies, using_card, entity):
     if '+' in using_card['Name']:
         base_damage += 3
     for enemy in enemies:
-        damage(base_damage, enemy, entity)
+        entity.attack(base_damage, enemy, using_card)
         entity.debuff("Vulnerable", 1, enemy, True)
     sleep(0.5)
-    system("clear")
+    clear()
 
 
 def use_ironwave(targeted_enemy, using_card, entity):
@@ -230,10 +205,10 @@ def use_ironwave(targeted_enemy, using_card, entity):
     if '+' in using_card['Name']:
         base_block += 2
         base_damage += 2
-    damage(base_damage, targeted_enemy, entity)
+    entity.attack(base_damage, targeted_enemy, using_card)
     entity.blocking(base_block)
     sleep(1.5)
-    system("clear")
+    clear()
 
 
 def use_pommelstrike(targeted_enemy, using_card, entity):
@@ -243,11 +218,11 @@ def use_pommelstrike(targeted_enemy, using_card, entity):
     if '+' in using_card['Name']:
         base_damage += 1
         base_cards += 1
-    damage(base_damage, targeted_enemy, entity)
+    entity.attack(base_damage, targeted_enemy, using_card)
     entity.draw_cards(True, base_cards)
     sleep(1.5)
-    system("clear")
-relics = {
+    clear()
+relics: dict[str: dict] = {
     # Starter Relics
     'Burning Blood': {'Name': 'Burning Blood', 'Class': 'Ironclad', 'Rarity': 'Starter', 'Health': 6, 'Info': 'At the end of combat, heal 6 HP', 'Flavor': "Your body's own blood burns with an undying rage."},
     'Ring of the Snake': {'Name': 'Ring of the Snake', 'Class': 'Silent', 'Rarity': 'Starter', 'Cards': 2, 'Info': 'At the start of each combat, draw 2 additional cards.', 'Flavor': 'Made from a fossilized snake, represents great skill as a huntress.'},
@@ -289,24 +264,24 @@ relics = {
     'Damaru': {'Name': 'Damaru', 'Class': 'Watcher', 'Rarity': 'Common', 'Info': 'At the start of your turn, gain 1 <bold>Mantra</bold>.', 'Flavor': 'The sound of the small drum keeps your mind awake, revealing a path forward.'},
     # Uncommon relics
     'Blue Candle': {'Name': 'Blue Candle', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': '<bold>Curse</bold> cards can now be played. Playing a <bold>Curse</bold> will make you lose 1 HP and <bold>Exhaust</bold> the card.', 'Flavor': 'The flame ignites when shrouded in darkness.'},
-    'Bottled Flame': {'Name': 'Bottled Flame', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'Upon pickup, choose an <bold>Attack</bold> card. At the start of your turn, this card will be in your hand.', 'Flavor': 'Inside the bottle resides a flame which eternally burns.'},
-    'Bottled Lightning': {'Name': 'Bottled Lightning', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'Upon pickup, choose an <bold>Skill</bold> card. At the start of your turn, this card will be in your hand.', 'Flavor': 'Peering into the swirling maelstrom, you see a part of yourself staring back.'},
-    'Bottled Tornado': {'Name': 'Bottled Tornado', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'Upon pickup, choose an <bold>Power</bold> card. At the start of your turn, this card will be in your hand.', 'Flavor': 'The bottle gently hums and whirs.'},
+    'Bottled Flame': {'Name': 'Bottled Flame', 'Class': 'Any', 'Rarity': 'Uncommon', 'Card Type': 'Attack', 'Info': 'Upon pickup, choose an <bold>Attack</bold> card. At the start of your turn, this card will be in your hand.', 'Flavor': 'Inside the bottle resides a flame which eternally burns.'},
+    'Bottled Lightning': {'Name': 'Bottled Lightning', 'Class': 'Any', 'Rarity': 'Uncommon', 'Card Type': 'Skill', 'Info': 'Upon pickup, choose an <bold>Skill</bold> card. At the start of your turn, this card will be in your hand.', 'Flavor': 'Peering into the swirling maelstrom, you see a part of yourself staring back.'},
+    'Bottled Tornado': {'Name': 'Bottled Tornado', 'Class': 'Any', 'Rarity': 'Uncommon', 'Card Type': 'Power', 'Info': 'Upon pickup, choose an <bold>Power</bold> card. At the start of your turn, this card will be in your hand.', 'Flavor': 'The bottle gently hums and whirs.'},
     'Darkstone Periapt': {'Name': 'Darkstone Periapt', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'Whenever you obtain a <bold>Curse</bold>, raise your Max HP by 6.', 'Flavor': 'The stone draws power from dark energy, converting it into vitality for the user.'},
     'Eternal Feather': {'Name': 'Eternal Feather', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'For every 5 cards in your deck, heal 3 HP when you enter a rest site.', 'Flavor': 'This feather appears to be completely indestructible. What bird does this possibly come from?'},
     'Molten Egg': {'Name': 'Molten Egg', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'Whenever you add an <bold>Attack</bold> card to your deck, it is <bold>Upgraded</bold>. ', 'Flavor': 'The egg of a Pheonix. It glows red hot with a simmering lava.'},
     'Toxic Egg': {'Name': 'Toxic Egg', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'Whenever you add a <bold>Skill</bold> card to your deck, it is <bold>Upgraded</bold>. ', 'Flavor': '"What a marvelous discovery! This appears to be the inert egg of some magical creature. Who or what created this?" - Ranwid'},
     'Frozen Egg': {'Name': 'Frozen Egg', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'Whenever you add a <bold>Power</bold> card to your deck, it is <bold>Upgraded</bold>. ', 'Flavor': 'The egg lies inert and frozen, never to hatch'},
     'Gremlin Horn': {'Name': 'Gremlin Horn', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'Whenever an enemy dies, gain 1 <bold>Energy</bold> and draw 1 card.'},
-    'Horn Cleat': {'Name': 'Horn Cleat', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'At the start ofy our 2nd trun, gain 14 <bold>Block</bold>.', 'Flavor': 'Pleasant to hold in the hand. What was it for?'},
+    'Horn Cleat': {'Name': 'Horn Cleat', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'At the start of your 2nd trun, gain 14 <bold>Block</bold>.', 'Flavor': 'Pleasant to hold in the hand. What was it for?'},
     'Ink Bottle': {'Name': 'Ink Bottle', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'Whenever you play 10 cards, draw 1 card.', 'Flavor': 'Once exhausted, it appears to refil itself in a different color.'},
     'Kunai': {'Name': 'Kunai', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'Every time you play 3 <bold>Attacks</bold> in a single turn, gain 1 <bold>Dexterity</bold>.', 'Flavor': 'A blade favored by assasins for its lethality at range.'},
-    'Letter Opener': {'Name': 'Letter Opener', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'Every time you play 3 <bold>Skill</bold> in a single turn, deal 5 damage to ALL enemies.', 'Flavor': 'Unnaturally sharp.'},
+    'Letter Opener': {'Name': 'Letter Opener', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'Every time you play 3 <bold>Skills</bold> in a single turn, deal 5 damage to ALL enemies.', 'Flavor': 'Unnaturally sharp.'},
     'Matryoshka': {'Name': 'Matryoshka', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'The next 2 non-boss chests you open contain 2 relics.', 'Flavor': 'A stackable set of dolls. The paint depicts an unknown bird with white eyes and blue feathers.'},
     'Meat on the Bone': {'Name': 'Meat on the Bone', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'If your HP is at 50% or lower at the end of combat, heal 12 HP.'},
     'Mercury Hourglass': {'Name': 'Mercury Hourglass', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'At the start of your turn, deal 3 damage to ALL enemies.', 'Flavor': 'An enchanted hourglass that endlessly drips.'},
     'Mummified Hand': {'Name': 'Mummified Hand', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'Whenever you play a <bold>Power</bold> card, a random card in your hand costs 0 that turn.', 'Flavor': 'Frequently twitches, especially when your pulse is high.'},
-    'Ornamental Hand': {'Name': 'Ornamental Hand', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'Every time you play 3 <bold>Attacks</bold> in a single turn, gain 4 <bold>Block</bold>.', 'Flavor': 'The fan seems to extend and harden as blood is spilled.'},
+    'Ornamental Fan': {'Name': 'Ornamental Fan', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'Every time you play 3 <bold>Attacks</bold> in a single turn, gain 4 <bold>Block</bold>.', 'Flavor': 'The fan seems to extend and harden as blood is spilled.'},
     'Pantograph': {'Name': 'Pantograph', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'At the start of boss combats, heal 25 HP.', 'Flavor': '"Solid foundations are not accidental. Tools for planning are a must." - The Architect'},
     'Pear': {'Name': 'Pear', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'Raise your Max HP by 10', 'Flavor': 'A common fruit before the Spireblight.'},
     'Question Card': {'Name': 'Question Card', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'Future card rewards have 1 additional card to choose from.', 'Flavor': '"Those with more choices minimize the downside to chaos." - Kublai the Great'},
@@ -438,80 +413,80 @@ relics = {
 }
 cards = {
     # Ironclad cards
-    'Strike': {'Name': 'Strike', 'Damage': 6, 'Energy': 1, 'Rarity': 'Basic', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ6 damage', 'Function': use_strike},
-    'Strike+': {'Name': '<green>Strike+</green>', 'Upgraded': True, 'Damage': 9, 'Energy': 1, 'Rarity': 'Basic', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ9 damage', 'Function': use_strike},
+    'Strike': {'Name': 'Strike', 'Damage': 6, 'Energy': 1, 'Rarity': 'Basic', 'Target': 'Single', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ6 damage', 'Function': use_strike},
+    'Strike+': {'Name': 'Strike+', 'Upgraded': True, 'Damage': 9, 'Energy': 1, 'Rarity': 'Basic', 'Target': 'Single', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ9 damage', 'Function': use_strike},
 
     'Defend': {'Name': 'Defend', 'Block': 5, 'Energy': 1, 'Target': 'Yourself', 'Rarity': 'Basic', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Gain ꫱5 <yellow>Block</yellow>', 'Function': use_defend},
-    'Defend+': {'Name': '<green>Defend+</green>', 'Upgraded': True, 'Block': 8, 'Energy': 1, 'Target': 'Yourself', 'Rarity': 'Basic', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Gain ꫱8 <yellow>Block</yellow>', 'Function': use_defend},
+    'Defend+': {'Name': 'Defend+', 'Upgraded': True, 'Block': 8, 'Energy': 1, 'Target': 'Yourself', 'Rarity': 'Basic', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Gain ꫱8 <yellow>Block</yellow>', 'Function': use_defend},
 
     'Bash': {'Name': 'Bash', 'Damage': 8, 'Vulnerable': 2, 'Energy': 2, 'Target': 'Single', 'Rarity': 'Basic', 'Class': 'Ironclad', 'Type': 'Attack', 'Info': 'Deal Σ8 damage. Apply 2 <yellow>Vulnerable</yellow>', 'Function': use_bash},
-    'Bash+': {'Name': '<green>Bash+</green>', 'Upgraded': True, 'Damage': 10, 'Vulnerable': 3, 'Energy': 2, 'Target': 'Single', 'Rarity': 'Basic', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ10 damage. Apply 3 <yellow>Vulnerable</yellow>', 'Function': use_bash},
+    'Bash+': {'Name': 'Bash+', 'Upgraded': True, 'Damage': 10, 'Vulnerable': 3, 'Energy': 2, 'Target': 'Single', 'Rarity': 'Basic', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ10 damage. Apply 3 <yellow>Vulnerable</yellow>', 'Function': use_bash},
 
     'Anger': {'Name': 'Anger', 'Damage': 6, 'Energy': 0,  'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ6 damage. Add a copy of this card to your discard pile.', 'Function': use_anger},
-    'Anger+': {'Name': '<green>Anger+</green>', 'Upgraded': True, 'Damage': 8, 'Energy': 0, 'Target': 'Single', 'Rarity': 'Common', 'Class': 'Ironclad', 'Type': 'Attack', 'Info': 'Deal Σ8 damage. Add a copy of this card to your discard pile.', 'Function': use_anger},
+    'Anger+': {'Name': 'Anger+', 'Upgraded': True, 'Damage': 8, 'Energy': 0, 'Target': 'Single', 'Rarity': 'Common', 'Class': 'Ironclad', 'Type': 'Attack', 'Info': 'Deal Σ8 damage. Add a copy of this card to your discard pile.', 'Function': use_anger},
 
     'Armaments': {'Name': 'Armaments', 'Block': 5, 'Target': 'Yourself', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Gain ꫱5 <yellow>Block</yellow>. <yellow>Upgrade</yellow> a card in your hand for the rest of combat.', 'Function': ''},
-    'Armaments+': {'Name': '<green>Armaments+</green>', 'Upgraded': True, 'Block': 5, 'Target': 'Yourself', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Gain ꫱5 <yellow>Block</yellow>. <yellow>Upgrade</yellow> ALL cards in your hand for the rest of combat.', 'Function': ''},
+    'Armaments+': {'Name': 'Armaments+', 'Upgraded': True, 'Block': 5, 'Target': 'Yourself', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Gain ꫱5 <yellow>Block</yellow>. <yellow>Upgrade</yellow> ALL cards in your hand for the rest of combat.', 'Function': ''},
 
     'Body Slam': {'Name': 'Body Slam', 'Damage': 'player block', 'Energy': 1, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal damage equal to your <yellow>Block</yellow>(Σ0)', 'Function': use_bodyslam},
-    'Body Slam+': {'Name': '<green>Body Slam+</green>', 'Upgraded': True, 'Damage': 'player block', 'Energy': 0, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal damage equal to your <yellow>Block</yellow>(Σ0)', 'Function': use_bodyslam},
+    'Body Slam+': {'Name': 'Body Slam+', 'Upgraded': True, 'Damage': 'player block', 'Energy': 0, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal damage equal to your <yellow>Block</yellow>(Σ0)', 'Function': use_bodyslam},
 
     'Clash': {'Name': 'Clash', 'Damage': 14, 'Energy': 0, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Can only be played is every card in your hand is an Attack. Deal Σ14 damage.', 'Function': use_clash},
-    'Clash+': {'Name': '<green>Clash+</green>', 'Upgraded': True, 'Damage': 18, 'Energy': 0, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Can only be played if every card in your hand is an Attack. Deal Σ18 damage.', 'Function': use_clash},
+    'Clash+': {'Name': 'Clash+', 'Upgraded': True, 'Damage': 18, 'Energy': 0, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Can only be played if every card in your hand is an Attack. Deal Σ18 damage.', 'Function': use_clash},
 
     'Cleave': {'Name': 'Cleave', 'Damage': 8, 'Target': 'All', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ8 damage to ALL enemies', 'Function': use_cleave},
-    'Cleave+': {'Name': '<green>Cleave+</green>', 'Upgraded': True, 'Damage': 11, 'Target': 'All', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ11 damage to ALL enemies', 'Function': use_cleave},
+    'Cleave+': {'Name': 'Cleave+', 'Upgraded': True, 'Damage': 11, 'Target': 'All', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ11 damage to ALL enemies', 'Function': use_cleave},
 
     'Clothesline': {'Name': 'Clothesline', 'Energy': 2, 'Damage': 12, 'Weak': 2, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ12 damage. Apply 2 <yellow>Weak</yellow>', 'Function': use_clothesline},
-    'Clothesline+': {'Name': '<green>Clothesline+</green>', 'Upgraded': True, 'Energy': 2, 'Damage': 14, 'Weak': 3, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ14 damage. Apply 3 <yellow>Weak</yellow>', 'Function': use_clothesline},
+    'Clothesline+': {'Name': 'Clothesline+', 'Upgraded': True, 'Energy': 2, 'Damage': 14, 'Weak': 3, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ14 damage. Apply 3 <yellow>Weak</yellow>', 'Function': use_clothesline},
 
     'Flex': {'Name': 'Flex', 'Strength': 2, 'Strength Down': 2, 'Energy': 0, 'Target': 'Yourself', 'Rarity': 'Common', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Gain 2 <yellow>Strength</yellow>. At the end of your turn, lose 2 <yellow>Strength</yellow>', 'Function': use_flex},
-    'Flex+': {'Name': '<green>Flex+</green>', 'Upgraded': True, 'Strength': 4, 'Strength Down': 4, 'Energy': 0, 'Target': 'Yourself', 'Rarity': 'Common', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Gain 4 <yellow>Strength</yellow>. At the end of your turn lose 4 <yellow>Strength</yellow>', 'Function': use_flex},
+    'Flex+': {'Name': 'Flex+', 'Upgraded': True, 'Strength': 4, 'Strength Down': 4, 'Energy': 0, 'Target': 'Yourself', 'Rarity': 'Common', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Gain 4 <yellow>Strength</yellow>. At the end of your turn lose 4 <yellow>Strength</yellow>', 'Function': use_flex},
 
     'Havoc': {'Name': 'Havoc', 'Energy': 1, 'Target': 'Yourself', 'Rarity': 'Common', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Play the top card of your draw pile and <yellow>Exhaust</yellow> it.', 'Function': use_havoc},
-    'Havoc+': {'Name': '<green>Havoc+</green>', 'Upgraded': True, 'Energy': 0, 'Target': 'Yourself', 'Rarity': 'Common', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Play the top card of your draw pile and <yellow>Exhaust</yellow> it.', 'Function': use_havoc},
+    'Havoc+': {'Name': 'Havoc+', 'Upgraded': True, 'Energy': 0, 'Target': 'Yourself', 'Rarity': 'Common', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Play the top card of your draw pile and <yellow>Exhaust</yellow> it.', 'Function': use_havoc},
 
     'Headbutt': {'Name': 'Headbutt', 'Damage': 9, 'Energy': 1, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ9 damage. Place a card from your discard pile on top of your draw pile.', 'Function': use_headbutt},
-    'Headbutt+': {'Name': '<green>Headbutt+</green>', 'Upgraded': True, 'Damage': 12, 'Energy': 1, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ12 damage. Place a card from your discard pile on top of your draw pile.', 'Function': use_headbutt},
+    'Headbutt+': {'Name': 'Headbutt+', 'Upgraded': True, 'Damage': 12, 'Energy': 1, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ12 damage. Place a card from your discard pile on top of your draw pile.', 'Function': use_headbutt},
 
     'Heavy Blade': {'Name': 'Heavy Blade', 'Damage': 14, 'Strength Multi': 3, 'Energy': 2, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ14 damage. <yellow>Strength</yellow> affects this card 3 times.', 'Function': use_heavyblade},
-    'Heavy Blade+': {'Name': '<green>Heavy Blade+</green>', 'Upgraded': True, 'Damage': 14, 'Strength Multi': 5, 'Energy': 2, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ14 damage. <yellow>Strength</yellow> affects this card 5 times', 'Function': use_heavyblade},
+    'Heavy Blade+': {'Name': 'Heavy Blade+', 'Upgraded': True, 'Damage': 14, 'Strength Multi': 5, 'Energy': 2, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ14 damage. <yellow>Strength</yellow> affects this card 5 times', 'Function': use_heavyblade},
 
     'Iron Wave': {'Name': 'Iron Wave', 'Damage': 5, 'Block': 5, 'Energy': 1, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Gain ꫱5 <yellow>Block</yellow>. Deal Σ5 damage.', 'Function': ''},
-    'Iron Wave+': {'Name': '<green>Iron Wave+</green>', 'Upgraded': True, 'Damage': 7, 'Block': 7, 'Energy': 1, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Gain ꫱7 <yellow>Block</yellow>. Deal Σ7 damage.', 'Function': ''},
+    'Iron Wave+': {'Name': 'Iron Wave+', 'Upgraded': True, 'Damage': 7, 'Block': 7, 'Energy': 1, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Gain ꫱7 <yellow>Block</yellow>. Deal Σ7 damage.', 'Function': ''},
 
     'Perfected Strike': {'Name': 'Perfected Strike', 'Damage': 6, 'Damage Per "Strike"': 2, 'Energy': 2, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad',
                          'Info': 'Deal Σ6 damage. Deals 2 additional damage for ALL your cards containing "Strike".', 'Function': use_perfectedstrike},
-    'Perfected Strike+': {'Name': '<green>Perfected Strike+</green>', 'Upgraded': True, 'Damage': 6, 'Damage Per "Strike"': 3, 'Energy': 2, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad',
-                          'Info': 'Deal Σ6 damage. Deals 3 additional damage for ALL your cards containing "Strike".', 'Function': use_perfectedstrike},
+    'Perfected Strike+': {'Name': 'Perfected Strike+', 'Upgraded': True, 'Damage': 6, 'Damage Per "Strike"': 3, 'Energy': 2, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad',
+                         'Info': 'Deal Σ6 damage. Deals 3 additional damage for ALL your cards containing "Strike".', 'Function': use_perfectedstrike},
 
     'Pommel Strike': {'Name': 'Pommel Strike', 'Damage': 9, 'Cards': 2, 'Energy': 1, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ9 damage. Draw 1 card.', 'Function': use_pommelstrike},
-    'Pommel Strike+': {'Name': '<green>Pommel Strike+</green>', 'Upgraded': True, 'Damage': 10, 'Cards': 2, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ10 damage. Draw 2 cards.', 'Function': use_pommelstrike},
+    'Pommel Strike+': {'Name': 'Pommel Strike+', 'Upgraded': True, 'Damage': 10, 'Cards': 2, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ10 damage. Draw 2 cards.', 'Function': use_pommelstrike},
 
     'Shrug it Off': {'Name': 'Shrug it Off', 'Block': 8, 'Cards': 1, 'Energy': 1, 'Rarity': 'Common', 'Target': 'Yourself', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Gain ꫱8 <yellow>Block</yellow>. Draw 1 card.', 'Function': use_shrugitoff},
-    'Shrug it Off+': {'Name': '<green>Shrug it Off+</green>', 'Upgraded': True, 'Block': 11, 'Cards': 1, 'Energy': 1, 'Rarity': 'Common', 'Target': 'Yourself', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Gain ꫱11 <yellow>Block</yellow>. Draw 1 card.', 'Function': use_shrugitoff},
+    'Shrug it Off+': {'Name': 'Shrug it Off+', 'Upgraded': True, 'Block': 11, 'Cards': 1, 'Energy': 1, 'Rarity': 'Common', 'Target': 'Yourself', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Gain ꫱11 <yellow>Block</yellow>. Draw 1 card.', 'Function': use_shrugitoff},
 
     'Sword Boomerang': {'Name': 'Sword Boomerang', 'Damage': 3, 'Times': 3, 'Target': 'Random', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ3 damage to a random enemy 3 times.', 'Function': use_swordboomerang},
-    'Sword Boomerang+': {'Name': '<green>Sword Boomerang+</green>', 'Upgraded': True, 'Damage': 3, 'Times': 4, 'Target': 'Random', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ3 damage to a random enemy 4 times.', 'Function': use_swordboomerang},
+    'Sword Boomerang+': {'Name': 'Sword Boomerang+', 'Upgraded': True, 'Damage': 3, 'Times': 4, 'Target': 'Random', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ3 damage to a random enemy 4 times.', 'Function': use_swordboomerang},
 
     'Thunderclap': {'Name': 'Thunderclap', 'Damage': 4, 'Vulnerable': 1, 'Target': 'All', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ4 damage and apply 1 <yellow>Vulnerable</yellow> to ALL enemies.', 'Function': use_thunderclap},
-    'Thunderclap+': {'Name': '<green>Thunderclap+</green>', 'Upgraded': True, 'Damage': 7, 'Vulnerable': 1, 'Target': 'All', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ7 damage and apply 1 <yellow>Vulnerable</yellow> to ALL enemies.', 'Function': use_thunderclap},
+    'Thunderclap+': {'Name': 'Thunderclap+', 'Upgraded': True, 'Damage': 7, 'Vulnerable': 1, 'Target': 'All', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ7 damage and apply 1 <yellow>Vulnerable</yellow> to ALL enemies.', 'Function': use_thunderclap},
 
     'True Grit': {'Name': 'True Grit', 'Class': 'Ironclad', 'Rarity': 'Common', 'Target': 'Yourself', 'Type': 'Skill', 'Block': 7, 'Energy': 1, 'Info': 'Gain ꫱7 <yellow>Block</yellow>. <yellow>Exhaust</yellow> a random card in your hand.', 'Function': ''},
-    'True Grit+': {'Name': '<green>True Grit+</green>', 'Class': 'Ironclad', 'Rarity': 'Common', 'Target': 'Yourself', 'Type': 'Skill', 'Upgraded': True, 'Block': 9, 'Energy': 1, 'Info': 'Gain ꫱9 <yellow>Block</yellow>. <yellow>Exhaust</yellow> a card in your hand.', 'Function': ''},
+    'True Grit+': {'Name': 'True Grit+', 'Class': 'Ironclad', 'Rarity': 'Common', 'Target': 'Yourself', 'Type': 'Skill', 'Upgraded': True, 'Block': 9, 'Energy': 1, 'Info': 'Gain ꫱9 <yellow>Block</yellow>. <yellow>Exhaust</yellow> a card in your hand.', 'Function': ''},
 
     'Twin Strike': {'Name': 'Twin Strike', 'Class': 'Ironclad', 'Rarity': 'Common', 'Type': 'Attack', 'Target': 'Single', 'Damage': 5, 'Energy': 1, 'Info': 'Deal Σ5 damage twice.', 'Function': ''},
-    'Twin Strike+': {'Name': '<green>Twin Strike+</green>', 'Class': 'Ironclad', 'Rarity': 'Common', 'Type': 'Attack', 'Upgraded': True, 'Target': 'Single', 'Damage': 7, 'Energy': 1, 'Info': 'Deal Σ7 damage twice.', 'Function': ''},
+    'Twin Strike+': {'Name': 'Twin Strike+', 'Class': 'Ironclad', 'Rarity': 'Common', 'Type': 'Attack', 'Upgraded': True, 'Target': 'Single', 'Damage': 7, 'Energy': 1, 'Info': 'Deal Σ7 damage twice.', 'Function': ''},
 
     'Warcry': {'Name': 'Warcry', 'Class': 'Ironclad', 'Rarity': 'Common', 'Target': 'Yourself', 'Type': 'Skill', 'Cards': 1, 'Energy': 0, 'Info': 'Draw 1 card. Put a card from your hand on top of your draw pile. <yellow>Exhaust</yellow>.', 'Function': ''},
-    'Warcry+': {'Name': '<green>Warcry+</green>', 'Class': 'Ironclad', 'Rarity': 'Common', 'Target': 'Yourself', 'Type': 'Skill', 'Upgraded': True, 'Cards': 2, 'Energy': 0, 'Info': 'Draw 2 cards. Put a card from your hand on top of your draw pile. <yellow>Exhaust</yellow>.', 'Function': ''},
+    'Warcry+': {'Name': 'Warcry+', 'Class': 'Ironclad', 'Rarity': 'Common', 'Target': 'Yourself', 'Type': 'Skill', 'Upgraded': True, 'Cards': 2, 'Energy': 0, 'Info': 'Draw 2 cards. Put a card from your hand on top of your draw pile. <yellow>Exhaust</yellow>.', 'Function': ''},
 
     'Wild Strike': {'Name': 'Wild Strike', 'Class': 'Ironclad', 'Rarity': 'Common', 'Type': 'Attack', 'Target': 'Single', 'Damage': 12, 'Energy': 1, 'Info': 'Deal Σ12 damage. Shuffle a <bold>Wound</bold> into your draw pile.', 'Function': ''},
-    'Wild Strike+': {'Name': '<green>Wild Strike+</green>', 'Class': 'Ironclad', 'Rarity': 'Common', 'Type': 'Attack', 'Upgraded': True, 'Target': 'Single', 'Damage': 17, 'Energy': 1, 'Info': 'Deal Σ17 damage. Shuffle a <bold>Wound</bold> into your draw pile.', 'Function': ''},
+    'Wild Strike+': {'Name': 'Wild Strike+', 'Class': 'Ironclad', 'Rarity': 'Common', 'Type': 'Attack', 'Upgraded': True, 'Target': 'Single', 'Damage': 17, 'Energy': 1, 'Info': 'Deal Σ17 damage. Shuffle a <bold>Wound</bold> into your draw pile.', 'Function': ''},
     # Status cards
     'Slimed': {'Name': 'Slimed', 'Energy': 1, 'Target': 'Nothing', 'Rarity': 'Common', 'Type': 'Status', 'Info': '<yellow>Exhaust</yellow>'},
     'Burn': {'Name': 'Burn', 'Playable': False, 'Energy': 'Unplayable', 'Damage': 2, 'Rarity': 'Common', 'Type': 'Status', 'Info': '<yellow>Unplayable.</yellow> At the end of your turn, take 2 damage.'},
-    'Burn+': {'Name': '<green>Burn+</green>', 'Upgraded': True, 'Playable': False, 'Energy': 'Unplayable', 'Damage': 4, 'Rarity': 'Common', 'Type': 'Status', 'Info': '<yellow>Unplayable.</yellow> At the end of your turn, take 4 damage.'},
+    'Burn+': {'Name': 'Burn+', 'Upgraded': True, 'Playable': False, 'Energy': 'Unplayable', 'Damage': 4, 'Rarity': 'Common', 'Type': 'Status', 'Info': '<yellow>Unplayable.</yellow> At the end of your turn, take 4 damage.'},
     'Dazed': {'Name': 'Dazed', 'Playable': False, 'Ethereal': True, 'Energy': 'Unplayable', 'Rarity': 'Common', 'Type': 'Status', 'Info': '<yellow>Unplayable. Ethereal.</yellow>'},
     'Wound': {'Name': 'Wound', 'Playable': False, 'Rarity': 'Common', 'Type': 'Status', 'Info': '<yellow>Unplayable.</yellow>'},
     'Void': {'Name': 'Void', 'Playable': False, 'Ethereal': True, 'Energy Loss': 1, 'Rarity': 'Common', 'Type': 'Status', 'Info': '<yellow>Unplayable. Ethereal.</yellow> When this card is drawn, lose 1 Energy.'},
@@ -526,14 +501,17 @@ cards = {
     'Injury': {'Name': 'Injury', 'Playable': False, 'Energy': 'Unplayable', 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<yellow>Unplayable.</yellow>'},
     'Necronomicurse': {'Name': 'Necronomicurse', 'Playable': False, 'Energy': 'Unplayable', 'Exhaustable': False, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<yellow>Unplayable.</yellow> There is no escape from this <yellow>Curse</yellow>.'},
     'Normality': {'Name': 'Normality', 'Playable': False, 'Cards Limit': 3, 'Energy': 'Unplayable', 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<yellow>Unplayable.</yellow> You cannot play more than 3 cards this turn.'},
-    'Pain': {'Name': 'Pain', 'Playable': False, 'Damage': 1, 'Energy': 'Unplayable', 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<yellow>Unplayable.<yellow> While in hand, lose 1 HP when other cards are played.'},
+    'Pain': {'Name': 'Pain', 'Playable': False, 'Damage': 1, 'Energy': 'Unplayable', 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<yellow>Unplayable</yellow>. While in hand, lose 1 HP when other cards are played.'},
     'Parasite': {'Name': 'Parasite', 'Playable': False, 'Max Hp Loss': 3, 'Energy': 'Unplayable', 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<yellow>Unplayable.</yellow> If transformed or removed from your deck, lose 3 Max HP.'},
     'Pride': {'Name': 'Pride', 'Innate': True, 'Exhaust': True, 'Energy': 1, 'Rarity': 'Special', 'Type': 'Curse', 'Info': '<yellow>Innate.</yellow> At the end of your turn, put a copy of this card on top of your draw pile. <yellow>Exhaust.</yellow>'},
     'Shame': {'Name': 'Shame', 'Playable': False, 'Frail': 1, 'Energy': 'Unplayable', 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<yellow>Unplayable.</yellow> At the end of your turn, gain 1 <yellow>Frail</yellow>.'},
     'Writhe': {'Name': 'Writhe', 'Playable': False, 'Innate': True, 'Energy': 'Unplayable', 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<yellow>Unplayable. Innate.</yellow>'}
 }
 
-golden_multi = 1
+golden_multi: int = 1
+def activate_sacred_bark():
+    global golden_multi
+    golden_multi = 2
 potions = {
     # Common | All Classes
     'Attack Potion': {'Name': 'Attack Potion', 'Cards': 1 * golden_multi, 'Card Type': 'Attack', 'Class': 'All', 'Rarity': 'Common', 'Info': f'Add {"1" if golden_multi < 2 else "2 copies"} of 3 random Attack cards to your hand, {"it" if golden_multi < 2 else "they"} costs 0 this turn'},
@@ -584,4 +562,3 @@ potions = {
     'Stance Potion': {'Name': 'Stance Potion', 'Stances': ['Calm', 'Wrath'], 'Class': 'Watcher', 'Rarity': 'Uncommon', 'Info': 'Enter Calm or Wrath'},
     'Ambrosia': {'Name': 'Ambrosia', 'Stance': 'Divinity', 'Class': 'Watcher', 'Rarity': 'Rare', 'Info': 'Enter Divinity Stance'}
 }
-
