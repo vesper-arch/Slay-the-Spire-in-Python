@@ -71,7 +71,7 @@ class Player:
         self.golden_bark: bool = False  # Used for the Golden Bark relic
         # Used for the Molten, Toxic, and Frozen Egg relics
         self.upgrade_attacks = False
-        self.upgrade_skill = False
+        self.upgrade_skills = False
         self.upgrade_powers = False
         self.red_skull_active = False
         self.inked_cards = 0  # Used for the Ink Bottle relic
@@ -86,8 +86,6 @@ class Player:
         Uses a card
         Wow!
         """
-        if card.get('Name') == 'Slimed':
-            self.move_card(card, self.exhaust_pile, pile, True)
         if card.get('Target') == 'Single':
             card['Function'](target, card, self)
         elif card.get('Target') in ('Area', 'Random'):

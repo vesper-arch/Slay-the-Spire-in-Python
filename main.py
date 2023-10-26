@@ -27,6 +27,7 @@ def combat(tier) -> None:
         for enemy in active_enemies:
             # Removes block, ticks debuffs and buffs, and triggers buffs and debuffs.
             enemy.start_turn()
+        killed_enemies = True
         while True:
             print(f"Turn {combat_turn}: ")
             # Shows the player's potions, cards(in hand), amount of cards in discard and draw pile, and shows the status for you and the enemies.
@@ -69,6 +70,7 @@ def combat(tier) -> None:
             card_rewards(tier, True, player, cards)
             combat_turn = 0
             sleep(1.5)
+            clear()
             break
         if escaped is True:
             print("Escaped...")
@@ -253,7 +255,7 @@ def play_card():
 
 
 
-order_of_encounters = [unknown, combat, rest, combat, combat, unknown, rest]
+order_of_encounters = [combat, unknown, rest, combat, combat, unknown, rest]
 for encounter in order_of_encounters:
     if encounter.__name__ == 'combat':
         combat('Normal')

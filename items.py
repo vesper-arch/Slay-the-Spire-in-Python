@@ -62,6 +62,12 @@ def use_clash(targeted_enemy, using_card, entity):
     if "+" in using_card['Name']:
         base_damage += 4
     print()
+    for card in entity.hand:
+        if card['Type'] != 'Attack':
+            print('You have non-Attack cards in your hand')
+            sleep(1.5)
+            clear()
+            return None
     entity.attack(base_damage, targeted_enemy, using_card)
     sleep(1.5)
     clear()
@@ -220,6 +226,42 @@ def use_pommelstrike(targeted_enemy, using_card, entity):
         base_cards += 1
     entity.attack(base_damage, targeted_enemy, using_card)
     entity.draw_cards(True, base_cards)
+    sleep(1.5)
+    clear()
+
+def use_truegrit(using_card, entity):
+    '''Gain 7(9) Block. Exhaust a random(not random) card in your hand.'''
+    base_block = using_card['Block']
+    if '+' in using_card['Name']:
+        base_block += 2
+    entity.blocking(base_block)
+    if '+' in using_card['Name']:
+        view_piles(entity.hand, entity)
+        option = list_input('Choose a card to Exhaust', entity.hand)
+        entity.move_card(entity.deck[option], entity.exhaust_pile, entity.hand, False)
+    else:
+        entity.move_card(random.choice(entity.hand), entity.exhaust_pile, entity.hand, False)
+    sleep(1.5)
+    clear()
+
+def use_twinstrike(targeted_enemy, using_card, entity):
+    '''Deal 5(7) damage twice.'''
+    base_damage = using_card['Damage']
+    if '+' in using_card['Name']:
+        base_damage += 2
+    for _ in range(2):
+        entity.attack(base_damage, targeted_enemy, using_card)
+
+def use_warcry(using_card, entity):
+    '''Draw 1(2) cards. Put a card from your hand on top of your draw pile.'''
+    base_cards = using_card['Cards']
+    if '+' in using_card['Name']:
+        base_cards += 1
+    entity.draw_cards(True, base_cards)
+    view_piles(entity.hand, entity)
+    option = list_input('Choose a card to put on top of your draw pile.', entity.hand)
+    entity.draw_pile.append(entity.hand[option])
+    del entity.hand[option]
     sleep(1.5)
     clear()
 relics: dict[str: dict] = {

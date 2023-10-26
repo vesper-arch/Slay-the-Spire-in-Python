@@ -1,6 +1,6 @@
 from time import sleep
 from os import system
-from copy import copy
+from copy import deepcopy
 import math
 import random
 import re
@@ -189,34 +189,23 @@ def generate_card_rewards(reward_tier: str, amount: int, entity: object, card_po
         for _ in range(amount):
             random_num = 70 # It's set to 70 because Uncommon and Rare cards don't exist yet
             if random_num > 97:
-                random_key = random.choice(list(rare_cards.keys()))
-                rewards.append(rare_cards[random_key])
+                rewards.append(random.choice(rare_cards))
             elif random_num < 60:
-                random_key = random.choice(list(common_cards.keys()))
-                rewards.append(common_cards[random_key])
+                rewards.append(random.choice(uncommon_cards))
             else:
-                random_key = random.choice(list(uncommon_cards.keys()))
-                rewards.append(uncommon_cards[random_key])
+                rewards.append(random.choice(common_cards))
     elif reward_tier == "Elite":
         for _ in range(amount):
             random_num = random.randint(1, 101)
             if random_num <= 10:
-                random_key = random.choice(list(rare_cards.keys()))
-                random_value = rare_cards[random_key]
-                rewards.append(random_key[random_value])
+                rewards.append(random.choice(rare_cards))
             elif random_num > 50:
-                random_key = random.choice(list(common_cards.keys()))
-                random_value = common_cards[random_key]
-                rewards.append(random_key[random_value])
+                rewards.append(random.choice(uncommon_cards))
             else:
-                random_key = random.choice(list(uncommon_cards.keys()))
-                random_value = uncommon_cards[random_key]
-                rewards.append(random_key[random_value])
+                rewards.append(random.choice(common_cards))
     elif reward_tier == "Boss":
         for _ in range(amount):
-            random_key = random.choice(list(rare_cards.keys()))
-            random_value = rare_cards[random_value]
-            rewards.append(random_key[random_value])
+            rewards.append(random.choice(rare_cards))
     return rewards
 
 
@@ -374,13 +363,10 @@ def claim_potions(choice, potion_amount, potion_pool, entity, rewards=None, chan
 
 def card_rewards(tier, choice, entity, card_pool, rewards=None):
     if not rewards:
-        rewards = generate_card_rewards(tier, entity.card_reward_choices, card_pool, entity)
+        rewards = generate_card_rewards(tier, entity.card_reward_choices, entity, card_pool)
     while True:
-        counter = 1
-        for card in rewards:
-            ansiprint(f"{counter}: <light-black>{card['Type']}</light-black> | <blue>{card['Name']}</blue> | <light-red>{card['Energy']} Energy</light-red> | <yellow>{card['Info']}</yellow>")
-            counter += 1
         if choice:
+            view_piles(rewards, entity)
             chosen_reward = list_input('What card do you want? > ', rewards)
             if entity.upgrade_attacks and rewards[chosen_reward]['Type'] == 'Attack':
                 entity.card_actions(rewards[chosen_reward], 'Upgrade')
@@ -390,20 +376,21 @@ def card_rewards(tier, choice, entity, card_pool, rewards=None):
                 entity.card_actions(rewards[chosen_reward], 'Upgrade')
             entity.deck.append(rewards[chosen_reward])
             print(f"{entity.name} obtained {rewards[chosen_reward]['Name']}")
-        else:
-            for card in rewards:
-                if card.get('Type') == 'Curse' and entity.block_curses > 0:
-                    ansiprint(f"{card['Name']} was negated by <bold>Omamori</bold>.")
-                    entity.block_curses -= 1
-                    if entity.block_curses == 0:
-                        ansiprint('<bold>Omamori</bold> is depleted.')
-                    continue
-                if card.get('Type') == 'Curse' and entity.darkstone_health:
-                    ansiprint("<bold>Darkstone Periapt</bold> activated.")
-                    entity.health_actions(6, "Max Health")
-                entity.deck.append(card)
-                print(f"{entity.name} obtained {card['Name']}")
-                rewards.remove(card)
+            rewards.clear()
+            break
+        for card in rewards:
+            if card.get('Type') == 'Curse' and entity.block_curses > 0:
+                ansiprint(f"{card['Name']} was negated by <bold>Omamori</bold>.")
+                entity.block_curses -= 1
+                if entity.block_curses == 0:
+                    ansiprint('<bold>Omamori</bold> is depleted.')
+                continue
+            if card.get('Type') == 'Curse' and entity.darkstone_health:
+                ansiprint("<bold>Darkstone Periapt</bold> activated.")
+                entity.health_actions(6, "Max Health")
+            entity.deck.append(card)
+            print(f"{entity.name} obtained {card['Name']}")
+            rewards.remove(card)
         if entity.gold_on_card_add:
             entity.gold += 9
             ansiprint('You gained 9 <yellow>Gold</yellow> from <bold>Ceramic Fish</bold>.')
@@ -469,7 +456,7 @@ def start_combat(entity, enemy_list):
     entity.draw_pile = random.sample(entity.deck, len(entity.deck))
     encounter_enemies = random.choice(enemy_list)
     for enemy in encounter_enemies:
-        enemy = copy(enemy)
+        enemy = deepcopy(enemy)
         active_enemies.append(enemy)
         # Enemies have 2 health values, [min, max]. This chooses a random number between those min and max values.
         enemy.health = random.randint(enemy.health[0], enemy.health[1])
