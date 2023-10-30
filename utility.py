@@ -190,16 +190,16 @@ def generate_card_rewards(reward_tier: str, amount: int, entity: object, card_po
             random_num = 70 # It's set to 70 because Uncommon and Rare cards don't exist yet
             if random_num > 97:
                 rewards.append(random.choice(rare_cards))
-            elif random_num < 60:
+            elif 60 < random_num < 97:
                 rewards.append(random.choice(uncommon_cards))
             else:
                 rewards.append(random.choice(common_cards))
     elif reward_tier == "Elite":
         for _ in range(amount):
-            random_num = random.randint(1, 101)
-            if random_num <= 10:
+            random_num = random.randint(1, 100)
+            if random_num >= 90:
                 rewards.append(random.choice(rare_cards))
-            elif random_num > 50:
+            elif 90 > random_num > 50:
                 rewards.append(random.choice(uncommon_cards))
             else:
                 rewards.append(random.choice(common_cards))
@@ -267,6 +267,7 @@ def claim_relics(choice: bool, entity: object, relic_amount: int, relic_pool: di
     if not choice:
         for i in range(relic_amount):
             entity.relics.append(rewards[i])
+            entity.on_relic_pickup(rewards[i])
             ansiprint(f"{entity.name} obtained {rewards[i]['Name']} | {rewards[i]['Info']}")
             rewards.remove(rewards[i])
             sleep(0.5)
@@ -283,35 +284,8 @@ def claim_relics(choice: bool, entity: object, relic_amount: int, relic_pool: di
             clear()
             continue
         entity.relics.append(rewards[option])
+        entity.on_relic_pickup(rewards[option])
         print(f"{entity.name} obtained {rewards[option]['Name']}.")
-        if rewards[option] == relic_pool.get('Ceramic Fish'):
-            entity.gold_on_card_add = True
-        if rewards[option] == relic_pool.get('Potion Belt'):
-            entity.max_potions += 2
-        if rewards[option] == relic_pool.get('Vajra'):
-            entity.starting_strength += 1
-        if 'Bottled' in rewards[option].get('Name'):
-            entity.bottle_card(rewards[option]['Card Type'])
-        if 'Egg' in rewards[option].get('Name'):
-            relic_variables = {relic_pool['Molten Egg']: entity.upgrade_attacks,
-                              relic_pool['Frozen Egg']: entity.upgrade_skills,
-                              relic_pool['Toxic Egg']: entity.upgrade_powers}
-            relic_variables[rewards[option]] = True
-
-        if rewards[option] == relic_pool.get('War Paint'):
-            skill_cards = [card for card in entity.deck if card.get('Type') == 'Skill']
-            ansiprint("<bold>War Paint</bold>:")
-            for _ in range(min(len(skill_cards), 2)):
-                entity.card_actions(random.choice(skill_cards), 'Upgrade', skill_cards)
-        if rewards[option] == relic_pool.get('Pear'):
-            ansiprint("<bold>Pear</bold> caused: ", end='')
-            entity.health_actions(10, "Max Health")
-        if rewards[option] == relic_pool.get('Whetstone'):
-            attack_cards = {card: stats for card, stats in entity.deck.items() if stats.get('Type') == 'Attack'}
-            ansiprint("<bold>Whetstone</bold>:")
-            for _ in range(min(len(attack_cards), 2)):
-                choice = attack_cards[random.choice(attack_cards.keys())]
-                entity.card_actions(random.choice(attack_cards), 'Upgrade', attack_cards)
         rewards.remove(rewards[i])
 
 def claim_potions(choice, potion_amount, potion_pool, entity, rewards=None, chance_based=True):
@@ -403,8 +377,9 @@ def view_piles(pile, entity, end=False, condition='True'):
         pile = random.sample(pile, len(pile))
     counter = 1
     for card in pile:
+        upgrade_check = 'blue' if not card.get('Upgraded') else 'green'
         if eval(condition):
-            ansiprint(f"{counter}: <{'blue' if not card.get('Upgraded') else 'green'}>{card['Name']}</{'blue' if not card.get('Upgraded') else 'green'}> | <light-cyan>{card['Type']}</light-cyan> | <light-red>{card['Energy']}{' Energy' if isinstance(card.get('Energy'), int) else ''}</light-red> | <yellow>{card['Info']}</yellow>".replace('Σ', '').replace('꫱', ''))
+            ansiprint(f"{counter}: <{upgrade_check}>{card['Name']}</{upgrade_check}> | <light-cyan>{card['Type']}</light-cyan> | <{'light-red' if not card.get('Changed Energy') else 'green'}>{card['Energy']}</{'light-red' if not card.get('Changed Energy') else 'green'}>{' Energy' if isinstance(card.get('Energy'), int) else ''} | <yellow>{card['Info']}</yellow>".replace('Σ', '').replace('꫱', ''))
             counter += 1
             sleep(0.05)
         else:
@@ -452,6 +427,10 @@ def display_ui(entity, combat=True):
 
 def start_combat(entity, enemy_list):
     print("Starting combat")
+    for relic in entity.relics:
+        if relic['Name'] == 'Pantograph':
+            entity.health_actions(25, 'Heal')
+            break
     # Shuffles the player's deck into their draw pile
     entity.draw_pile = random.sample(entity.deck, len(entity.deck))
     encounter_enemies = random.choice(enemy_list)
@@ -524,6 +503,18 @@ def calculate_actual_block(string: str, entity) -> tuple[str, str]:
             affected_by += "<red>Frail</red>(x0.75 block)"
         string = string.replace(original_damage, str(block_value))
     return string, affected_by
+
+def modify_energy_cost(amount: int, modify_type: str, card: dict):
+    modified_card = card.copy()
+    if (modify_type == 'Set' and amount != card['Energy']) or (modify_type == 'Adjust' and amount != 0):
+        modified_card['Changed Energy'] = True
+    if modify_type == 'Set':
+        modified_card['Energy'] = amount
+        ansiprint(f"{modified_card['Name']} has its energy cost set to {amount}")
+    elif modify_type == 'Adjust':
+        modified_card['Energy'] += amount
+        ansiprint(f"{modified_card['Name']} got its energy cost {'<green>reduced</green>' if amount < 0 else '<red>increased</red>'} by {abs(amount)}")
+    return modified_card
 
 def clear():
     system('clear')

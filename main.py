@@ -33,7 +33,7 @@ def combat(tier) -> None:
             display_ui(player)
             ansiprint("1: <blue>Play a card</blue> \n2: <light-red>Play Potion</light-red> \n3: <green>View Relics</green> \n4: <magenta>View debuffs and buffs</magenta> \n5: View deck \n6: View draw pile \n7: View discard pile \n8: End turn")
             commands: dict = {'1': play_card, '2': play_potion, '3': view_relics, '4': (player.show_status, True), '5': player.deck, '6': player.draw_pile, '7': player.discard_pile}
-            option = input('')
+            option = input('> ')
             if option in ('1', '2', '3'):
                 commands.get(option)()
             elif option == '4':
@@ -110,7 +110,7 @@ def rest():
         sleep(1)
         player.show_status(False)
         ansiprint(f"<bold>[Rest]</bold> Heal for 30 percent of your Max HP({math.floor(player.max_health * 0.30)} {'+ 15 from <bold>Regal Pillow</bold>' if relics['Regal Pillow'] in player.relics else ''}) \n<bold>[Upgrade]</bold> Upgrade a card in your deck > ", end='')
-        action = input('').lower()
+        action = input('> ').lower()
         if action == 'rest':
             # heal_amount is equal to 30% of the player's max health rounded down.
             heal_amount = math.floor(player.max_health * 0.30)
@@ -139,7 +139,7 @@ def rest():
             sleep(1.5)
             clear()
     while True:
-        option = input("[View Deck] or [Leave]").lower()
+        option = input("[View Deck] or [Leave]\n> ").lower()
         if option == 'view deck':
             view_piles(player.deck, player)
         elif option == 'leave':
