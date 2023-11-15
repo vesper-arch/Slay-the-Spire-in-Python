@@ -1,6 +1,5 @@
 from time import sleep
 from os import system
-from copy import deepcopy
 import math
 import random
 import re
@@ -235,7 +234,7 @@ def generate_potion_rewards(amount: int, entity: object, potion_pool: dict, chan
     return rewards
 
 
-def generate_relic_rewards(source, amount, entity, relic_pool, chance_based=True) -> list[dict]:
+def generate_relic_rewards(source: str, amount: int, entity, relic_pool: dict, chance_based=True) -> list[dict]:
     common_relics = [relic for relic in relic_pool.values() if relic.get('Rarity') == 'Common' and relic.get('Class') == entity.player_class]
     uncommon_relics = [relic for relic in relic_pool.values() if relic.get('Rarity') == 'Uncommon' and relic.get('Class') == entity.player_class]
     rare_relics = [relic for relic in relic_pool.values() if relic.get('Rarity') == 'Rare' and relic.get('Class') == entity.player_class]
@@ -288,7 +287,7 @@ def claim_relics(choice: bool, entity: object, relic_amount: int, relic_pool: di
         print(f"{entity.name} obtained {rewards[option]['Name']}.")
         rewards.remove(rewards[i])
 
-def claim_potions(choice, potion_amount, potion_pool, entity, rewards=None, chance_based=True):
+def claim_potions(choice: bool, potion_amount: int, potion_pool: dict, entity, rewards=None, chance_based=True):
     if not rewards:
         rewards = generate_potion_rewards(potion_amount, entity, potion_pool, chance_based)
     if not choice:
@@ -335,7 +334,7 @@ def claim_potions(choice, potion_amount, potion_pool, entity, rewards=None, chan
         sleep(0.2)
         clear()
 
-def card_rewards(tier, choice, entity, card_pool, rewards=None):
+def card_rewards(tier: str, choice: bool, entity, card_pool: dict, rewards=None):
     if not rewards:
         rewards = generate_card_rewards(tier, entity.card_reward_choices, entity, card_pool)
     while True:
@@ -371,15 +370,16 @@ def card_rewards(tier, choice, entity, card_pool, rewards=None):
         rewards.clear()
         sleep(1)
 
-def view_piles(pile, entity, end=False, condition='True'):
+def view_piles(pile: list, entity, end=False, condition='True'):
     """Prints a numbered list of all the cards in a certain pile."""
     if pile == entity.draw_pile:
         pile = random.sample(pile, len(pile))
     counter = 1
     for card in pile:
-        upgrade_check = 'blue' if not card.get('Upgraded') else 'green'
+        card_type_colors = {'Attack': 'red', 'Skill': 'light-blue', 'Power': 'green', 'Status': 'fg 141', 'Curse': 'fg 141'}
+        upgrade_check = card.get('Upgraded')
         if eval(condition):
-            ansiprint(f"{counter}: <{upgrade_check}>{card['Name']}</{upgrade_check}> | <light-cyan>{card['Type']}</light-cyan> | <{'light-red' if not card.get('Changed Energy') else 'green'}>{card['Energy']}</{'light-red' if not card.get('Changed Energy') else 'green'}>{' Energy' if isinstance(card.get('Energy'), int) else ''} | <yellow>{card['Info']}</yellow>".replace('Σ', '').replace('꫱', ''))
+            ansiprint(f"{counter}: <{card_type_colors[card['Type']]}>{card['Name']}</{card_type_colors[card['Type']]}>{'<green>+</green>' if upgrade_check else ''} | <{'light-red' if not card.get('Changed Energy') else 'green'}>{card['Energy']}{' Energy' if isinstance(card.get('Energy'), int) else ''}</{'light-red' if not card.get('Changed Energy') else 'green'}> | <yellow>{card['Info']}</yellow>".replace('Σ', '').replace('꫱', ''))
             counter += 1
             sleep(0.05)
         else:
@@ -405,14 +405,7 @@ def display_ui(entity, combat=True):
         sleep(0.05)
     print()
     ansiprint("<bold>Hand: </bold>")
-    for card in entity.hand:
-        # Replaces Energy with a really large number if a card is unplayable(Shown with the string "Unplayable")(elegant solution, i know)
-        if card.get('Energy') if isinstance(card.get('Energy'), int) else 57634576647346 <= entity.energy:
-            ansiprint(f"<{'blue' if card.get('Upgraded') is not True else 'green'}>{card['Name']}</{'blue' if card.get('Upgraded') is not True else 'green'}> | <light-black>{card['Type']}</light-black> | <italic><red>{card['Energy']} {'Energy' if isinstance(card.get('Energy'), int) else ''}</red></italic> | <yellow>{card['Info']}</yellow>".replace('Σ', '').replace('꫱', ''))
-        # Otherwise, print in full color
-        else:
-            ansiprint(f"<light-black>{card['Name']} | {card['Type']} | {card['Energy']} {'Energy' if isinstance(card.get('Energy'), int) else ''} | {card['Info']}</light-black>".replace('Σ', '').replace('꫱', ''))
-        sleep(0.05)
+    view_piles(entity.hand, entity, False, "card.get('Energy') if isinstance(card.get('Energy'), int) else 57634576647346 <= entity.energy")
     print()
     if combat is True:
         for enemy in active_enemies:
@@ -425,26 +418,12 @@ def display_ui(entity, combat=True):
         entity.show_status(False)
     print()
 
-def start_combat(entity, enemy_list):
-    print("Starting combat")
-    for relic in entity.relics:
-        if relic['Name'] == 'Pantograph':
-            entity.health_actions(25, 'Heal')
-            break
-    # Shuffles the player's deck into their draw pile
-    entity.draw_pile = random.sample(entity.deck, len(entity.deck))
-    encounter_enemies = random.choice(enemy_list)
-    for enemy in encounter_enemies:
-        enemy = deepcopy(enemy)
-        active_enemies.append(enemy)
-        # Enemies have 2 health values, [min, max]. This chooses a random number between those min and max values.
-        enemy.health = random.randint(enemy.health[0], enemy.health[1])
-        enemy.max_health = enemy.health
-    entity.start_of_combat_relics()
 
-def list_input(input_string, array) -> str | None:
+
+def list_input(input_string: str, array: list) -> int | None:
     try:
-        option = int(input(input_string)) - 1
+        ansiprint(input_string, end='')
+        option = int(input()) - 1
         array[option] = array[option] # Checks that the number is in range but doesn't really do anything
     except ValueError:
         return None
@@ -452,7 +431,7 @@ def list_input(input_string, array) -> str | None:
         return None
     return option
 
-def remove_color_tags(string) -> str:
+def remove_color_tags(string: str) -> str:
     pattern = r"<(\w+)>" # Pattern that searches for the word between < and > without symbols
     colors = re.findall(pattern, string)
     for color in colors:
@@ -460,7 +439,7 @@ def remove_color_tags(string) -> str:
     string = string.replace('<', '').replace('>', '').replace('/', '') # Removes all color tag symbols
     return string
 
-def calculate_actual_damage(string: str, target, entity: object, card) -> tuple[str, str]:
+def calculate_actual_damage(string: str, target, entity, card: dict) -> tuple[str, str]:
     match = re.search(r"Σ(\d+)", string)
     affected_by = ''
     if match:
