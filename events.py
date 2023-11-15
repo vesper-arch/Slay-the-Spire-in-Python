@@ -79,7 +79,7 @@ def event_TheDivineFountain():
         ansiprint("You come across <light-blue>shimmering water</light-blue> flowing endlessly from a fountain on a nearby wall.")
         sleep(0.8)
         ansiprint("<bold>[Drink]</bold> <green>Remove all <bold>Curses</bold></green> from your deck. \n<bold>[Leave]</bold> Nothing happens")
-        option = input('> ').lower()
+        option = input('<blink>></blink> ').lower()
         if option == "drink":
             for card in player.deck:
                 if card.get("Type") == "Curse":
@@ -105,7 +105,7 @@ def event_Duplicator():
         print("Before you lies a dedicated altar to some ancient entity.")
         sleep(0.8)
         ansiprint("<bold>[Pray]</bold> <green>Duplicate a card in your deck</green> \n<bold>[Leave]</bold> Nothing happens")
-        option = input('> ').lower()
+        option = input('<blink>></blink> ').lower()
         if option == 'pray':
             view_piles(player.deck, player)
             duplicate = list_input("What card do you want to duplicate? > ", player.deck)
@@ -132,7 +132,7 @@ def event_GoldenShrine():
         sleep(0.8)
         ansiprint("<bold>[Pray]</bold> <green>Gain 100 gold</green> \n<bold>[Desecrate]</bold> <green>Gain 275 gold.</green> <red>Become <bold>Cursed - Regret</bold></red> \n<bold>[Leave]</bold> Nothing happens")
         ansiprint("<fg 141>Regret</fg 141>: <yellow>Unplayable</yellow>. At the end of your turn, lose 1 HP for each card in your hand")
-        option = input('> ').lower()
+        option = input('<blink>></blink> ').lower()
         if option == 'pray':
             player.gain_gold(100, False)
             ansiprint("As your hand touches the shrine, <yellow>gold</yellow> rains from the ceiling showering you in riches.")
@@ -180,7 +180,7 @@ def event_OminousForge():
         print("You duck into a small hut. Inside, you find what appears to be a forge. The smithing tools are covered with dust, yet a fire roars inside the furnace. You feel on edge...")
         sleep(0.8)
         ansiprint("<bold>[Forge]</bold> <green>Upgrade a Card</green> \n<bold>[Rummage]</bold> <green>Obtain Warped Tongs.</green> <red>Become <bold>Cursed | Pain</bold></red> \n<bold>[Leave]</bold> Nothing happens")
-        option = input('> ').lower()
+        option = input('<blink>></blink> ').lower()
         if option == 'forge':
             view_piles(player.deck, player, False, 'card.get("Upgraded") is not True')
             option = list_input("What card do you want to upgrade? > ", player.deck)
@@ -240,7 +240,7 @@ def event_Transmogrifier():
         ansiprint('Before you lies an elaborate shrine to a forgotten spirit.')
         sleep(0.8)
         ansiprint('<bold>[Pray]</bold> <green>Transform a card.</green> \n<bold>[Leave]</bold> Nothing happens.')
-        option = input('> ').lower()
+        option = input('<blink>></blink> ').lower()
         if option == 'pray':
             view_piles(player.deck, player, False, 'card.get("Removable") is not False')
             transform_card = list_input('What card would you like to transform?', player.deck)
@@ -270,7 +270,7 @@ def event_UpgradeShrine():
         print('Before you lies an elaborate shrine to a forgotten spirit.')
         sleep(0.8)
         ansiprint('<bold>[Pray]</bold> <green>Upgrade a card.</green> \n<bold>[Leave]</bold> Nothing happens.')
-        option = input('> ').lower()
+        option = input('<blink>></blink> ').lower()
         if option == 'pray':
             view_piles(player.deck, player, False, "not card.get('Upgraded') and card.get('Type') != 'Curse'")
             upgrade_card = list_input('What card do you want to upgrade?', player.deck)
@@ -310,7 +310,7 @@ A cheery disheveled fellow approaches you gleefully. You do not know this man.
 You eye him suspiciously and consider your options...""")
         sleep(0.8)
         ansiprint("<bold>[Give Potion]</bold> <red>Lose a potion.</red> <green>Recieve a relic.</green> \n<bold>[Give Gold]</bold> <red>Lose a varying amount of gold.</red> <green>Recieve a relic.</green> \n<bold>[Give Card]</bold> <red>Lose a card.</red> <green>Recieve a relic.</green> \n<bold>[Attack]</bold> Nothing happens.")
-        option = input('> ').lower()
+        option = input('<blink>></blink> ').lower()
         if 'give' in option:
             relic_rewards = [relic for relic in relics.values() if relic.get('Rarity') in ('Common', 'Uncommon', 'Rare')]
             if 'potion' in option:
@@ -380,7 +380,7 @@ def event_TheWomanInBlue():
         print()
         sleep(0.8)
         ansiprint('<bold>[Buy 1 Potion]</bold> 20 Gold \n<bold>[Buy 2 Potions]</bold> 30 Gold. \n<bold>[Buy 3 Potions]</bold> 40 Gold. \n<bold>[Leave]</bold> Nothing happens.')
-        option = input('> ').lower()
+        option = input('<blink>></blink> ').lower()
         if 'potion' in option:
             if '1' in option:
                 claim_potions(True, 1, valid_potions, player, False)
@@ -418,7 +418,7 @@ On closer inspection, it's not a statue but a statuesque, gaunt man. Is he even 
 <bold>Eerie Man</bold>: "Face. Let me touch? Maybe trade?"''')
         sleep(0.8)
         ansiprint(f'<bold>[Touch]</bold> <green>Gain 75 gold</green>. <red>Lose {math.floor(player.max_health * 0.1)} HP</red> \n<bold>[Trade]</bold> <green>50% Good Face</green> <red>50% Bad Face</red> \n<bold>[Leave]</bold> Nothing happens.')
-        option = input('> ').lower()
+        option = input('<blink>></blink> ').lower()
         if option == 'touch':
             player.gain_gold(75)
             player.take_sourceless_dmg(math.floor(player.max_health * 0.1))
@@ -465,7 +465,7 @@ What do you do?''')
         sleep(0.8)
         ansiprint(f'<bold>[Banana]</bold> <green>Heal {math.floor(player.max_health / 3)} HP</green> \n<bold>[Donut]</bold> <green>Max HP +5</green> \n<bold>[Box]</bold> <green>Recieve a relic.</green> <red>Become Cursed: <bold>Regret</bold></red>')
         ansiprint(f'<fg 141>Regret</fg 141> | <yellow>{cards["Regret"]["Info"]}</yellow>') # fg 141 is purple
-        option = input('> ').lower()
+        option = input('<blink>></blink> ').lower()
         if option == 'banana':
             ansiprint('You eat the <yellow>banana</yellow>. It is nutritious and slightly <light-blue>magical</light-blue>, healing you.')
             sleep(0.5)
@@ -500,7 +500,7 @@ def event_TheCleric():
 "Hello friend! I am <light-blue>Cleric</light-blue>! Are you interested in my services!?" the creature shouts, loudly.''')
         sleep(0.5)
         ansiprint(f'<bold>[Heal]</bold> <red>Lose 35 Gold</red>. <green>Heal {math.floor(player.max_health * 0.25)} HP</green> \n<bold>[Purify]</bold> <red>Lose 50 Gold</red>. Remove a card from your deck. \n<bold>[Leave]</bold> Nothing happens.')
-        option = input('> ').lower()
+        option = input('<blink>></blink> ').lower()
         if option == 'heal':
             if player.gold < 35:
                 ansiprint("<red>You don't have enough gold.</red>")
@@ -560,14 +560,14 @@ def event_GoldenIdol():
                   
 You're sure you don't see any traps nearby.\n""")
         ansiprint("<bold>[Take]</bold> <green>Obtain <bold>Golden Idol</bold>.</green> <red>Trigger a trap</red> \n<bold>[Leave]</bold> Nothing happens")
-        option = input('> ').lower()
+        option = input('<blink>></blink> ').lower()
         if option == 'take':
             claim_relics(False, player, 1, relics, [relics['Golden Idol']], False)
             ansiprint("""As you grab the idol and stow it away, a giant boulder smashes through the ceiling into the ground next to you.
                       
 You realize that the floor is slanted downwards as the boulder starts to roll towards you.""")
             ansiprint(f"<bold>[Outrun]</bold> <red>Become <bold>Cursed</bold> - <bold>Injury</bold></red> \n<bold>[Smash]</bold> <red>Take {math.floor(player.max_health * 0.25)} damage</red> \n<bold>[Hide]</bold> <red>Lose {math.floor(player.max_health * 0.08)} Max HP</red>")
-            option = input('> ').lower()
+            option = input('<blink>></blink> ').lower()
             if option == 'outrun':
                 ansiprint("""<italic>RUUUUUUUUUUUUUUUN!</italic>
                         
