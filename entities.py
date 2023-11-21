@@ -2,9 +2,10 @@ import math
 import sys
 import random
 from time import sleep
-from ansimarkup import ansiprint
+from copy import deepcopy
+from ansi_tags import ansiprint
 from items import relics, cards
-from utility import active_enemies, combat_turn, duration_effects, player_buffs, player_debuffs, enemy_buffs, enemy_debuffs, non_stacking_effects, all_effects, list_input, clear, modify_energy_cost
+from utility import active_enemies, combat_turn, DURATION_EFFECTS, PLAYER_BUFFS, PLAYER_DEBUFFS, ENEMY_BUFFS, ENEMY_DEBUFFS, NON_STACKING_EFFECTS, all_effects, list_input, clear, modify_energy_cost
 
 class Player:
     """
@@ -45,14 +46,14 @@ class Player:
         self.orb_slots: int = 3
         self.gold: int = 0
         self.debuffs: dict[str: int] = {}
-        for debuff in player_debuffs:
-            if debuff not in non_stacking_effects:
+        for debuff in PLAYER_DEBUFFS:
+            if debuff not in NON_STACKING_EFFECTS:
                 self.debuffs[debuff] = 0
             else:
                 self.debuffs[debuff] = False
         self.buffs: dict[str: int] = {}
-        for buff in player_buffs:
-            if buff not in non_stacking_effects:
+        for buff in PLAYER_BUFFS:
+            if buff not in NON_STACKING_EFFECTS:
                 self.buffs[buff] = 0
             else:
                 self.buffs[buff] = False
@@ -112,12 +113,19 @@ class Player:
                 ansiprint('You gained 1 Energy from <bold>Nunckaku</bold>.')
                 self.nunckaku_attacks = 0
         self.on_card_play(card)
+        if self.buffs['Corruption']:
+            exhaust = True
         if exhaust is True or card.get('Exhaust') is True:
             ansiprint(f"{card['Name']} was <bold>Exhausted</bold>.")
             self.move_card(card, self.exhaust_pile, pile, True)
         else:
             self.move_card(card, self.discard_pile, pile, True)
 
+        if self.buffs['Double Tap'] > 0 and card.get('Type') == 'Attack':
+            self.buffs['Double Tap'] -= 1
+            sleep(1.5)
+            clear()
+            self.use_card(card, target, True, pile)
         # Medical Kit allows Status cards to played
         if card.get('Type') == 'Status' and relics['Medical Kit'] in player.relics:
             exhaust = True
@@ -143,7 +151,8 @@ class Player:
             valid_cards = [card for card in self.deck if card.get('Type') == valid_card_types[relic['Name']]]
             ansiprint(f"<bold>{relic['Name']}</bold>:")
             for _ in range(min(len(valid_cards), 2)):
-                self.card_actions(random.choice(valid_cards), 'Upgrade', valid_cards)
+                chosen_card = random.randint(0, len(self.deck) - 1)
+                self.card_actions(self.deck[chosen_card], chosen_card, 'Upgrade', self.deck, valid_cards)
         if relic.get('Name') in ('Strawberry', 'Pear', 'Mango'):
             health_values = {'Strawberry': 7, 'Pear': 10, 'Mango': 14}
             self.health_actions(health_values[relic['Name']], 'Max Health')
@@ -215,10 +224,17 @@ class Player:
                         self.energy += 2
                         self.draw_shuffles = 0
                 ansiprint("<bold>Discard pile shuffled into draw pile.</bold>")
-            player.hand.extend(player.draw_pile[-draw_cards:])
+            self.hand.extend(player.draw_pile[-draw_cards:])
             # Removes those cards
             player.draw_pile = player.draw_pile[:-draw_cards]
             print(f"{self.name} drew {draw_cards} cards.")
+            for card in player.hand[-draw_cards:]:
+                if card['Type'] in ('Status', 'Curse') and self.buffs['Fire Breathing'] > 0:
+                    for enemy in active_enemies:
+                        self.attack(self.buffs['Fire Breathing'], enemy)
+                if card['Type'] == 'Status' and self.buffs['Evolve'] > 0:
+                    clear()
+                    self.draw_cards(True, self.buffs['Evolve'])
             break
 
     def blocking(self, block: int, card: bool = True):
@@ -233,8 +249,10 @@ class Player:
                 block_affected_by += '<light-cyan>Frail</light-cyan> (x0.75 block) | '
         self.block += block
         ansiprint(f'{self.name} gained {block} <blue>Block</blue>')
+        if self.buffs['Juggernaut'] > 0:
+            self.attack(self.buffs['Juggernaut'], random.choice(active_enemies))
         print('Affected by:')
-        ansiprint(block_affected_by)
+        ansiprint(block_affected_by if block_affected_by else 'Nothing')
 
     def health_actions(self, heal: int, heal_type: str):
         '''If [heal_type] is 'Heal', you heal for [heal] HP. If [heal_type] is 'Max Health', increase your max health by [heal].'''
@@ -251,7 +269,7 @@ class Player:
             self.health += heal
             ansiprint(f"Your Max HP is {'increased' if heal > 0 else 'decreased'} by <{'light-blue' if heal > 0 else 'red'}>{heal}</{'light-blue' if heal > 0 else 'red'}>")
 
-    def card_actions(self, subject_card: object, action: str, card_pool: list[dict] = None):
+    def card_actions(self, subject_card: object, index: int, action: str, pile: list[dict], card_pool: list[dict] = None):
         '''[action] == 'Remove', remove [card] from your deck.
         [action] == 'Upgrade', Upgrade [card]
         [action] == 'Transform', transform a card into another random card.
@@ -261,7 +279,7 @@ class Player:
             card_pool = cards
         while True:
             if action == "Remove":
-                player.deck.remove(subject_card)
+                del pile[index]
                 break
             elif action == 'Transform':
                 # Curse cards can only be transformed into other Curses
@@ -273,39 +291,43 @@ class Player:
                     new_card = random.choice(options)
                     if new_card == subject_card:
                         continue
-                    self.deck.append(new_card)
-                    self.deck.remove(subject_card)
+                    del pile[index]
+                    player.deck.insert(index, new_card)
                     break
                 break
             elif action == 'Upgrade':
-                upgraded_cards = {card: stats for card, stats in card_pool.items() if stats.get('Name') not in ('Status', 'Curse') and stats.get('Upgraded')}
-                for valid_card, stats in upgraded_cards.items():
-                    stripped_string = stats.get('Name')
-                    stripped_string = stripped_string.replace('+', '')
-                    if subject_card.get('Name') == stripped_string:
-                        ansiprint(f"{subject_card['Name']} got <green>Upgraded</green>")
-                        self.deck.insert(self.deck.index(subject_card), card_pool[valid_card])
-                        self.deck.remove(subject_card)
-                        break
-                break
+                if "Searing Blow" in subject_card['Name']:
+                    effects_plus = subject_card.pop('Effects+')
+                    subject_card['Name'] += '+'
+                    for stat, new_value in effects_plus.values():
+                        subject_card[stat] = new_value
+                    subject_card['Upgraded'] = True
+                else:
+                    n = subject_card['Upgrade Count']
+                    n += 1
+                    subject_card['Name'] += f"+{n}"
+                    subject_card['Damage'] = n * (n + 7) / 2 + 12
+                    subject_card['Info'] = f"Deal Σ{subject_card['Damage']}. Can be <bold>upgraded</bold> any number of times."
+
+                ansiprint(f"{subject_card['Name']} was upgraded to <green>{subject_card['Name']}")
 
     def show_status(self, full_view=False, combat=True):
         if combat is True:
             status = f"\n{self.name} (<red>{self.health} </red>/ <red>{self.max_health}</red> | <light-blue>{self.block} Block</light-blue> | <light-red>{self.energy} / {self.max_energy}</light-red>)"
             for buff in self.buffs:
-                if buff not in non_stacking_effects and self.buffs[buff] > 0:
+                if buff not in NON_STACKING_EFFECTS and self.buffs[buff] > 0:
                     status += f" | <light-cyan>{buff}</light-cyan>: {self.buffs[buff]}"
-                elif buff in non_stacking_effects and self.buffs[buff] is True:
+                elif buff in NON_STACKING_EFFECTS and self.buffs[buff] is True:
                     status += f" | <light-cyan>{buff}</light-cyan>"
             for debuff in self.debuffs:
-                if debuff not in non_stacking_effects and self.debuffs[debuff] > 0:
+                if debuff not in NON_STACKING_EFFECTS and self.debuffs[debuff] > 0:
                     status += f" | <red>{debuff}</red>: {self.debuffs[debuff]}"
-                elif debuff in non_stacking_effects and self.debuffs[debuff] is True:
+                elif debuff in NON_STACKING_EFFECTS and self.debuffs[debuff] is True:
                     status += f" | <red>{debuff}</red>"
         else:
             status = f"\n{self.name} (<red>{self.health} </red>/ <red>{self.max_health}</red> | <yellow>{self.gold} Gold</yellow>)"
-        ansiprint(status)
-        print()
+        ansiprint(status, '' if status == f"\n{self.name} (<red>{self.health} </red>/ <red>{self.max_health}</red> | <light-blue>{self.block} Block</light-blue> | <light-red>{self.energy} / {self.max_energy}</light-red>)" else '\n'
+)
         if full_view is True:
             # int() function used to account for boolean variables.
             for buff in self.buffs:
@@ -326,14 +348,17 @@ class Player:
 
     def move_card(self, card, move_to, from_location, cost_energy, shuffle=False):
         if cost_energy is True:
-            self.energy -= card["Energy"]
+            energy_cost = eval(str(card['Energy']))
+            self.energy -= energy_cost
         from_location.remove(card)
         if shuffle is True:
             move_to.insert(random.randint(0, len(move_to) - 1), card)
         else:
             move_to.append(card)
+        if self.buffs["Dark Embrace"] > 0 and move_to == self.exhaust_pile:
+            self.draw_cards(True, 1)
         if relics['Dead Branch'] in self.relics and move_to == self.exhaust_pile:
-            self.hand.append(random.choice([card for card in cards if card.get('Upgraded') is not True and card.get('Class') == self.player_class]))
+            self.hand.append(deepcopy(random.choice([card for card in cards if card.get('Upgraded') is not True and card.get('Class') == self.player_class])))
         if relics["Charon's Ashes"] in self.relics and move_to == self.exhaust_pile:
             for enemy in active_enemies:
                 self.attack(3, enemy)
@@ -349,23 +374,16 @@ class Player:
             if relics['Strike Dummy'] in self.relics and 'strike' in card.get('Name').lower():
                 dmg += 3
                 dmg_affected_by += "<bold>Strike Dummy</bold>(+3 dmg) | "
-            if "Body Slam" in card.get('Name'):
-                dmg += self.block
-                dmg_affected_by += f"Body Slam(+{self.block} dmg) | "
-            if "Perfected Strike" in card.get('Name'):
-                perfected_dmg = len([card for card in self.deck if 'strike' in card.get('Name').lower()]) * card.get('Damage Per "Strike"')
-                dmg += perfected_dmg
-                dmg_affected_by += f"Perfected Strike(+{perfected_dmg} dmg) | "
             if self.debuffs["Weak"] > 0 and card:
                 dmg = math.floor(dmg * 0.75)
-                dmg_affected_by += "<light-cyan>Weak</light-cyan>(x0.75 dmg) | "
+                dmg_affected_by += "<debuff>Weak</debuff>(x0.75 dmg) | "
             if target.debuffs["Vulnerable"] > 0:
                 dmg = math.floor(dmg * (1.50 + 0 if relics['Paper Phrog'] not in self.relics else 0.25))
-                dmg_affected_by += f"<light-cyan>Vulnerable</light-cyan>(x{'1.5' if relics['Paper Phrog'] not in self.relics else '1.75'} dmg) | "
+                dmg_affected_by += f"<debuff>Vulnerable</debuff>(x{'1.5' if relics['Paper Phrog'] not in self.relics else '1.75'} dmg) | "
             if self.buffs["Vigor"] > 0:
-                dmg_affected_by += f"{self.buffs['Vigor']} <light-cyan>Vigor</light-cyan>(+{self.buffs['Vigor']} dmg) | "
+                dmg_affected_by += f"{self.buffs['Vigor']} <buff>Vigor</buff>(+{self.buffs['Vigor']} dmg) | "
             if self.buffs["Strength"] != 0:
-                dmg_affected_by += f"{'<red>' if self.buffs['Strength'] < 0 else ''}{self.buffs['Strength']}{'</red>' if self.buffs['Strength'] < 0 else ''} <light-cyan>Strength</light-cyan> | "
+                dmg_affected_by += f"{'<buff>' if self.buffs['Strength'] < 0 else '<debuff>'}{self.buffs['Strength']}{'</buff>' if self.buffs['Strength'] < 0 else '</debuff>'} <buff>Strength</buff> | "
                 if "Heavy Blade" in card.get('Name'):
                     dmg_affected_by += f"Heavy Blade(x{card.get('Strength Multi')} Strength gain) | "
             if self.buffs["Pen Nib"] > 0:
@@ -376,7 +394,7 @@ class Player:
                 dmg_affected_by += "<bold>Phantasmal Killer</bold>(x2 dmg) | "
             if target.buffs['Intangible'] > 0:
                 dmg = 1
-                dmg_affected_by = "<light-cyan>Intangible</light-cyan>(ALL damage reduced to 1)"
+                dmg_affected_by = "<buff>Intangible</buff>(ALL damage reduced to 1)"
         if not ignore_block:
             if dmg <= target.block:
                 target.block -= dmg
@@ -395,29 +413,29 @@ class Player:
                 ansiprint(f"You dealt {dmg} damage(<light-blue>{target.block} Blocked</light-blue>) to {target.name}")
                 if target.health <= 0:
                     target.die()
+                if 'Reaper' in card['Name']:
+                    self.health_actions(dmg, 'Heal')
                 target.block = 0
 
-    def debuff(self, debuff_name: str, amount: int, target: object, end: bool):
+    def debuff(self, debuff_name: str, amount: int, target: object, end=False):
         if debuff_name not in all_effects:
             ansiprint(f"<red>{debuff_name} is not a valid debuff or buff. This is my mistake!</red>")
             sys.exit(1)
         if target.buffs['Artifact'] == 0:
-            if debuff_name in non_stacking_effects and self != target:
+            if debuff_name in NON_STACKING_EFFECTS and self != target:
                 target.debuffs[debuff_name] = True
-                ansiprint(f"{self.name} applied <red>{debuff_name}</red> to {target.name}.")
-            elif debuff_name not in non_stacking_effects and self != target:
+                ansiprint(f"{self.name} applied <debuff>{debuff_name}</debuff> to {target.name}.")
+            elif debuff_name not in NON_STACKING_EFFECTS and self != target:
                 target.debuffs[debuff_name] += amount
-                ansiprint(f"{self.name} applied {amount} <red>{debuff_name}</red> to {target.name}.")
+                ansiprint(f"{self.name} applied {amount} <debuff>{debuff_name}</debuff> to {target.name}.")
                 if debuff_name == 'Vulnerable' and relics['Champion Belt'] in self.relics:
                     self.debuff('Weak', 1, target, False)
-            if self == target and debuff_name not in non_stacking_effects:
+            if self == target and debuff_name not in NON_STACKING_EFFECTS:
                 ansiprint(f"+{amount} {debuff_name}")
-            elif self == target and debuff_name in non_stacking_effects:
-                ansiprint(f"<red>{debuff_name}</red>")
-            else:
-                ansiprint(f"{self.name} applied {amount} <red>{debuff_name}</red> to {target.name}")
+            elif self == target and debuff_name in NON_STACKING_EFFECTS:
+                ansiprint(f"<debuff>{debuff_name}</debuff>")
         else:
-            ansiprint(f"{debuff_name} was blocked by {'' if self != target else 'your'} <light-cyan>Artifact</light-cyan>")
+            ansiprint(f"{debuff_name} was blocked by {'' if self != target else 'your'} <buff>Artifact</buff>")
             target.artifact -= 1
         if end is False:
             sleep(1)
@@ -425,11 +443,11 @@ class Player:
             sleep(1.5)
             clear()
 
-    def buff(self, buff_name, amount, end):
+    def buff(self, buff_name, amount, end=False):
         if buff_name not in all_effects:
             ansiprint(f"<red>{buff_name} is not a valid debuff or buff. This is my mistake!</red>")
             sys.exit(1)
-        if buff_name not in non_stacking_effects:
+        if buff_name not in NON_STACKING_EFFECTS:
             self.buffs[buff_name] += amount
             ansiprint(f"+{amount} <light-cyan>{buff_name}</light-cyan>")
         else:
@@ -515,28 +533,31 @@ class Player:
     def debuff_buff_tick(self):
         # ///////Buffs\\\\\\\\
         for buff in self.buffs:
+            if buff == 'Rage' and self.buffs[buff] > 0:
+                self.buffs['Rage'] = 0
+                ansiprint('<buff>Rage</buff> wears off.')
             if buff == 'Flame Barrier' and self.buffs[buff] > 0:
                 self.buffs['Flame Barrier'] = 0
-                ansiprint('<light-cyan>Flame Barrier</light-cyan> wears off')
-            if buff in duration_effects and self.buffs[buff] > 0:
+                ansiprint('<buff>Flame Barrier</buff> wears off')
+            if buff in DURATION_EFFECTS and self.buffs[buff] > 0:
                 self.buffs[buff] -= 1
-                ansiprint(f"-1 <light-cyan>{buff}</light-cyan>")
+                ansiprint(f"-1 <buff>{buff}</buff>")
                 if self.buffs[buff] == 0:
-                    ansiprint(f"<light-cyan>{buff}</light-cyan> wears off")
+                    ansiprint(f"<buff>{buff}</buff> wears off")
         # //////Debuffs\\\\\\
         for debuff in self.debuffs:
-            if debuff in duration_effects and self.debuffs[debuff] > 0:
+            if debuff in DURATION_EFFECTS and self.debuffs[debuff] > 0:
                 self.debuffs[debuff] -= 1
-                ansiprint(f"-1 <light-cyan>{debuff}</light-cyan>")
+                ansiprint(f"-1 <debuff>{debuff}</debuff>")
                 if self.debuffs[debuff] == 0:
-                    ansiprint(f"<light-cyan>{debuff}</light-cyan> wears off.")
+                    ansiprint(f"<debuff>{debuff}</debuff> wears off.")
         # Strength Down: Lose X Strength at the end of your turn
         if self.debuffs['Strength Down'] > 0:
             self.buffs['Strength'] -= self.debuffs['Strength Down']
-            ansiprint(f"<red>Strength</red> was reduced by {self.debuffs['Strength Down']} because of <red>Strength Down</red>")
+            ansiprint(f"<red>Strength</red> was reduced by {self.debuffs['Strength Down']} because of <debuff>Strength Down</debuff>")
             sleep(0.7)
             self.debuffs['Strength Down'] = 0
-            print("Strength Down wears off.")
+            print("<debuff>Strength Down</debuff> wears off.")
             sleep(0.8)
 
     def end_of_turn_effects(self):
@@ -575,6 +596,10 @@ class Player:
                     self.the_bomb_countdown = 3
 
     def start_of_turn_effects(self):
+        if self.buffs['Brutality'] > 0:
+            ansiprint("From <buff>Brutality</buff>: ")
+            self.take_sourceless_dmg(self.buffs['Brutality'])
+            self.draw_cards(True, self.buffs['Brutality'])
         if self.buffs["Next Turn Block"] > 0:
             self.blocking(self.buffs["Next Turn Block"], False)
             self.buffs["Next Turn Block"] = 0
@@ -588,9 +613,13 @@ class Player:
                 enemy.buffs['Strength'] += 1
                 ansiprint(f"{enemy.name} gained 1 <light-cyan>Strength</light-cyan>")
             self.buff('Strength', 2, False)
+        if self.buffs['Demon Form'] > 0:
+            ansiprint("From <buff>Demon Form</buff>: ", end='')
+            self.buff("Strength", self.buffs['Demon Form'])
         if relics['Warped Tongs'] in self.relics:
             ansiprint("From <bold>Warped Tongs</bold>:")
-            self.card_actions(random.choice(self.hand), 'Upgrade')
+            chosen_card = random.randint(0, len(self.hand) - 1)
+            self.card_actions(self.hand[chosen_card], chosen_card, 'Upgrade', self.hand)
         if relics['Horn Cleat'] in self.relics:
             self.blocking(14, False)
 
@@ -712,14 +741,14 @@ class Enemy:
             self.damage = [5, 7]
         self.past_moves = ['place'] * 3
         self.buffs = {}
-        for buff in enemy_buffs:
-            if buff not in non_stacking_effects:
+        for buff in ENEMY_BUFFS:
+            if buff not in NON_STACKING_EFFECTS:
                 self.buffs[buff] = 0
             else:
                 self.buffs[buff] = False
         self.debuffs = {}
-        for debuff in enemy_debuffs:
-            if debuff not in non_stacking_effects:
+        for debuff in ENEMY_DEBUFFS:
+            if debuff not in NON_STACKING_EFFECTS:
                 self.debuffs[debuff] = 0
             else:
                 self.debuffs[debuff] = False
@@ -834,17 +863,16 @@ class Enemy:
     def show_status(self, full_view=False):
         status = f"\n{self.name} (<red>{self.health} </red>/ <red>{self.max_health}</red> | <light-blue>{self.block} Block</light-blue>)"
         for buff in self.buffs:
-            if buff not in non_stacking_effects and self.buffs[buff] > 0:
+            if buff not in NON_STACKING_EFFECTS and self.buffs[buff] > 0:
                 status += f" | <light-cyan>{buff}</light-cyan>: {self.buffs[buff]}"
-            elif buff in non_stacking_effects and self.buffs[buff] is True:
+            elif buff in NON_STACKING_EFFECTS and self.buffs[buff] is True:
                 status += f" | <light-cyan>{buff}</light-cyan>"
         for debuff in self.debuffs:
-            if debuff not in non_stacking_effects and self.debuffs[debuff] > 0:
+            if debuff not in NON_STACKING_EFFECTS and self.debuffs[debuff] > 0:
                 status += f" | <red>{debuff}</red>: {self.debuffs[debuff]}"
-            elif debuff in non_stacking_effects and self.debuffs[debuff] is True:
+            elif debuff in NON_STACKING_EFFECTS and self.debuffs[debuff] is True:
                 status += f" | <red>{debuff}</red>"
-        ansiprint(status)
-        print()
+        ansiprint(status, '' if status == f"\n{self.name} (<red>{self.health} </red>/ <red>{self.max_health}</red> | <light-blue>{self.block} Block</light-blue>)" else '\n')
         if full_view is True:
             # int() function used to account for True|False variables.
             for buff in self.buffs:
@@ -894,9 +922,17 @@ class Enemy:
                 if dmg > 0 and relics['Self-Forming Clay'] in player.relics:
                     ansiprint('<bold>Self-Forming Clay</bold> activated.')
                     player.buffs['Next Turn Block'] += 3
-                ansiprint(f"{self.name} dealt {dmg}(<light-blue>{player.block} Blocked</light-blue>) to you.")
+                ansiprint(f"{self.name} dealt {dmg}(<light-blue>{player.block} Blocked</light-blue>) damage to you.")
                 player.block = 0
                 player.health -= dmg
+            if player.buffs['Flame Barrier'] > 0:
+                if self.block >= dmg:
+                    self.block -= dmg
+                else:
+                    dmg -= self.block
+                    self.health -= dmg
+                    self.block = 0
+                    ansiprint(f"{self.name} took {dmg}(<light-blue>{self.block} Blocked</light-blue>) damage from <buff>Fire Breathing</buff>.")
         if player.health <= math.floor(player.max_health * 0.5) and not player.meat_on_the_bone:
             player.meat_on_the_bone = True
             ansiprint("<bold>Meat on the Bone</bold>> activated.")
@@ -912,7 +948,7 @@ class Enemy:
         if buff not in all_effects:
             ansiprint(f"<red>{buff} is not a valid debuff or buff. This is my mistake!</red>")
             sys.exit(1)
-        if buff not in non_stacking_effects:
+        if buff not in NON_STACKING_EFFECTS:
             self.buffs[buff] += amount
             ansiprint(f"{self.name} gained {amount} <light-cyan>{buff}</light-cyan>")
         else:
@@ -938,7 +974,7 @@ class Enemy:
             ansiprint('<red>Frail</red> was blocked by your <bold>Turnip</bold>')
             sleep(1)
             return
-        if debuff not in non_stacking_effects:
+        if debuff not in NON_STACKING_EFFECTS:
             player.debuffs[debuff] += amount
             ansiprint(f"{self.name} applied {amount} <light-cyan>{debuff}</light-cyan> to you")
         else:
@@ -981,6 +1017,9 @@ class Enemy:
         else:
             if self.active_turns > 1 and self.block > 0:
                 ansiprint(f"{self.name}'s Block was not removed because of <light-cyan>Barricade</light-cyan")
+        if self.buffs['Ritual'] > 0:
+            ansiprint("From <buff>Ritual</buff>: ", end='')
+            self.buff("Strength", self.buffs['Ritual'], False)
         if self.debuffs["Vulnerable"] > 0:
             self.debuffs["Vulnerable"] -= 1
             ansiprint("<light-cyan>-1 Vulnerable</light-cyan>")
@@ -1013,8 +1052,8 @@ class Enemy:
 
 # Characters
 player = Player(80, 0, 3, [])
-player.deck = [cards['Strike'], cards['Strike'], cards['Strike'], cards['Strike'], cards['Strike'],
-               cards['Defend'], cards['Defend'], cards['Defend'], cards['Defend'], cards['Bash']]
+player.deck = list(map(deepcopy, [cards['Strike'], cards['Strike'], cards['Strike'], cards['Strike'], cards['Strike'],
+               cards['Defend'], cards['Defend'], cards['Defend'], cards['Defend'], cards['Bash']]))
 player.relics.append(relics['Burning Blood'])
 # Enemies
 enemy_encounters = [[Enemy([48, 54], 0, "Cultist")], [Enemy([40, 44], 0, "Jaw Worm")]]

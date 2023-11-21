@@ -1,20 +1,21 @@
 from time import sleep
 from os import system
+from copy import deepcopy
 import math
 import random
 import re
-from ansimarkup import ansiprint
+from ansi_tags import ansiprint
 
 
 active_enemies = []
 combat_turn = 1
 combat_potion_dropchance = 40
-duration_effects = ("Frail", "Poison", "Vulnerable", "Weak", "Draw Reduction", 'Lock On', "No Block", "Intangible", "Blur", "Collect", 'Double Damage',
+DURATION_EFFECTS = ("Frail", "Poison", "Vulnerable", "Weak", "Draw Reduction", 'Lock On', "No Block", "Intangible", "Blur", "Collect", 'Double Damage',
                    "Equilibrium", "Phantasmal", "Regeneration", "Fading")
-non_stacking_effects = ("Confused", "No Draw", "Entangled", "Barricade", "Back Attack", "Life Link", "Minion", "Reactive", "Shifting", "Split",
+NON_STACKING_EFFECTS = ("Confused", "No Draw", "Entangled", "Barricade", "Back Attack", "Life Link", "Minion", "Reactive", "Shifting", "Split",
                         "Stasis", "Unawakened", "Blasphemer", "Corruption", "Electro", "Master Reality", "Pen Nib", "Simmering Rage",
                         "Surrounded")
-player_buffs = {"Artifact": "Negate the next X debuffs",
+PLAYER_BUFFS = {"Artifact": "Negate the next X debuffs",
                 "Barricade": "<bold>Block</bold> is not removed at the start of your turn",
                 "Buffer": "Prevent the next X times you would lose HP",
                 "Dexterity": "Increases <bold>Block</bold> gained from cards by X",
@@ -98,7 +99,7 @@ player_buffs = {"Artifact": "Negate the next X debuffs",
                 "Wave of the Hand": "Whenever you gain <bold>Block</bold> this turn, apply X <bold>Weak</bold> to ALL enemies",
                 "Well-laid Plans": "At the end of your turn, <bold>Retain</bold> up to X cards.",
 }
-player_debuffs = {
+PLAYER_DEBUFFS = {
     "Confused": "The costs of your cards are randomized on draw, from 0 to 3",
     "Dexterity Down": "At the end of your turn, lose X <bold>Dexterity</bold>",
     "Frail": "<bold>Block</bold> gained from cards is reduced by 25%",
@@ -115,7 +116,7 @@ player_debuffs = {
     "No Block": "You may not gain <bold>Block</bold> from cards for the next X turns",
     "Wraith Form": "At the start of your turn, lose X <bold>Dexterity</bold>"
 }
-enemy_buffs = {"Artifact": "Negate the next X debuffs",
+ENEMY_BUFFS = {"Artifact": "Negate the next X debuffs",
                 "Barricade": "<bold>Block</bold> is not removed at the start of your turn",
                 "Intangible": "Reduce ALL damage and HP loss to 1 for X turns",
                 "Metallicize": "At the end of your/its turn, gains X <bold>Block</bold>",
@@ -149,7 +150,7 @@ enemy_buffs = {"Artifact": "Negate the next X debuffs",
                 "Time Warp": "Whenever you play N cards, ends your turn and gains X <bold>Strength</bold>",
                 "Unawakened": "This enemy hasn't awakened yet...",
 }
-enemy_debuffs = {
+ENEMY_DEBUFFS = {
                 "Poison": "At the beginning of its turn, loses X HP and loses 1 stack of Poison",
                 "Shackled": "At the end of its turn, regains X <bold>Strength</bold>",
                 "Slow": "The enemy recieves (X * 10)% more damage from attacks this turn. Whenever you play a card, increase Slow by 1",
@@ -161,10 +162,10 @@ enemy_debuffs = {
                 "Lock-On": "<bold>Lightning</bold> and <bold>Dark</bold> orbs deal 50% more damage to the targeted enemy",
                 "Mark": "Whenever you play <bold>Pressure Points</bold>, all enemies with Mark lose X HP"}
 all_effects = []
-all_effects.extend(player_buffs)
-all_effects.extend(player_debuffs)
-all_effects.extend(enemy_buffs)
-all_effects.extend(enemy_debuffs)
+all_effects.extend(PLAYER_BUFFS)
+all_effects.extend(PLAYER_DEBUFFS)
+all_effects.extend(ENEMY_BUFFS)
+all_effects.extend(ENEMY_DEBUFFS)
 all_effects = tuple(all_effects)
 
 def generate_card_rewards(reward_tier: str, amount: int, entity: object, card_pool: dict) -> list[dict]:
@@ -188,23 +189,23 @@ def generate_card_rewards(reward_tier: str, amount: int, entity: object, card_po
         for _ in range(amount):
             random_num = 70 # It's set to 70 because Uncommon and Rare cards don't exist yet
             if random_num > 97:
-                rewards.append(random.choice(rare_cards))
+                rewards.append(deepcopy(random.choice(rare_cards)))
             elif 60 < random_num < 97:
-                rewards.append(random.choice(uncommon_cards))
+                rewards.append(deepcopy(random.choice(uncommon_cards)))
             else:
-                rewards.append(random.choice(common_cards))
+                rewards.append(deepcopy(random.choice(common_cards)))
     elif reward_tier == "Elite":
         for _ in range(amount):
             random_num = random.randint(1, 100)
             if random_num >= 90:
-                rewards.append(random.choice(rare_cards))
+                rewards.append(deepcopy(random.choice(rare_cards)))
             elif 90 > random_num > 50:
-                rewards.append(random.choice(uncommon_cards))
+                rewards.append(deepcopy(random.choice(uncommon_cards)))
             else:
-                rewards.append(random.choice(common_cards))
+                rewards.append(deepcopy(random.choice(common_cards)))
     elif reward_tier == "Boss":
         for _ in range(amount):
-            rewards.append(random.choice(rare_cards))
+            rewards.append(deepcopy(random.choice(rare_cards)))
     return rewards
 
 
@@ -370,16 +371,17 @@ def card_rewards(tier: str, choice: bool, entity, card_pool: dict, rewards=None)
         rewards.clear()
         sleep(1)
 
-def view_piles(pile: list, entity, end=False, condition='True'):
+def view_piles(pile: list[dict], entity, end=False, condition='True'):
     """Prints a numbered list of all the cards in a certain pile."""
     if pile == entity.draw_pile:
         pile = random.sample(pile, len(pile))
     counter = 1
     for card in pile:
-        card_type_colors = {'Attack': 'red', 'Skill': 'light-blue', 'Power': 'green', 'Status': 'fg 141', 'Curse': 'fg 141'}
-        upgrade_check = card.get('Upgraded')
+        upgrades = card.get('Upgrade Count', '')
+        upgrade_check = card.get('Upgraded') or card.get('Upgrade Count', 0) > 0
+        changed_energy = 'light-red' if not card.get('Changed Energy') else 'green'
         if eval(condition):
-            ansiprint(f"{counter}: <{card_type_colors[card['Type']]}>{card['Name']}</{card_type_colors[card['Type']]}>{'<green>+</green>' if upgrade_check else ''} | <{'light-red' if not card.get('Changed Energy') else 'green'}>{card['Energy']}{' Energy' if isinstance(card.get('Energy'), int) else ''}</{'light-red' if not card.get('Changed Energy') else 'green'}> | <yellow>{card['Info']}</yellow>".replace('Σ', '').replace('꫱', ''))
+            ansiprint(f"{counter}: <{card['Type'].lower()}>{card['Name']}</{card['Type'].lower()}>{f'<green>+{upgrades}</green>' if upgrade_check else ''} | <{changed_energy}>{card['Energy']}{' Energy' if isinstance(card.get('Energy'), int) else ''}</{changed_energy}> | <yellow>{card['Info']}</yellow>".replace('Σ', '').replace('꫱', ''))
             counter += 1
             sleep(0.05)
         else:
@@ -395,23 +397,12 @@ def view_piles(pile: list, entity, end=False, condition='True'):
 
 def display_ui(entity, combat=True):
     # Repeats for every card in the entity's hand
-    print("Potions: ")
-    for potion in entity.potions:
-        ansiprint(f"<blue>{potion['Name']}</blue> | <green>{potion['Class']}</green> | <light-black>{potion['Rarity']}</light-black> | <yellow>{potion['Info']}</yellow>")
-        sleep(0.05)
-    # Fills the empty potion slots with '(Empty)'
-    for _ in range(entity.max_potions - len(entity.potions)):
-        ansiprint("<light-black>(Empty)</light-black>")
-        sleep(0.05)
-    print()
     ansiprint("<bold>Hand: </bold>")
-    view_piles(entity.hand, entity, False, "card.get('Energy') if isinstance(card.get('Energy'), int) else 57634576647346 <= entity.energy")
-    print()
+    view_piles(entity.hand, entity, False, "card.get('Energy', float('inf')) <= entity.energy")
     if combat is True:
         for enemy in active_enemies:
             enemy.show_status()
         # Displays the number of cards in the draw and discard pile
-        print(f"Draw pile: {len(entity.draw_pile)}\nDiscard pile: {len(entity.discard_pile)}\n")
         # Displays the entity's current health, block, energy, debuffs and buffs.
         entity.show_status()
     else:
@@ -484,16 +475,15 @@ def calculate_actual_block(string: str, entity) -> tuple[str, str]:
     return string, affected_by
 
 def modify_energy_cost(amount: int, modify_type: str, card: dict):
-    modified_card = card.copy()
     if (modify_type == 'Set' and amount != card['Energy']) or (modify_type == 'Adjust' and amount != 0):
-        modified_card['Changed Energy'] = True
+        card['Changed Energy'] = True
     if modify_type == 'Set':
-        modified_card['Energy'] = amount
-        ansiprint(f"{modified_card['Name']} has its energy cost set to {amount}")
+        card['Energy'] = amount
+        ansiprint(f"{card['Name']} has its energy cost set to {amount}")
     elif modify_type == 'Adjust':
-        modified_card['Energy'] += amount
-        ansiprint(f"{modified_card['Name']} got its energy cost {'<green>reduced</green>' if amount < 0 else '<red>increased</red>'} by {abs(amount)}")
-    return modified_card
+        card['Energy'] += amount
+        ansiprint(f"{card['Name']} got its energy cost {'<green>reduced</green>' if amount < 0 else '<red>increased</red>'} by {abs(amount)}")
+    return card
 
 def clear():
     system('clear')
