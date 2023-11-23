@@ -368,8 +368,9 @@ def card_rewards(tier: str, choice: bool, entity, card_pool: dict, rewards=None)
         if entity.gold_on_card_add:
             entity.gold += 9
             ansiprint('You gained 9 <yellow>Gold</yellow> from <bold>Ceramic Fish</bold>.')
-        rewards.clear()
-        sleep(1)
+        break
+    rewards.clear()
+    sleep(1)
 
 def view_piles(pile: list[dict], entity, end=False, condition='True'):
     """Prints a numbered list of all the cards in a certain pile."""
@@ -381,11 +382,11 @@ def view_piles(pile: list[dict], entity, end=False, condition='True'):
         upgrade_check = card.get('Upgraded') or card.get('Upgrade Count', 0) > 0
         changed_energy = 'light-red' if not card.get('Changed Energy') else 'green'
         if eval(condition):
-            ansiprint(f"{counter}: <{card['Type'].lower()}>{card['Name']}</{card['Type'].lower()}>{f'<green>+{upgrades}</green>' if upgrade_check else ''} | <{changed_energy}>{card['Energy']}{' Energy' if isinstance(card.get('Energy'), int) else ''}</{changed_energy}> | <yellow>{card['Info']}</yellow>".replace('Σ', '').replace('꫱', ''))
+            ansiprint(f"{counter}: <{card['Type'].lower()}>{card['Name']}</{card['Type'].lower()}>{f'<green>+{upgrades}</green>' if upgrade_check else ''} | <{changed_energy}>{card.get('Energy', 'Unplayable')}{' Energy' if card.get('Energy') else ''}</{changed_energy}> | <yellow>{card['Info']}</yellow>".replace('Σ', '').replace('꫱', ''))
             counter += 1
             sleep(0.05)
         else:
-            ansiprint(f"{counter}: <light-black>{card['Name']} | {card['Type']} | {card['Energy']}{' Energy' if isinstance(card.get('Energy'), int) else ''} | {card['Info']}</light-black>".replace('Σ', '').replace('꫱', ''))
+            ansiprint(f"{counter}: <light-black>{card['Name']} | {card['Type']} | {card.get('Energy', 'Unplayable')}{' Energy' if card.get('Energy') else ''} | {card['Info']}</light-black>".replace('Σ', '').replace('꫱', ''))
             counter += 1
             sleep(0.05)
     if end:
@@ -430,15 +431,17 @@ def remove_color_tags(string: str) -> str:
     string = string.replace('<', '').replace('>', '').replace('/', '') # Removes all color tag symbols
     return string
 
-def calculate_actual_damage(string: str, target, entity, card: dict) -> tuple[str, str]:
+def calculate_actual_damage(string: str, target, entity, card=None) -> tuple[str, str]:
+    if not card:
+        card = {}
     match = re.search(r"Σ(\d+)", string)
     affected_by = ''
     if match:
         original_damage: str = match.group()
         damage_value = int(original_damage.replace('Σ', ''))
-        if "Body Slam" in card.get('Name'):
+        if "Body Slam" in card.get('Name', ''):
             damage_value += entity.block
-        if "Perfected Strike" in card.get('Name'):
+        if "Perfected Strike" in card.get('Name', ''):
             perfected_strike_dmg = len([card for card in entity.deck if 'strike' in card.get('Name')]) * card.get('Damage Per "Strike"')
             damage_value += perfected_strike_dmg
             affected_by += f"Perfected Strike(+{perfected_strike_dmg} dmg)"
@@ -447,12 +450,12 @@ def calculate_actual_damage(string: str, target, entity, card: dict) -> tuple[st
             affected_by += f"<{'<light-cyan>' if entity.buffs['Strength'] > 0 else '<red>'}Strength{'</light-cyan>' if entity.buffs['Strength'] > 0 else '</red>'}>({'+' if entity.buffs['Strength'] > 0 else '-'}{abs(entity.buffs['Strength']) * card.get('Strength Multi', 1)} dmg) | "
             if card.get("Strength Multi", 1) > 1:
                 affected_by += f"Heavy Blade(x{card.get('Strength Multi')} Strength gain)"
-        if entity.buffs['Vigor'] > 0:
-            damage_value += entity.buffs['Vigor']
-            affected_by += f"<light-cyan>Vigor</light-cyan>(+{entity.buffs['Vigor']} dmg) | "
+        if entity.buffs.get('Vigor', 0) > 0:
+            damage_value += entity.buffs.get('Vigor')
+            affected_by += f"<light-cyan>Vigor</light-cyan>(+{entity.buffs.get('Vigor')} dmg) | "
         if target.debuffs['Vulnerable'] > 0:
             damage_value = math.floor(damage_value * 1.5)
-            affected_by += "Target's <light-cyan>Vulnerable</light-cyan>(x1.50 dmg) | "
+            affected_by += f'{"Target" if hasattr(target, "player_class") else "Your"} <debuff>Vulnerable</debuff>(x1.50 dmg) | '
         if entity.debuffs['Weak'] > 0:
             damage_value = math.floor(damage_value * 0.75)
             affected_by += "<red>Weak</red>(x0.75 dmg)"

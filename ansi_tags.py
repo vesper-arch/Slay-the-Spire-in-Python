@@ -10,7 +10,8 @@ user_tags = {
     "status": "\033[38;5;35m",
     "curse": "\033[38;5;127m",
     "uncommon": "\033[38;5;27m",
-    "rare": "\033[38;5;208m"
+    "rare": "\033[38;5;208m",
+    "yellow": "\033[38;5;220m"
 }
 am = AnsiMarkup(tags=user_tags, strict=True)
 

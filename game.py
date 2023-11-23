@@ -87,7 +87,7 @@ def combat(tier) -> None:
         player.end_player_turn()
         for enemy in active_enemies:
             # Lets the enemy use their moves.
-            enemy.enemy_turn()
+            enemy.execute_move()
             input('Press enter to continue > ')
             sleep(1.5)
             clear()
