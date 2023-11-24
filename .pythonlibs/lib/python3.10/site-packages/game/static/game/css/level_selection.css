@@ -1,0 +1,96 @@
+#episodes .panel-intro {
+  margin: 30px 0 20px 0;
+}
+
+#episodes .panel-subintro {
+  margin: 20px 0 20px 0;
+}
+
+#episodes .panel-header {
+  color: #fff;
+  margin-bottom: 0;
+  text-align: left;
+  padding-left: 10px;
+  letter-spacing: 1.5px;
+  font-size: 17px;
+}
+
+#episodes .bg--shared-levels {
+  color: #000;
+  font-weight: 500;
+}
+
+#episodes .episode_range_text {
+  font-size: 15px;
+  text-align: right;
+  margin-right: 1.5em;
+  float: right;
+  width: 170px;
+}
+
+#episodes .panel-body {
+  border: 1px solid #dddddd;
+  background: #f1ecec;
+  color: #333333;
+  padding: 2rem 5rem;
+}
+
+#episodes .panel-body p {
+  padding-bottom: 5px;
+}
+
+#episodes .panel-body a {
+  line-height: 25px;
+  text-decoration: none;
+}
+
+#episodes .score_text {
+  float: right;
+  text-align: right;
+  width: 100px;
+  line-height: 25px;
+}
+
+#episodes .coin_image {
+  float: right;
+  right: 30px;
+}
+
+#episodes .episode_image.coin_image {
+  width: 30px;
+  height: 30px;
+  margin-top: -3px;
+}
+
+#episodes .level_image.coin_image {
+  width: 25px;
+  height: 25px;
+  margin-right: 2.5px;
+}
+
+#episodes .episode-title {
+  cursor: pointer;
+  margin-left: 15px;
+}
+
+#episodes .panel-header:not(.bg--loops-coming-soon) .collapsed.episode_range_text::after {
+  content: "\e250";
+  font-family: "Glyphicons Halflings";
+  margin-left: 10px;
+}
+
+#episodes .panel-header:not(.bg--loops-coming-soon) .episode_range_text::after {
+  content: "\e252";
+  font-family: "Glyphicons Halflings";
+  margin-left: 10px;
+}
+
+#episodes .disabled,
+#episodes .disabled:hover,
+#episodes .disabled:focus,
+#episodes .disabled:visited {
+  color: #a1a1a1;
+  cursor: default;
+  font-weight: 300;
+  text-decoration: none;
+}

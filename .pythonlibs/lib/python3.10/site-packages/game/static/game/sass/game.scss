@@ -1,0 +1,428 @@
+@import "foundation_overrides";
+@import "foundation";
+@import "variables";
+
+.size-12 {
+  font-size: 12px;
+}
+
+.size-14 {
+  font-size: 14px;
+}
+
+.size-16 {
+  font-size: 16px;
+}
+
+.size-18 {
+  font-size: 18px;
+}
+
+.size-21 {
+  font-size: 21px;
+}
+
+.size-24 {
+  font-size: 24px;
+}
+
+.size-36 {
+  font-size: 36px;
+}
+
+.size-48 {
+  font-size: 48px;
+}
+
+.size-60 {
+  font-size: 60px;
+}
+
+.size-72 {
+  font-size: 72px;
+}
+
+.container {
+  position: relative;
+}
+
+.sidebar {
+  background-color: $sidebar-bg;
+  padding: 20px;
+  margin-bottom: $sidebar-gutter-spacing;
+
+  &.on-left {
+    top: 0;
+    left: $sidebar-gutter-spacing;
+    position: absolute;
+
+    @media #{$large-up} {
+      ~ .main {
+        margin-left: $sidebar-left-large-width + $sidebar-gutter-spacing;
+      }
+    }
+    @media #{$medium-only} {
+      ~ .main {
+        margin-left: $sidebar-left-medium-width + $sidebar-gutter-spacing;
+      }
+    }
+  }
+
+  &.on-right {
+    max-width: $sidebar-right-max-width;
+    top: 0;
+    right: $sidebar-gutter-spacing;
+    position: absolute;
+  }
+
+  .side-nav {
+    padding-top: 0;
+  }
+
+  h5,
+  dt {
+    margin: 0;
+    padding: 2px 0;
+    text-transform: uppercase;
+    font-size: 0.78rem;
+    font-weight: normal;
+  }
+
+  hr {
+    margin-top: 0;
+  }
+
+  p,
+  table,
+  dd {
+    font-size: 0.8rem;
+  }
+
+  p,
+  table {
+    margin-top: 0.8rem;
+  }
+
+  table tr td,
+  table tr th {
+    font-size: 0.8rem;
+  }
+
+  .panel {
+    padding: 0.8rem;
+    margin-top: 0.8rem;
+  }
+
+  form {
+    margin-top: 0.8rem;
+    margin-bottom: 0.8rem;
+
+    label,
+    input,
+    select,
+    button,
+    .postfix.button {
+      font-size: 0.8rem;
+    }
+
+    select,
+    input[type="text"],
+    .postfix.button {
+      height: 2rem;
+      line-height: 2rem;
+    }
+
+    button {
+      padding: 0.5rem 0.8rem;
+      width: 100%;
+      margin: 0 0 1rem;
+    }
+  }
+
+  li {
+    margin: 0;
+    padding: 0;
+
+    &.divider {
+      margin: 16px 0;
+    }
+
+    &.heading {
+      padding: 2px 0;
+      text-transform: uppercase;
+      font-size: 0.78rem;
+    }
+
+    a {
+      padding: 0.33333rem 0;
+    }
+
+    p {
+      margin-bottom: 0;
+    }
+
+    &.active {
+      > a:first-child {
+        margin: 0 -20px;
+        padding-left: 20px;
+        padding-right: 20px;
+        background: $sidebar-link-active-bg;
+        font-weight: bold;
+        color: $sidebar-link-active-color;
+      }
+    }
+
+    &:hover {
+      > a:first-child {
+        margin: 0 -20px;
+        padding-left: 20px;
+        padding-right: 20px;
+        color: $sidebar-link-hover-color;
+        background: $sidebar-link-hover-bg;
+      }
+    }
+  }
+
+  section:last-child hr {
+    display: none;
+  }
+
+  @media #{$large-up} {
+    width: $sidebar-left-large-width;
+    &.on-right + .main {
+      padding-right: $sidebar-right-max-width + $sidebar-gutter-spacing;
+    }
+  }
+
+  @media #{$medium-down} {
+    width: $sidebar-left-medium-width;
+  }
+}
+
+@media #{$medium-down} {
+  .right-menu-reveal {
+    @include reveal-bg;
+    @include reveal-modal-base;
+    @include reveal-modal-style;
+    hr:last-child {
+      display: none;
+    }
+  }
+}
+
+.main {
+  margin-top: 1rem;
+
+  .actions.button.dropdown {
+    padding: 0.5rem 0.8rem;
+  }
+
+  .actions:before {
+    display: none;
+  }
+}
+
+.pagination-totals {
+  font-size: 0.8rem;
+  color: $pagination-link-font-color;
+}
+
+.fixed-modal {
+  @media #{$medium-up} {
+    width: $fixed-modal-width;
+    margin-top: 5rem;
+    border: 1px solid $iron;
+  }
+
+  margin: 0 auto;
+
+  header {
+    background-color: $topbar-bg;
+    padding: 1em;
+    text-align: center;
+
+    h1 {
+      color: $topbar-link-color;
+      font-size: 1.6em;
+      margin: 0;
+    }
+  }
+
+  section {
+    @media #{$medium-up} {
+      padding: 1rem;
+      padding-bottom: 0;
+    }
+
+    .full {
+      margin-left: -1rem;
+      margin-right: -1rem;
+    }
+
+    .submit {
+      text-align: center;
+    }
+
+    .errorcode {
+      @include pricing-table-price;
+      margin-bottom: 1rem;
+    }
+  }
+}
+
+.center {
+  text-align: center;
+}
+
+.nuit-breadcrumbs {
+  margin-bottom: 0.5em;
+}
+
+.responsive {
+  &.grouped {
+    @media #{$small-only} {
+      @include grouped-responsive-table;
+    }
+    &.medium-down {
+      @media #{$medium-down} {
+        @include grouped-responsive-table;
+      }
+    }
+  }
+  &.scroll {
+    @media #{$small-only} {
+      @include scroll-responsive-table(#{upper-bound($small-range)});
+    }
+    &.medium-down {
+      @media #{$medium-down} {
+        @include scroll-responsive-table(#{upper-bound($medium-range)});
+      }
+    }
+  }
+}
+
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.popup_video {
+  width: 100%;
+}
+
+.popup_video > iframe {
+  width: 100%;
+  height: 100%;
+}
+
+.ocargo-modal {
+  position: fixed;
+  width: 61.9vw;
+  top: 0;
+  left: 0;
+  transform: translate(19.5vw, 10vh);
+  height: fit-content;
+  max-height: 82vh;
+  margin-bottom: 10%;
+  background-color: white;
+  border-radius: 15px;
+  padding: 30px;
+  overflow-y: auto;
+}
+
+.main_popup_container {
+  display: flex;
+  flex-direction: row;
+  gap: 2rem;
+}
+
+.close-reveal-modal {
+  font-size: 2.5rem;
+  line-height: 1;
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  color: #aaa;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+#myModal:not(:target) {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.4s ease, visibility 0.4s ease-in-out;
+}
+
+#myModal:target {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.4s ease, visibility 0.4s ease-in-out;
+}
+
+.popup__text--warning {
+  color: $color-error;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background-color: $background-overlay-color;
+  z-index: $level-1;
+}
+
+/* START - Fixes for screentime-popup */
+.flex-column {
+  flex-direction: column !important;
+}
+.justify-content-center {
+  justify-content: center !important;
+}
+.mt-0 {
+  margin-top: 0 !important;
+}
+.my-4 {
+    margin-top: 15px !important;
+    margin-bottom: 15px !important;
+}
+.button--primary {
+  padding: 10px 15px;
+  background: #ffd23b;
+  color: #000000;
+
+  &:hover {
+    box-shadow: 0px 6px 10px 0px rgba(0, 0, 0, 0.14), 0px 1px 18px 0px rgba(0, 0, 0, 0.12), 0px 3px 5px 0px rgba(0, 0, 0, 0.2);
+    background: #ffc709;
+    color: #000000;
+    text-decoration: none;
+  }
+}
+#screentime-popup {
+  .popup-box__title {
+    padding: 25px 25px 0 25px;
+    font-size: 21px;
+  }
+
+  .popup-box__msg {
+    padding: 0 25px 25px 25px;
+    font-family: "Inter", sans-serif;
+    font-size: 18px;
+  }
+
+  .popup-box__buttons {
+    margin: 25px;
+  }
+
+  .button {
+    font-family: "Inter", sans-serif;
+    font-weight: 600;
+    min-width: 150px;
+  }
+}
+/* END - Fixes for screentime-popup */

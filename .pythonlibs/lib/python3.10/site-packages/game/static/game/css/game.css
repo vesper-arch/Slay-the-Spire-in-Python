@@ -1,0 +1,390 @@
+#paper {
+    width: 50%;
+    height: 100%;
+    overflow: scroll;
+    z-index: 6;
+    float: left;
+    padding-left: 16px;
+}
+
+@media print {
+    #paper {
+        width: 100% !important;
+        left: 0 !important;
+    }
+
+    .no-print {
+        display: none !important;
+    }
+}
+
+/*****************/
+/* Tab structure */
+/*****************/
+
+#tabs {
+    width: fit-content;
+    height: 100%;
+    float: left;
+}
+
+#tabs span {
+    color: white;
+}
+
+#tabs img {
+    filter: invert(1);
+}
+
+#tabs #blockly_tab span,
+#tabs #python_tab span {
+    color: black;
+}
+
+#tabs #blockly_tab img,
+#tabs #python_tab img {
+    filter: none;
+}
+
+#right {
+    position: relative;
+    height: 100%;
+    overflow: hidden;
+}
+
+#tab_panes {
+    width: 50%;
+    height: 100%;
+    float: left;
+}
+
+/***************/
+/* Blockly tab */
+/***************/
+
+#blockly_pane {
+    padding: 0px;
+    overflow: hidden;
+}
+
+#blockly_holder {
+    width: 100%;
+    height: 100%;
+}
+
+#blockly_pane .blocklyFlyoutBackground {
+    fill-opacity: 0.7;
+}
+
+#blockly_pane .blocklySvg {
+    background: #f3f3f3;
+}
+
+#blockly_pane #flyoutButton {
+    position: absolute;
+    padding: 0px;
+    top: 10px;
+    padding: 0px;
+    width: 31px;
+    height: 31px;
+    border-top-right-radius: 5px;
+    border-bottom-right-radius: 5px;
+    background: rgba(255, 255, 255, 0.87);
+}
+
+#blockly_pane #flyoutButton img {
+    width: 30px;
+    height: 30px;
+}
+
+#blockly_pane #flyoutButton:focus {
+    outline: 0;
+}
+
+#blockly_pane .quantity_text {
+    font-size: 15pt;
+    fill: green;
+}
+
+#blockly_pane #pythonView_holder {
+    display: flex;
+    flex-direction: column;
+    height: 50%;
+    padding-top: 16px; /* pythonViewSlider height */
+}
+
+#blockly_pane #pythonView_holder .CodeMirror {
+    flex-grow: 1;
+}
+
+/**************/
+/* Python tab */
+/**************/
+
+
+#pythonCode {
+    height: 100%;
+    width: 100%;
+}
+
+.description > *:not(.CodeMirror) {
+    padding: 0rem 0.5rem 0.5rem 0.5rem;
+}
+
+#consoleRunCode {
+    display: flex;
+    flex-direction: column;
+    background: rgb(77, 77, 77);
+    align-items: flex-end;
+}
+
+div > .navigation_button_kurono {
+    margin: 0.5rem 0.5rem 0.5rem 0rem;
+}
+
+#consoleRunCode > h4 {
+    line-height: 25px;
+    height: 25px;
+    font-size: 20px;
+    color: white;
+    background: rgb(100, 100, 100);
+    margin: 0;
+    padding: 0.5rem 0rem 0.5rem 2.5rem;
+    width: 100%;
+    height: 100%;
+}
+
+#consoleOutput {
+    background-color: #FEFDFF;
+    font-size: 20px;
+    font-family: monospace;
+    max-width: 100%;
+    overflow: auto;
+    padding: 20px;
+    margin:0;
+    border: none;
+    resize: none;
+}
+
+#editor {
+    min-width: 0%;
+    min-height: 0%;
+    overflow: hidden;
+    height: 50%;
+}
+
+#clear_console {
+    margin-bottom: 0px;
+    position: absolute;
+    bottom: 1%;
+    right: 0;
+}
+
+#convert_from_blockly {
+    float: right;
+    margin-bottom: 0px
+}
+
+#pythonIntro {
+    width: 58%;
+    font-size: 1rem;
+    display:inline-block;
+    margin-bottom:10px;
+}
+
+#van_commands_help {
+    float: right;
+}
+
+/*************************/
+/* Loading & Saving tabs */
+/*************************/
+
+#load_pane,
+#save_pane {
+    padding: 0px;
+    margin: 20px 20px 0px 30px;
+    width: auto;
+}
+
+#workspaceNameInput {
+    height: 51px;
+    width: 202px;
+    font-size: 1.4rem !important;
+    padding-left: 10px;
+    float: left;
+}
+
+#saveWorkspaceTable,
+#loadWorkspaceTable {
+    width: 100%;
+    cursor: pointer;
+}
+
+#loadWorkspace {
+    margin-left: 20px;
+}
+
+#saveWorkspace {
+    margin-top: 0px;
+    margin-left: 28px;
+}
+
+#load_pane table,
+#save_pane table {
+    margin-bottom: 0px;
+    width: 100%;
+}
+
+#load_pane #does_not_exist,
+#load_pane .scrolling-table-wrapper,
+#save_pane .scrolling-table-wrapper {
+    display: none;
+}
+
+.scrolling-table-wrapper {
+    max-width: 380px;
+}
+
+/**************/
+/* Fuel gauge */
+/**************/
+
+#fuelGauge {
+    position: fixed;
+    z-index: 7;
+    width: 100px;
+    height: 100px;
+    right: 30px;
+    bottom: 20px;
+    visibility: hidden;
+}
+
+#fuelGaugePointer {
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    z-index: 8;
+    top: 0px;
+}
+
+/***********/
+/* Sliders */
+/***********/
+
+/* Python View slider div */
+
+#consoleLogSlider {
+    position: absolute;
+    top: 50%;
+    height: 0.25rem;
+    width: 100%;
+    z-index: 21;
+    cursor: row-resize;
+}
+
+#pythonViewSlider {
+    position: absolute;
+    top: 50%;
+    height: 16px;
+    width: 100%;
+    z-index: 21;
+    background-color: #444;
+    cursor: row-resize;
+}
+
+/* Central slider div */
+#consoleSlider {
+    position: absolute;
+    left: 50%;
+    width: 16px;
+    height: 100%;
+    z-index: 9;
+    background-color: #444;
+    cursor: col-resize;
+}
+
+/******************/
+/** Direct drive **/
+/******************/
+
+#direct_drive {
+    width: 200px;
+    height: 95px;
+    position: absolute;
+    z-index: 7;
+    left: 50%;
+    bottom: 20px;
+    margin-left: 35px;
+}
+
+.direct_drive_button {
+    display: inline;
+    cursor: pointer;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 45px 45px;
+    background-color: transparent;
+    width: 50px;
+    height: 50px;
+    position: absolute;
+    padding: 2px;
+    transition: background-size 0.3s;
+}
+
+.direct_drive_button:hover,
+.direct_drive_button:focus
+{
+    background-color: rgba(240,240,240,0.3);
+    background-size: 50px 50px;
+    background-color: transparent;
+    outline: none;
+}
+
+#go  {
+    left: 60px;
+    bottom: 0px;
+    background-image : url('/static/game/image/actions/go.svg');
+}
+
+#turnLeft {
+    left: 10px;
+    bottom: 0px;
+    background-image : url('/static/game/image/actions/left.svg');
+}
+
+#turnRight {
+    left: 110px;
+    bottom: 0px;
+    background-image : url('/static/game/image/actions/right.svg');
+}
+
+#moveForward {
+    left: 60px;
+    bottom: 50px;
+    background-image : url('/static/game/image/actions/forward.svg');
+}
+
+.blocklyWidgetDiv {
+    line-height: 1;
+}
+
+#zoom_pan {
+    right: 5%;
+    position: absolute;
+    height: 100px;
+    width: 100px;
+    z-index: 7;
+}
+
+#zoomOut {
+    left: 10px;
+    bottom: 0px;
+    background-image : url('/static/game/image/actions/btn_zoom_out.svg');
+}
+
+#zoomIn {
+    left: 70px;
+    bottom: 0px;
+    background-image : url('/static/game/image/actions/btn_zoom_in.svg');
+}

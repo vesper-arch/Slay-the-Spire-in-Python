@@ -1,0 +1,17 @@
+Metadata-Version: 2.1
+Name: rapid-router
+Version: 5.15.10
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Framework :: Django
+License-File: LICENSE.md
+Requires-Dist: django ==3.2.23
+Requires-Dist: django-csp ==3.7
+Requires-Dist: django-js-reverse ==0.9.1
+Requires-Dist: django-pipeline ==2.0.8
+Requires-Dist: djangorestframework ==3.13.1
+Requires-Dist: more-itertools ==8.7.0
+Requires-Dist: pyhamcrest ==2.0.2
+Requires-Dist: libsass ==0.22.0
+Requires-Dist: cfl-common
+
