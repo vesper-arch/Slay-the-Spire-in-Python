@@ -908,7 +908,8 @@ cards = {
     'Rage': {'Name': 'Rage', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Single', 'Rage': 3, 'Energy': 0, 'Info': 'Whenever you play an <attack>Attack</attack>, gain 3 <keyword>block</keyword>.', 
              'Effects+': {'Rage': 5, 'Info': 'Whenever you play an <attack>Attack</attack>, gain 5 <keyword>Block</keyword>.'}, 'Function': use_rage},
 
-    'Rampage': {'Name': 'Rampage', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Attack', 'Target': 'Single', 'Damage+': 5, 'Damage': 8, 'Energy': 1, 'Info': "Deal Σ8 damage. Increase this card's damage by 5 this combat.", 'Effects+': {'Damage+': 8, 'Info': "Deal Σ8 damage. Increase this card's damage by 8 this combat."}, 'Function': use_rampage},
+    'Rampage': {'Name': 'Rampage', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Attack', 'Target': 'Single', 'Damage+': 5, 'Damage': 8, 'Energy': 1, 'Info': "Deal Σ8 damage. Increase this card's damage by 5 this combat.", 
+                'Effects+': {'Damage+': 8, 'Info': "Deal Σ8 damage. Increase this card's damage by 8 this combat."}, 'Function': use_rampage},
 
     'Reckless Charge': {'Name': 'Reckless Charge', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Attack', 'Target': 'Single', 'Damage': 7, 'Energy': 0, 'Info': 'Deal Σ7 damage. Shuffle a <status>Dazed</status> into your draw pile.', 
                         'Effects+': {'Damage': 10, 'Info': 'Deal Σ10 damage. Shuffle a <status>Dazed</status> into your draw pile.'}, 'Function': use_recklesscharge},
