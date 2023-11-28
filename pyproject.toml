@@ -11,6 +11,7 @@ entities = "^1.0.0"
 events = "^0.5"
 items = "^0.6.5"
 pysaml2 = "^7.4.2"
+rapid-router = "^5.15.10"
 
 [tool.pyright]
 # https://github.com/microsoft/pyright/blob/main/docs/configuration.md
