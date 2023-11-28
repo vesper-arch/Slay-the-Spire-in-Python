@@ -2,96 +2,64 @@ import random
 from time import sleep
 from copy import deepcopy
 from ansi_tags import ansiprint
-from utility import list_input, clear, view_piles, modify_energy_cost
+from display_util import list_input, clear, view
+from debuff_and_buffs import ei
 
+
+
+def modify_energy_cost(amount: int, modify_type: str, card: dict):
+    if (modify_type == 'Set' and amount != card['Energy']) or (modify_type == 'Adjust' and amount != 0):
+        card['Changed Energy'] = True
+    if modify_type == 'Set':
+        card['Energy'] = amount
+        ansiprint(f"{card['Name']} has its energy cost set to {amount}")
+    elif modify_type == 'Adjust':
+        card['Energy'] += amount
+        ansiprint(f"{card['Name']} got its energy cost {'<green>reduced</green>' if amount < 0 else '<red>increased</red>'} by {abs(amount)}")
+    return card
 
 def use_strike(targeted_enemy: object, using_card, entity):
     '''Deals 6(9) damage.'''
-    base_damage = using_card['Damage']
-    if "+" in using_card['Name']:
-        base_damage += 3
-    print()
-    entity.attack(base_damage, targeted_enemy, using_card)
-    print()
-    sleep(1)
-    clear()
+    entity.attack(using_card['Damage'], targeted_enemy, using_card)
 
 
 def use_bash(targeted_enemy: object, using_card, entity):
     '''Deals 8(10) damage. Apply 2(3) Vulnerable'''
-    base_damage = using_card['Damage']
-    base_vulnerable = using_card['Vulnerable']
-    # Checks if the card is upgraded
-    if "+" in using_card['Name']:
-        base_damage += 2
-        base_vulnerable += 1
     print()
-    entity.attack(base_damage, targeted_enemy, using_card)
-    entity.debuff("Vulnerable", base_vulnerable, targeted_enemy, True)
-    print()
-    sleep(1.5)
-    clear()
+    entity.attack(using_card['Damage'], targeted_enemy, using_card)
+    ei.apply_effect(targeted_enemy, 'Vulnerable', using_card['Vulnerable'], entity)
 
 
 def use_defend(using_card, entity):
     '''Gain 5(8) Block'''
-    base_block = using_card['Block']
-    if "+" in using_card['Name']:
-        base_block += 3
-    print()
-    entity.blocking(base_block)
-    print()
-    sleep(1.5)
-    clear()
+    entity.blocking(using_card['Block'])
 
 
 def use_bodyslam(targeted_enemy, using_card, entity):
     '''Deals damage equal to your Block. Exhaust.(Don't Exhaust)'''
-    base_energy = using_card['Energy']
-    if "+" in using_card['Name']:
-        base_energy -= 1
-    print()
     entity.attack(using_card['Damage'], targeted_enemy, entity)
-    print()
-    sleep(1.5)
-    clear()
 
 
 def use_clash(targeted_enemy, using_card, entity):
     '''Can only be played if there are no non-attack cards in your hand. Deal 14(18) damage.'''
-    base_damage = using_card['Damage']
-    if "+" in using_card['Name']:
-        base_damage += 4
-    print()
     for card in entity.hand:
         if card['Type'] != 'Attack':
             print('You have non-Attack cards in your hand')
             sleep(1.5)
             clear()
-            return None
-    entity.attack(base_damage, targeted_enemy, using_card)
-    sleep(1.5)
-    clear()
+            return
+    entity.attack(using_card['Damage'], targeted_enemy, using_card)
 
 
 def use_heavyblade(targeted_enemy, using_card, entity):
     '''Deal 14(18) damage. Strength affects this card 3(5) times'''
-    strength_multi = cards['Heavy Blade']['Strength Multi']
-    if using_card.get('Upgraded'):
-        strength_multi += 2
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
-    sleep(1.5)
-    clear()
 
 
 def use_cleave(enemies, using_card, entity):
     '''Deal 8(11) damage to ALL enemies.'''
-    base_damage = using_card['Damage']
-    print()
     for enemy in enemies:
-        entity.attack(base_damage, enemy, using_card)
-    sleep(1.5)
-    clear()
+        entity.attack(using_card['Damage'], enemy, using_card)
 
 
 def use_perfectedstrike(targeted_enemy, using_card, entity):
@@ -99,17 +67,12 @@ def use_perfectedstrike(targeted_enemy, using_card, entity):
     total_damage = using_card['Damage'] + (len([card for card in entity.deck if 'strike' in card.get('Name')]) * using_card['Damage Per "Strike"'])
     print()
     entity.attack(total_damage, targeted_enemy, using_card)
-    sleep(1.5)
-    clear()
 
 
 def use_anger(targeted_enemy, using_card, entity):
     '''Deal 6(8) damage. Add a copy of this card to your discard pile.'''
-    print()
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
-    entity.discard_pile.append(using_card)
-    sleep(1.5)
-    clear()
+    entity.discard_pile.append(deepcopy(using_card))
 
 def use_armaments(using_card, entity):
     '''Gain 5 Block. Upgrade a(ALL) card(s) in your hand for the rest of combat.'''
@@ -120,7 +83,7 @@ def use_armaments(using_card, entity):
             sleep(0.3)
     else:
         while True:
-            view_piles(entity.hand, entity, False, 'not card.get("Upgraded") and (card.get("Name") == "Burn" or card.get("Type") not in ("Status", "Curse"))')
+            view.view_piles(entity.hand, entity, False, 'not card.get("Upgraded") and (card.get("Name") == "Burn" or card.get("Type") not in ("Status", "Curse"))')
             option = list_input("Choose a card to upgrade > ", entity.hand)
             if entity.hand[option].get('Upgraded') or (entity.hand[option].get('Name') != "Burn" and card.get('Type') in ('Status', 'Curse')):
                 ansiprint('That card is either already upgraded, a status, or a curse.')
@@ -129,63 +92,51 @@ def use_armaments(using_card, entity):
                 continue
             entity.card_actions(entity.hand[option], option, 'Upgrade', entity.hand)
             break
-    sleep(1.5)
-    clear()
 
 def use_clothesline(targeted_enemy, using_card, entity):
     '''Deal 12(14) damage. Apply 2(3) Weak'''
-    print()
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
-    entity.debuff("Weak", using_card['Weak'], targeted_enemy, True)
-    sleep(1.5)
-    clear()
+    ei.apply_effect(targeted_enemy, 'Weak', using_card['Weak'], entity)
 
 def use_havoc(enemies, using_card, entity):
     '''Play the top card of your draw pile and Exhaust it.'''
     _ = using_card
     entity.use_card(entity.draw_pile[-1], random.choice(enemies), True, entity.draw_pile)
-    sleep(1.5)
-    clear()
 
 def use_flex(using_card, entity):
     '''Gain 2(4) Strength. At the end of your turn, lose 2(4) Strength'''
-    entity.buff("Strength(Temp)", using_card['Strength'], True)
+    ei.apply_effect(entity, 'Strength', using_card['Strength'])
+    ei.apply_effect(entity, 'Strength Down', using_card['Strength'])
 
 def use_headbutt(targeted_enemy, using_card, entity):
     '''Deal 9(12) damage. Put a card from your discard pile on top of your draw pile.'''
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
     while True:
-        view_piles(entity.discard_pile, entity)
+        view.view_piles(entity.discard_pile, entity)
         choice = list_input('What card do you want to put on top of your draw pile? > ', entity.discard_pile)
         if not choice:
             ansiprint('<red>The card you entered was invalid</red>.')
-            sleep(1.5)
+            sleep(1)
             clear()
             continue
         entity.move_card(entity.discard_pile[choice], entity.discard_pile, entity.draw_pile, True)
         break
-    sleep(1.5)
-    clear()
 
 def use_shrugitoff(using_card, entity):
     '''Gain 8(11) Block. Draw 1 card.'''
     entity.blocking(using_card['Block'])
     entity.draw_cards(True, 1)
-    sleep(1.5)
-    clear()
 
 def use_swordboomerang(enemies, using_card, entity):
     '''Deal 3 damage to a random enemy 3(4) times.'''
     for _ in range(using_card['Times']):
         entity.attack(using_card['Damage'], random.choice(enemies), using_card)
-    sleep(1.5)
-    clear()
 
 def use_thunderclap(enemies, using_card, entity):
     '''Deal 4(7) damage and apply 1 Vulnerable to ALL enemies.'''
     for enemy in enemies:
         entity.attack(using_card['Damage'], enemy, using_card)
-        entity.debuff("Vulnerable", 1, enemy, True)
+        ei.apply_effect(enemy, 'Vulnerable', 1, entity)
     sleep(0.5)
     clear()
 
@@ -193,28 +144,29 @@ def use_ironwave(targeted_enemy, using_card, entity):
     '''Gain 5(7) Block. Deal 5(7) damage.'''
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
     entity.blocking(using_card['Block'])
-    sleep(1.5)
-    clear()
 
 
 def use_pommelstrike(targeted_enemy, using_card, entity):
     '''Deal 9(10) damage. Draw 1(2) cards.'''
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
     entity.draw_cards(True, using_card['Cards'])
-    sleep(1.5)
-    clear()
 
 def use_truegrit(using_card, entity):
     '''Gain 7(9) Block. Exhaust a random(not random) card in your hand.'''
     entity.blocking(using_card['Block'])
     if using_card.get('Upgraded'):
-        view_piles(entity.hand, entity)
-        option = list_input('Choose a card to Exhaust', entity.hand)
-        entity.move_card(entity.deck[option], entity.exhaust_pile, entity.hand, False)
+        while True:
+            view.view_piles(entity.hand, entity)
+            option = list_input('Choose a card to Exhaust', entity.hand)
+            if not option:
+                ansiprint('<red>The card you entered is invalid</red>')
+                sleep(1)
+                clear()
+                continue
+            entity.move_card(entity.deck[option], entity.exhaust_pile, entity.hand, False)
+            break
     else:
         entity.move_card(random.choice(entity.hand), entity.exhaust_pile, entity.hand, False)
-    sleep(1.5)
-    clear()
 
 def use_twinstrike(targeted_enemy, using_card, entity):
     '''Deal 5(7) damage twice.'''
@@ -224,48 +176,47 @@ def use_twinstrike(targeted_enemy, using_card, entity):
 def use_warcry(using_card, entity):
     '''Draw 1(2) cards. Put a card from your hand on top of your draw pile.'''
     entity.draw_cards(True, using_card['Cards'])
-    view_piles(entity.hand, entity)
-    option = list_input('Choose a card to put on top of your draw pile.', entity.hand)
-    entity.draw_pile.append(entity.hand[option])
-    del entity.hand[option]
-    sleep(1.5)
-    clear()
+    while True:
+        view.view_piles(entity.hand, entity)
+        option = list_input('Choose a card to put on top of your draw pile.', entity.hand)
+        if not option:
+            ansiprint('<red>The card you entered is invalid</red>')
+            sleep(1)
+            clear()
+            continue
+        entity.draw_pile.append(entity.hand[option])
+        del entity.hand[option]
+        break
 
 def use_wildstrike(targeted_enemy, using_card, entity):
     '''Deal 12(17) damage. Shuffle a Wound into your draw pile.'''
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
-    entity.draw_pile.insert(random.randint(0, len(entity.draw_pile) - 1), cards['Wound'])
-    ansiprint("A <keyword>Wound</keyword> was shuffled into your draw pile.")
-    sleep(1.5)
-    clear()
+    entity.draw_pile.insert(random.randint(0, len(entity.draw_pile) - 1), deepcopy(cards['Wound']))
+    ansiprint("A <status>Wound</status> was shuffled into your draw pile.")
 
 def use_battletrance(using_card, entity):
     '''Draw 3(4) cards. You cannot draw additonal cards this turn.'''
     entity.draw_cards(True, using_card['Cards'])
-    entity.debuff('No Draw', None, entity, True)
+    ei.apply_effect(entity, 'No Draw')
 
 def use_bloodforblood(targeted_enemy, using_card, entity):
-    '''Costs 1 less Energy for each time you lose HP this combat. Deal 18 damage.'''
+    '''Costs 1 less Energy for each time you lose HP this combat. Deal 18(22) damage.'''
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
-    sleep(1.5)
-    clear()
 
 def use_bloodletting(using_card, entity):
     '''Lose 2 HP. Gain 2(3) Energy.'''
     entity.take_sourceless_damage(2)
     entity.energy += using_card['Energy Gain']
     ansiprint(f"You gained {using_card['Energy Gain']} <keyword>Energy</keyword>.")
-    sleep(1.5)
-    clear()
 
 def use_burningpact(using_card, entity):
     '''Exhaust one card. Draw 1(2) cards.'''
     while True:
-        view_piles(entity.hand, entity)
+        view.view_piles(entity.hand, entity)
         option = list_input('Choose a card to <keyword>Exhaust</keyword> > ', entity.hand)
         if not option:
             ansiprint('<red>The card you entered is invalid.</red>')
-            sleep(1.5)
+            sleep(1)
             clear()
             continue
         entity.move_card(using_card, entity.exhaust_pile, entity.hand, False)
@@ -276,20 +227,20 @@ def use_burningpact(using_card, entity):
 def use_carnage(targeted_enemy, using_card, entity):
     '''Ethereal. Deal 20(28) damage.'''
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
-    sleep(1.5)
-    clear()
 
 def use_combust(using_card, entity):
     '''At the end of your turn, lose 1 HP and deal 5(7) damage to ALL enemies.'''
-    entity.buff("Combust", using_card['Combust'], True)
+    ei.apply_effect(entity, 'Combust', using_card['Combust'])
 
 def use_darkembrace(using_card, entity):
     '''Whenever a card is Exhausted, draw 1 card.'''
-    entity.buff("Dark Embrace", using_card['Dark Embrace'], True)
+    _ = using_card
+    ei.apply_effect(entity, 'Dark Embrace', 1)
 
 def use_disarm(targeted_enemy, using_card, entity):
     '''Enemy loses 2(3) Strength. Exhaust.'''
-    entity.debuff("Strength", -using_card['Strength Loss'], targeted_enemy, True)
+    _ = entity
+    ei.apply_effect(targeted_enemy, 'Strength', -using_card['Strength Loss'])
 
 def use_dropkick(targeted_enemy, using_card, entity):
     '''Deal 5(8) damage. If the enemy has Vulnerable, gain 1 Energy and draw 1 card.'''
@@ -298,13 +249,11 @@ def use_dropkick(targeted_enemy, using_card, entity):
         entity.energy += 1
         ansiprint('You gained 1 <keyword>Energy</keyword>.')
         entity.draw_cards(True, 1)
-    sleep(1.5)
-    clear()
 
 def use_dualwield(using_card, entity):
     '''Create a(2) copy(copies) of an Attack or Power card.'''
     while True:
-        view_piles(entity.hand, entity, False, 'card.get("Type") in ("Attack", "Power")')
+        view.view_piles(entity.hand, entity, False, 'card.get("Type") in ("Attack", "Power")')
         option = list_input(f"Choose a card to make {'a copy' if not using_card.get('Upgraded') else '2 copies'} of > ", entity.hand)
         if not option or entity.hand[option]['Type'] not in ('Attack', 'Power'):
             ansiprint('<red>The card you entered is either not an Attack or Power or it\'s invalid.</red>')
@@ -312,71 +261,60 @@ def use_dualwield(using_card, entity):
             clear()
             continue
         for _ in range(using_card['Copies']):
-            entity.hand.insert(option, entity.hand[option])
+            entity.hand.insert(option, deepcopy(entity.hand[option]))
         break
-    sleep(1.5)
-    clear()
 
 def use_entrench(using_card, entity):
     '''Double your Block'''
     _ = using_card
     entity.block *= 2
     ansiprint(f"You now have <light-blue>{entity.block} Block</light-blue>.")
-    sleep(1.5)
-    clear()
 
 def use_evolve(using_card, entity):
     '''Whenever you draw a Status card, draw 1(2) card.'''
-    entity.buff("Evolve", using_card['Evolve'], True)
+    ei.apply_effect(entity, 'Evolve', using_card['Evolve'])
 
 def use_feelnopain(using_card, entity):
     '''Whenever a card is Exhausted, gain 3(4) Block.'''
-    entity.buff("Feel No Pain", using_card['Feel No Pain'], True)
+    ei.apply_effect(entity, 'Feel No Pain', using_card['Feel No Pain'])
 
 def use_firebreathing(using_card, entity):
     '''Whenever you draw a Status or Curse card, deal 6(10) damage to ALL enemies.'''
-    entity.buff("Fire Breathing", using_card['Fire Breathing'], True)
+    ei.apply_effect(entity, 'Fire Breathing', using_card['Fire Breathing'])
 
 def use_flamebarrier(using_card, entity):
     '''Gain 12(16) Block. Whenever you are attacked this turn, deal 4 damage back.'''
     entity.blocking(using_card['Block'])
-    entity.buff("Fire Breathing", using_card['Fire Breathing'], True)
+    ei.apply_effect(entity, 'Flame Barrier', 4)
 
 def use_ghostlyarmor(using_card, entity):
     '''Ethereal. gain 10(13) Block.'''
     entity.blocking(using_card['Block'])
-    sleep(1.5)
-    clear()
 
 def use_hemokinesis(targeted_enemy, using_card, entity):
     '''Lose 2 HP. Deal 15(20) damage.'''
     entity.take_sourceless_damage(2)
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
-    sleep(1.5)
-    clear()
 
 def use_infernalblade(using_card, entity):
     '''Add a random Attack into your hand. It costs 0 this turn. Exhaust.'''
     _ = using_card
     valid_cards = [card for card in cards if card.get('Type') == 'Attack' and card.get('Class') == entity.player_class]
     entity.hand.append(modify_energy_cost(0, 'Set', deepcopy(random.choice(valid_cards))))
-    sleep(1.5)
-    clear()
 
 def use_inflame(using_card, entity):
     '''Gain 2(3) Strength'''
-    entity.buff("Strength", using_card['Strength'], True)
+    ei.apply_effect(entity, 'Strength', using_card['Strength'])
 
 def use_intimidate(enemies, using_card, entity):
     '''Apply 1(2) Weak to ALL enemies. Exhaust.'''
+    _ = entity
     for enemy in enemies:
-        entity.debuff("Weak", using_card['Weak'], enemy, False)
-    sleep(0.5)
-    clear()
+        ei.apply_effect(enemy, 'Weak', using_card['Weak'])
 
 def use_metallicize(using_card, entity):
     '''At the end of your turn, gain 3(4) Block'''
-    entity.buff("Metallicize", using_card["Metallicize"], True)
+    ei.apply_effect(entity, 'Metallicize', using_card['Metallicize'])
 
 def use_powerthrough(using_card, entity):
     '''Add 2 Wounds into your hand. Gain 15(20) Block.'''
@@ -384,45 +322,35 @@ def use_powerthrough(using_card, entity):
         entity.hand.append(deepcopy(cards['Wound']))
     ansiprint("2 <status>Wounds</status> have been added to your hand.")
     entity.blocking(using_card['Block'])
-    sleep(1.5)
-    clear()
 
 def use_pummel(targeted_enemy, using_card, entity):
     '''Deal 2 damage 4(5) times. Exhaust.'''
     for _ in range(using_card['Times']):
         entity.attack(2, targeted_enemy, using_card)
         sleep(0.5)
-    sleep(1)
-    clear()
 
 def use_rage(using_card, entity):
     '''Whenever you play an Attack this turn, gain 3(5) Block'''
-    entity.buff("Rage", using_card['Rage'], True)
+    ei.apply_effect(entity, 'Rage', using_card['Rage'])
 
 def use_rampage(targeted_enemy, using_card, entity):
     '''Deal 8 damage. Increase this card's damage by 5(8).'''
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
     using_card['Damage'] += using_card['Damage+']
-    sleep(1.5)
-    clear()
 
 def use_recklesscharge(targeted_enemy, using_card, entity):
     '''Deal 7(10) damage. Shuffle a Dazed into your draw pile.'''
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
     entity.draw_pile.insert(random.randint(0, len(entity.draw_pile) - 1), deepcopy(cards['Dazed']))
     ansiprint("A <status>Dazed</status> was shuffled into your draw pile.")
-    sleep(1.5)
-    clear()
 
 def use_rupture(using_card, entity):
     '''Whenever you lose HP from a card, gain 1(2) Strength.'''
-    entity.buff("Rupture", using_card['Rupture'], True)
+    ei.apply_effect(entity, 'Rupture', using_card['Rupture'])
 
 def use_searingblow(targeted_enemy, using_card, entity):
     '''Deal 12(16) damage. Can be upgraded any number of times.'''
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
-    sleep(1.5)
-    clear()
 
 def use_secondwind(using_card, entity):
     '''Exhaust all non-Attack cards in your hand and gain 5(7) Block for each card Exhausted.'''
@@ -434,22 +362,16 @@ def use_secondwind(using_card, entity):
             ansiprint(f"{card['Name']} was <keyword>Exhausted</keyword>.")
             sleep(0.5)
     entity.blocking(using_card['Block Per Card'] * cards_exhausted)
-    sleep(1.5)
-    clear()
 
 def use_seeingred(using_card, entity):
     '''Gain 2 Energy. Exhaust.'''
     _ = using_card
     entity.energy += 2
     ansiprint('You gained 2 <keyword>Energy</keyword>.')
-    sleep(1.5)
-    clear()
 
 def use_sentinel(using_card, entity):
     '''Gain 5(8) Block. If this card is Exhausted, gain 2(3) Energy.'''
     entity.blocking(using_card['Block'])
-    sleep(1.5)
-    clear()
 
 def use_seversoul(targeted_enemy, using_card, entity):
     '''Exhaust all non-Attack cards in your hand. Deal 16(22) damage.'''
@@ -459,23 +381,20 @@ def use_seversoul(targeted_enemy, using_card, entity):
             ansiprint(f"{card['Name']} was exhausted.")
             sleep(0.5)
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
-    sleep(1.5)
-    clear()
 
 def use_shockwave(enemies, using_card, entity):
     '''Apply 3(5) Weak and Vulnerable to ALL enemies. Exhaust.'''
+    _ = entity
     for enemy in enemies:
-        entity.debuff("Weak", using_card['Weak/Vulnerable'], enemy)
-        entity.debuff("Vulnerable", using_card['Weak/Vulnerable'], enemy)
-    sleep(0.5)
-    clear()
+        ei.apply_effect(enemy, 'Weak', using_card['Weak/Vulnerable'])
+        ei.apply_effect(enemy, 'Vulnerable', using_card['Weak/Vulnerable'])
 
 def use_uppercut(targeted_enemy, using_card, entity):
     '''Deal 10(13) damage. Apply 1(2) Weak. Apply 1(2) Vulnerable.'''
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
     sleep(1)
-    entity.debuff("Weak", using_card['Weak/Vulnerable'])
-    entity.debuff("Vulnerable", using_card['Weak/Vulnerable'], True)
+    ei.apply_effect(targeted_enemy, 'Weak', using_card['Weak/Vulnerable'])
+    ei.apply_effect(targeted_enemy, 'Vulnerable', using_card['Weak/Vulnerable'])
 
 def use_whirlwind(enemies, using_card, entity):
     '''Deal 5(8) damage to ALL enemies X times.'''
@@ -483,51 +402,46 @@ def use_whirlwind(enemies, using_card, entity):
         for enemy in enemies:
             entity.attack(using_card['Damage'], enemy, using_card)
             sleep(0.5)
+        sleep(1)
         clear()
-    sleep(1)
-    clear()
 
 def use_barricade(using_card, entity):
     '''Block is not removed at the start of your turn.'''
     _ = using_card
-    entity.buff("Barricade", 1, True)
+    ei.apply_effect(entity, 'Barricade')
 
 def use_berzerk(using_card, entity):
     '''Gain 2(1) Vulnerable. At the start of your turn, gain 1 Energy.'''
-    entity.debuff("Vulnerable", using_card["Self Vulnerable"], entity)
-    entity.buff("Berzerk", 1, True)
+    ei.apply_effect(entity, 'Vulnerable', using_card['Self Vulnerable'])
+    ei.apply_effect(entity, 'Berzerk', 1)
 
 def use_bludgeon(targeted_enemy, using_card, entity):
     '''Deal 32(42) damage.'''
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
-    sleep(1.5)
-    clear()
 
 def use_brutality(using_card, entity):
     '''At the start of your turn, lose 1 HP and draw 1 card.'''
     _ = using_card
-    entity.buff("Brutality", 1, True)
+    ei.apply_effect(entity, 'Brutality', 1)
 
 def use_corruption(using_card, entity):
     '''Skills cost 0. Whenever you play a Skill, Exhaust it.'''
     _ = using_card
-    entity.buff("Corruption", 1)
-    for card in entity.deck:
-        modify_energy_cost(0, 'Set', card)
+    ei.apply_effect(entity, 'Corruption')
 
 def use_demonform(using_card, entity):
     '''At the start of your turn, gain 2(3) Strength'''
-    entity.buff("Strength", using_card, True)
+    ei.apply_effect(entity, 'Demon Form', using_card['Demon Form'])
 
 def use_doubletap(using_card, entity):
     '''This turn, your next (2) Attack(s) is(are) played twice.'''
-    entity.buff("Double Tap", using_card['Charges'], True)
+    ei.apply_effect(entity, 'Double Tap', using_card['Charges'])
 
 def use_exhume(using_card, entity):
     '''Put a card from your exhaust pile into your hand. Exhaust.'''
     _ = using_card
     while True:
-        view_piles(entity.exhaust_pile, entity)
+        view.view_piles(entity.exhaust_pile, entity)
         option = list_input("Choose a card to return to your hand > ", entity.exhaust_pile)
         if not option:
             ansiprint('<red>The card you entered is invalid</red>')
@@ -537,16 +451,12 @@ def use_exhume(using_card, entity):
         entity.hand.append(entity.exhaust_pile)
         del entity.exhaust_pile[option]
         break
-    sleep(1.5)
-    clear()
 
 def use_feed(enemies, targeted_enemy, using_card, entity):
     '''Deal 10(12) damage. If Fatal, raise your Max HP by 3(4). Exhaust.'''
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
     if targeted_enemy not in enemies and not targeted_enemy.buffs['Minion']:
         entity.health_actions(using_card['Max HP'], 'Max Health')
-    sleep(1.5)
-    clear()
 
 def use_fiendfire(targeted_enemy, using_card, entity):
     '''Exhaust all cards in your hand. Deal 7(10) damage for each card Exhausted. Exhaust.'''
@@ -555,8 +465,6 @@ def use_fiendfire(targeted_enemy, using_card, entity):
             entity.move_card(card, entity.hand, entity.exhaust_pile, False)
             ansiprint(f"{card['Name']} was <keyword>Exhausted</keyword>.")
             entity.attack(using_card['Damage'], targeted_enemy, using_card)
-    sleep(1.5)
-    clear()
 
 def use_immolate(enemies, using_card, entity):
     '''Deal 21(28) damage to ALL enemies. Add a Burn to your discard pile.'''
@@ -564,26 +472,20 @@ def use_immolate(enemies, using_card, entity):
         entity.attack(using_card['Damage'], enemy, using_card)
         sleep(0.5)
     entity.discard_pile.append(deepcopy(cards['Burn']))
-    sleep(1.5)
-    clear()
 
 def use_impervious(using_card, entity):
     '''Gain 30(40) Block. Exhaust.'''
     entity.blocking(using_card['Block'])
-    sleep(1.5)
-    clear()
 
 def use_juggernaut(using_card, entity):
     '''Whenever you gain Block, deal 5(7) damage to a random enemy.'''
-    entity.buff("Juggernaut", using_card['Juggernaut'], True)
+    ei.apply_effect(entity, 'Juggernaut', using_card['Juggernaut'])
 
 def use_limitbreak(using_card, entity):
     '''Double your Strength. Exhaust.'''
     _ = using_card
     entity.buffs['Strength'] *= 2
-    ansiprint(f"You now have {entity.buffs['Strength']} <buff>Strength</buff>." if entity.buffs['Strength'] > 0 else '')
-    sleep(1.5)
-    clear()
+    ansiprint(f"You now have {entity.buffs['Strength']} <buff>Strength</buff>.\n" if entity.buffs['Strength'] > 0 else '', end='')
 
 def use_offering(using_card, entity):
     '''Lose 6 HP. Gain 2 Energy, Draw 3(5) cards. Exhaust.'''
@@ -591,8 +493,6 @@ def use_offering(using_card, entity):
     entity.energy += 2
     ansiprint("You gained 2 <keyword>Energy</keyword>.")
     entity.draw_cards(True, using_card['Cards'])
-    sleep(1.5)
-    clear()
 
 def use_reaper(enemies, using_card, entity):
     '''Deal 4(5) damage to ALL enemies. Heal HP equal to unblocked damage. Exhaust.'''
@@ -1057,3 +957,189 @@ potions = {
     'Stance Potion': {'Name': 'Stance Potion', 'Stances': ['Calm', 'Wrath'], 'Class': 'Watcher', 'Rarity': 'Uncommon', 'Info': 'Enter <keyword>Calm</keyword> or <keyword>Wrath</keyword>'},
     'Ambrosia': {'Name': 'Ambrosia', 'Stance': 'Divinity', 'Class': 'Watcher', 'Rarity': 'Rare', 'Info': 'Enter <keyword>Divinity</keyword>'}
 }
+
+class Generators():
+    '''Generates relics, potions, and cards'''
+    def __init__(self):
+        pass
+
+    def generate_card_rewards(self, reward_tier: str, amount: int, entity: object, card_pool: dict) -> list[dict]:
+        """
+        Normal combat rewards:
+        Rare: 3% | Uncommon: 37% | Common: 60%
+        
+        Elite combat rewards:
+        Rare: 10% | Uncommon: 40% | Common: 50%
+        
+        Boss combat rewards:
+        Rare: 100% | Uncommon: 0% | Common: 0%
+        """
+        common_cards = [card for card in card_pool.values() if card.get("Rarity") == "Common" and card.get("Type") not in ('Status', 'Curse') and not card.get('Upgraded') and card.get('Class') == entity.player_class]
+        uncommon_cards = [card for card in card_pool.values() if card.get("Rarity") == "Uncommon" and card.get("Type") not in ('Status', 'Curse') and not card.get('Upgraded') and card.get('Class') == entity.player_class]
+        rare_cards = [card for card in card_pool.values() if card.get("Rarity") == "Rare" and card.get("Type") not in ('Status', 'Curse') and not card.get('Upgraded') and card.get('Class') == entity.player_class]
+        rarities =  [common_cards, uncommon_cards, rare_cards]
+        rewards = []
+
+        if reward_tier == 'Normal':
+            chances = [0.60, 0.37, 0.03]
+        elif reward_tier == 'Elite':
+            chances = [0.5, 0.4, 0.1]
+        elif reward_tier == 'Boss':
+            chances = [0, 0, 1]
+        for _ in range(amount):
+            chosen_pool = random.choices(rarities, chances, k=1)[0]
+            rewards.append(deepcopy(random.choice(chosen_pool)))
+        return rewards
+
+
+    def generate_potion_rewards(self, amount: int, entity: object, potion_pool: dict, chance_based=True) -> list[dict]:
+        """You have a 40% chance to get a potion at the end of combat.
+        -10% when you get a potion.
+        +10% when you don't get a potion."""
+        common_potions: list[dict] = [potion for potion in potion_pool.values() if potion.get("Rarity") == "Common" and (potion.get("Class") == "All" or entity.player_class in potion.get('Class'))]
+        uncommon_potions: list[dict] = [potion for potion in potion_pool.values() if potion.get("Rarity") == "Uncommon" and (potion.get("Class") == "All" or entity.player_class in potion.get('Class'))]
+        rare_potions: list[dict] = [potion for potion in potion_pool.values() if potion.get("Rarity") == "Rare" and (potion.get("Class") == "All" or entity.player_class in potion.get('Class'))]
+        all_potions = common_potions + uncommon_potions + rare_potions
+        potion_pools = [common_potions, uncommon_potions, rare_potions]
+        rewards = []
+        for _ in range(amount):
+            if chance_based:
+                rewards.append(random.choice(random.choices(potion_pools, [0.65, 0.25, 0.1], k=1)[0]))
+            else:
+                rewards.append(random.choice(all_potions))
+        return rewards
+
+
+    def generate_relic_rewards(self, source: str, amount: int, entity, relic_pool: dict, chance_based=True) -> list[dict]:
+        common_relics = [relic for relic in relic_pool.values() if relic.get('Rarity') == 'Common' and relic.get('Class') == entity.player_class]
+        uncommon_relics = [relic for relic in relic_pool.values() if relic.get('Rarity') == 'Uncommon' and relic.get('Class') == entity.player_class]
+        rare_relics = [relic for relic in relic_pool.values() if relic.get('Rarity') == 'Rare' and relic.get('Class') == entity.player_class]
+        all_relics = common_relics + uncommon_relics + rare_relics
+        relic_pools = [common_relics, uncommon_relics, rare_relics]
+        rewards = []
+        if source == 'Chest':
+            common_chance = 0.49
+            uncommon_chance = 0.42
+            rare_chance = 0.09
+        else:
+            common_chance = 0.50
+            uncommon_chance = 0.33
+            rare_chance = 0.17
+        for _ in range(amount):
+            if chance_based:
+                rewards.append(random.choice(random.choices(relic_pools, [common_chance, uncommon_chance, rare_chance], k=1)[0]))
+            else:
+                rewards.append(random.choice(all_relics))
+        return rewards
+
+    def claim_relics(self, choice: bool, entity: object, relic_amount: int, relic_pool: dict=None, rewards: list=None, chance_based=True):
+        relic_pool = relics if not relic_pool else relic_pool
+        if not rewards:
+            rewards = self.generate_relic_rewards('Other', relic_amount, entity, relic_pool, chance_based)
+        if not choice:
+            for i in range(relic_amount):
+                entity.relics.append(rewards[i])
+                entity.on_relic_pickup(rewards[i])
+                ansiprint(f"{entity.name} obtained {rewards[i]['Name']} | {rewards[i]['Info']}")
+                rewards.remove(rewards[i])
+                sleep(0.5)
+            sleep(0.5)
+        while len(rewards) > 0 and choice:
+            counter = 1
+            for relic in rewards:
+                ansiprint(f"{counter}: {relic['Name']} | {relic['Class']} | <light-black>{relic['Rarity']}</light-black> | <yellow>{relic['Info']}</yellow> | <blue><italic>{relic['Flavor']}</italic></blue>")
+                counter += 1
+                sleep(0.05)
+            option = list_input('What relic do you want? > ', rewards)
+            if not option:
+                sleep(1.5)
+                clear()
+                continue
+            entity.relics.append(rewards[option])
+            entity.on_relic_pickup(rewards[option])
+            print(f"{entity.name} obtained {rewards[option]['Name']}.")
+            rewards.remove(rewards[i])
+
+    def claim_potions(self, choice: bool, potion_amount: int, entity,  potion_pool: dict=None, rewards=None, chance_based=True):
+        potion_pool = potions if not potion_pool else potion_pool
+        if not rewards:
+            rewards = self.generate_potion_rewards(potion_amount, entity, potion_pool, chance_based)
+        if not choice:
+            for i in range(potion_amount):
+                entity.potions.append(rewards[i])
+                print(f"{entity.name} obtained {rewards[i]['Name']} | {rewards[i]['Info']}")
+                rewards.remove(rewards[i])
+            sleep(1.5)
+            clear()
+        while len(rewards) > 0:
+            counter = 1
+            print(f"Potion Bag: ({len(entity.potions)} / {entity.max_potions})")
+            view.view_potions(entity, False)
+            print()
+            print("Potion reward(s):")
+            counter = 1
+            for potion in rewards:
+                ansiprint(f"{counter}: <blue>{potion['Name']}</blue> | <light-black>{potion['Rarity']}</light-black> | <green>{potion['Class']}</green> | <yellow>{potion['Info']}</yellow>")
+                counter += 1
+            print()
+            option = list_input('What potion you want? >', rewards)
+            if len(entity.potions) == entity.max_potions:
+                ansiprint("<red>Potion bag full!")
+                sleep(1)
+                option = input("Discard a potion?(y|n) > ")
+                if option == 'y':
+                    counter = 1
+                    for potion in entity.potions:
+                        ansiprint(f"{counter}: <light-black>{potion['Rarity']}</light-black> | <green>{potion['Class']}</green> | <blue>{potion['Name']}</blue> | <yellow>{potion['Info']}</yellow>")
+                        counter += 1
+                    option = list_input('What potion do you want to discard? > ', entity.potions)
+                    print(f"Discarded {entity.potions[option]['Name']}.")
+                    entity.potions.remove(entity.potions[option])
+                    sleep(1.5)
+                    clear()
+                else:
+                    sleep(1.5)
+                    clear()
+                continue
+            entity.potions.append(rewards[option])
+            rewards.remove(rewards[option])
+            sleep(0.2)
+            clear()
+
+    def card_rewards(self, tier: str, choice: bool, entity, card_pool: dict, rewards=None):
+        if not rewards:
+            rewards = self.generate_card_rewards(tier, entity.card_reward_choices, entity, card_pool)
+        while True:
+            if choice:
+                view.view_piles(rewards, entity)
+                chosen_reward = list_input('What card do you want? > ', rewards)
+                if (entity.upgrade_attacks or entity.upgrade_skills or entity.upgrade_powers) and rewards[chosen_reward]['Type'] in ['Attack', 'Skill', 'Power']:
+                    entity.card_actions(rewards[chosen_reward], 'Upgrade')
+                if relics['Ceramic Fish'] in entity.relics:
+                    ansiprint("From <bold>Ceramic Fish</bold>: ", end='')
+                    entity.gain_gold(9)
+                entity.deck.append(rewards[chosen_reward])
+                print(f"{entity.name} obtained <bold>{rewards[chosen_reward]['Name']}</bold>")
+                rewards.clear()
+                break
+            for card in rewards:
+                if card.get('Type') == 'Curse' and entity.block_curses > 0:
+                    ansiprint(f"{card['Name']} was negated by <bold>Omamori</bold>.")
+                    entity.block_curses -= 1
+                    if entity.block_curses == 0:
+                        ansiprint('<bold>Omamori</bold> is depleted.')
+                    continue
+                if card.get('Type') == 'Curse' and entity.darkstone_health:
+                    ansiprint("<bold>Darkstone Periapt</bold> activated.")
+                    entity.health_actions(6, "Max Health")
+                entity.deck.append(card)
+                print(f"{entity.name} obtained {card['Name']}")
+                rewards.remove(card)
+            if entity.gold_on_card_add:
+                entity.gold += 9
+                ansiprint('You gained 9 <yellow>Gold</yellow> from <bold>Ceramic Fish</bold>.')
+            break
+        rewards.clear()
+        sleep(1)
+
+gen = Generators()

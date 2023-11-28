@@ -4,8 +4,9 @@ import random
 from time import sleep
 from copy import deepcopy
 from ansi_tags import ansiprint
-from items import relics, cards
-from utility import active_enemies, combat_turn, DURATION_EFFECTS, PLAYER_BUFFS, PLAYER_DEBUFFS, ENEMY_BUFFS, ENEMY_DEBUFFS, NON_STACKING_EFFECTS, all_effects, list_input, clear, modify_energy_cost, calculate_actual_damage
+from items import relics, cards, modify_energy_cost
+from debuff_and_buffs import ei
+from display_util import active_enemies, combat_turn, list_input, clear, display_actual_damage
 
 class Player:
     """
@@ -44,19 +45,9 @@ class Player:
         self.exhaust_pile: list[dict] = []
         self.orbs = []
         self.orb_slots: int = 3
-        self.gold: int = 0
-        self.debuffs: dict[str: int] = {}
-        for debuff in PLAYER_DEBUFFS:
-            if debuff not in NON_STACKING_EFFECTS:
-                self.debuffs[debuff] = 0
-            else:
-                self.debuffs[debuff] = False
-        self.buffs: dict[str: int] = {}
-        for buff in PLAYER_BUFFS:
-            if buff not in NON_STACKING_EFFECTS:
-                self.buffs[buff] = 0
-            else:
-                self.buffs[buff] = False
+        self.gold: int = 100
+        self.debuffs: dict[str: int] = ei.init_effects(self, 'Debuffs')
+        self.buffs: dict[str: int] = ei.init_effects(self, 'Buffs')
         # Alternate debuff/buff effects
         self.combusts_played = 0
         self.the_bomb_countdown = 3
@@ -90,6 +81,29 @@ class Player:
         self.plays_this_turn = 0 # Counts how many cards the played plays each turn
         self.stone_calender = 0
 
+    def __str__(self):
+        return f'(<italic>Player</italic>)Ironclad(<red>{self.health} / {self.max_health}</red> | <yellow>{self.gold} Gold</yellow> | Deck: {len(self.deck)})'
+
+    def __repr__(self):
+        if self.in_combat is True:
+            status = f"\n{self.name} (<red>{self.health} </red>/ <red>{self.max_health}</red> | <light-blue>{self.block} Block</light-blue> | <light-red>{self.energy} / {self.max_energy} Energy</light-red>)"
+            for buff in self.buffs:
+                if self.buffs[buff] is True or self.buffs[buff] > 0:
+                    status += f"<buff>{buff}</buff>{f' {self.buffs[buff]}' if isinstance(self.buffs[buff], int) else ''}"
+            for debuff in self.debuffs:
+                if self.debuffs[debuff] is True or self.debuffs[debuff] > 0:
+                    status += f"<debuff>{debuff}</debuff>{f' {self.debuffs[debuff]}' if isinstance(self.debuffs[debuff], int) else ''}"
+        else:
+            status = f"\n{self.name} (<red>{self.health} </red>/ <red>{self.max_health}</red> | <yellow>{self.gold} Gold</yellow>)"
+        return status + '' if status == f"\n{self.name} (<red>{self.health} </red>/ <red>{self.max_health}</red> | <light-blue>{self.block} Block</light-blue> | <light-red>{self.energy} / {self.max_energy}</light-red>)" else '\n'
+
+    def show_effects(self):
+        for buff in self.buffs:
+            if int(self.buffs[buff]) > 0:
+                ansiprint(f'<buff>{buff}</buff>: {ei.ALL_EFFECTS[buff].replace("X", str(self.buffs[buff]))}')
+        for debuff in self.debuffs:
+            ansiprint(f'<debuff>{debuff}</debuff>: {ei.ALL_EFFECTS[debuff].replace("X", str(self.debuffs[debuff]))}')
+
     def use_card(self, card: dict, target: object, exhaust, pile) -> None:
         """
         Uses a card
@@ -104,6 +118,8 @@ class Player:
         else:
             ansiprint("<red>Card does not have a 'Target' key</red>")
             sys.exit(1)
+        sleep(1.5)
+        clear()
         if card.get('Type') == 'Attack' and relics['Pen Nib'] in self.relics:
             self.pen_nib_attacks += 1
         if card.get('Type') == 'Attack' and relics['Nunchaku'] in self.relics:
@@ -164,7 +180,7 @@ class Player:
             self.kunai_attacks += 1
             if self.kunai_attacks == 3:
                 ansiprint("<bold>Kunai</bold> activated: ", end='')
-                self.buff("Dexterity", 1, False)
+                ei.apply_effect(self, 'Dexterity', 1)
                 self.kunai_attacks = 0
         if relics['Ornamental Fan'] in self.relics and card.get('Type') == 'Attack':
             self.ornament_fan_attacks += 1
@@ -186,7 +202,7 @@ class Player:
             self.shuriken_attacks += 1
             if self.shuriken_attacks == 3:
                 ansiprint('<bold>Shuriken</bold> activated: ', end='')
-                self.buff('Strength', 1, False)
+                ei.apply_effect(self, 'Strength', 1)
         if relics['Ink Bottle'] in self.relics:
             self.inked_cards += 1
             if self.inked_cards == 10:
@@ -195,7 +211,7 @@ class Player:
                 self.inked_cards = 0
         if relics['Duality'] in self.relics and card.get('Type') == 'Attack':
             ansiprint('<bold>Duality</bold> activated: ', end='')
-            self.buff('Dexterity', 1, False)
+            ei.apply_effect(self, 'Dexterity', 1)
         if relics['Bird-Faced Urn'] in self.relics and card.get('Type') == 'Power':
             ansiprint('<bold>Bird-Faced Urn<bold> activated: ', end='')
             self.health_actions(2, 'Heal')
@@ -312,37 +328,10 @@ class Player:
                 ansiprint(f"{subject_card['Name'].replace('+', '')} was upgraded to <green>{subject_card['Name']}</green>")
                 break
 
-    def show_status(self, full_view=False, combat=True):
-        if combat is True:
-            status = f"\n{self.name} (<red>{self.health} </red>/ <red>{self.max_health}</red> | <light-blue>{self.block} Block</light-blue> | <light-red>{self.energy} / {self.max_energy}</light-red>)"
-            for buff in self.buffs:
-                if buff not in NON_STACKING_EFFECTS and self.buffs[buff] > 0:
-                    status += f" | <buff>{buff}</buff>: {self.buffs[buff]}"
-                elif buff in NON_STACKING_EFFECTS and self.buffs[buff] is True:
-                    status += f" | <buff>{buff}</buff>"
-            for debuff in self.debuffs:
-                if debuff not in NON_STACKING_EFFECTS and self.debuffs[debuff] > 0:
-                    status += f" | <red>{debuff}</red>: {self.debuffs[debuff]}"
-                elif debuff in NON_STACKING_EFFECTS and self.debuffs[debuff] is True:
-                    status += f" | <red>{debuff}</red>"
-        else:
-            status = f"\n{self.name} (<red>{self.health} </red>/ <red>{self.max_health}</red> | <yellow>{self.gold} Gold</yellow>)"
-        ansiprint(status, '' if status == f"\n{self.name} (<red>{self.health} </red>/ <red>{self.max_health}</red> | <light-blue>{self.block} Block</light-blue> | <light-red>{self.energy} / {self.max_energy}</light-red>)" else '\n'
-)
-        if full_view is True:
-            # int() function used to account for boolean variables.
-            for buff in self.buffs:
-                # .replace() method is used to replace any variable values with their current values
-                if int(self.buffs[buff]) > 0:
-                    ansiprint(f"<light-cyan>{buff}</light-cyan>: {all_effects[buff]}".replace("X", self.buffs[buff]))
-            for debuff in self.debuffs:
-                if int(self.debuffs[debuff]) > 0:
-                    ansiprint(f"<red>{debuff}</red>: {all_effects[debuff]}".replace("X", self.debuffs[debuff]))
-        print()
-
     def end_player_turn(self):
-        self.discard_pile.extend(self.hand)
-        self.hand = []
+        self.discard_pile += self.hand
+        self.hand.clear()
+        self.end_of_turn_effects()
         self.end_of_turn_relics()
         sleep(1.5)
         clear()
@@ -418,53 +407,11 @@ class Player:
                     self.health_actions(dmg, 'Heal')
                 target.block = 0
 
-    def debuff(self, debuff_name: str, amount: int, target: object, end=False):
-        if debuff_name not in all_effects:
-            ansiprint(f"<red>{debuff_name} is not a valid debuff or buff. This is my mistake!</red>")
-            sys.exit(1)
-        if target.buffs['Artifact'] == 0:
-            if debuff_name in NON_STACKING_EFFECTS and self != target:
-                target.debuffs[debuff_name] = True
-                ansiprint(f"{self.name} applied <debuff>{debuff_name}</debuff> to {target.name}.")
-            elif debuff_name not in NON_STACKING_EFFECTS and self != target:
-                target.debuffs[debuff_name] += amount
-                ansiprint(f"{self.name} applied {amount} <debuff>{debuff_name}</debuff> to {target.name}.")
-                if debuff_name == 'Vulnerable' and relics['Champion Belt'] in self.relics:
-                    self.debuff('Weak', 1, target, False)
-            if self == target and debuff_name not in NON_STACKING_EFFECTS:
-                ansiprint(f"+{amount} {debuff_name}")
-            elif self == target and debuff_name in NON_STACKING_EFFECTS:
-                ansiprint(f"<debuff>{debuff_name}</debuff>")
-        else:
-            ansiprint(f"{debuff_name} was blocked by {'' if self != target else 'your'} <buff>Artifact</buff>")
-            target.artifact -= 1
-        if end is False:
-            sleep(1)
-        else:
-            sleep(1.5)
-            clear()
-
-    def buff(self, buff_name, amount, end=False):
-        if buff_name not in all_effects:
-            ansiprint(f"<red>{buff_name} is not a valid debuff or buff. This is my mistake!</red>")
-            sys.exit(1)
-        if buff_name not in NON_STACKING_EFFECTS:
-            self.buffs[buff_name] += amount
-            ansiprint(f"+{amount} <light-cyan>{buff_name}</light-cyan>")
-        else:
-            self.buffs[buff_name] = True
-            ansiprint(f"<light-cyan>{buff_name}</light-cyan>")
-        if buff_name == "Strength(Temp)":
-            self.debuff("Strength Down", amount, self, True)
-        if end is True:
-            sleep(1.5)
-            clear()
-        else:
-            sleep(1)
-
     def gain_gold(self, gold, dialogue=True):
         if relics['Ectoplasm'] not in self.relics:
             self.gold += gold
+        else:
+            ansiprint("You cannot gain <yellow>Gold</yellow> because of <bold>Ectoplasm</bold>.")
         if dialogue is True:
             ansiprint(f"You gained <green>{gold}</green> <yellow>Gold</yellow>(<yellow>{self.gold}</yellow> Total)")
         sleep(1)
@@ -500,7 +447,7 @@ class Player:
         # Start of turn effects
         self.draw_cards(False, (self.draw_strength + 3) if self.plays_this_turn <= 3 and relics['Pocketwatch'] in self.relics and combat_turn > 1 else 0)
         self.plays_this_turn = 0
-        self.debuff_buff_tick()
+        ei.tick_effects(self)
         self.start_of_turn_relics()
         if combat_turn > 0:
             if relics['Incense Burner'] in self.relics:
@@ -531,53 +478,25 @@ class Player:
         else:
             self.block = 0
 
-    def debuff_buff_tick(self):
-        # ///////Buffs\\\\\\\\
-        for buff in self.buffs:
-            if buff == 'Rage' and self.buffs[buff] > 0:
-                self.buffs['Rage'] = 0
-                ansiprint('<buff>Rage</buff> wears off.')
-            if buff == 'Flame Barrier' and self.buffs[buff] > 0:
-                self.buffs['Flame Barrier'] = 0
-                ansiprint('<buff>Flame Barrier</buff> wears off')
-            if buff in DURATION_EFFECTS and self.buffs[buff] > 0:
-                self.buffs[buff] -= 1
-                ansiprint(f"-1 <buff>{buff}</buff>")
-                if self.buffs[buff] == 0:
-                    ansiprint(f"<buff>{buff}</buff> wears off")
-        # //////Debuffs\\\\\\
-        for debuff in self.debuffs:
-            if debuff in DURATION_EFFECTS and self.debuffs[debuff] > 0:
-                self.debuffs[debuff] -= 1
-                ansiprint(f"-1 <debuff>{debuff}</debuff>")
-                if self.debuffs[debuff] == 0:
-                    ansiprint(f"<debuff>{debuff}</debuff> wears off.")
-        # Strength Down: Lose X Strength at the end of your turn
+    def end_of_turn_effects(self):
         if self.debuffs['Strength Down'] > 0:
             self.buffs['Strength'] -= self.debuffs['Strength Down']
-            ansiprint(f"<red>Strength</red> was reduced by {self.debuffs['Strength Down']} because of <debuff>Strength Down</debuff>")
-            sleep(0.7)
+            ansiprint(f'<debuff>Strength Down</debuff> reduced <buff>Strength</buff> to {self.buffs["Strength"]}')
             self.debuffs['Strength Down'] = 0
-            print("<debuff>Strength Down</debuff> wears off.")
-            sleep(0.8)
-
-    def end_of_turn_effects(self):
+            ansiprint('<debuff>Strength Down</debuff>')
         if self.buffs["Regeneration"] > 0:
             self.health_actions(self.buffs["Regeneration"], False)
-            # Regeneration gets reduced by 1 in the above function
-        # Metallicize: At the end of your turn, gain X Block
         if self.buffs["Metallicize"] > 0:
             print("Metallicize: ", end='')
             self.blocking(self.buffs["Metallicize"], False)
             sleep(0.8)
-        # Plated Armor: At the end of your turn, gain X Block. Decreases by 1 when recieving unblocked attack damage
         if self.buffs["Plated Armor"] > 0:
             print("Plated Armor: ", end='')
             self.blocking(self.buffs["Plated Armor"], False)
             sleep(0.8)
         if self.buffs["Ritual"] > 0:
             print("Ritual: ", end='')
-            self.buff("Strength", self.buffs["Ritual"], True)
+            ei.apply_effect(self, 'Strength', self.buffs['Ritual'])
         if self.buffs["Combust"] > 0:
             self.take_sourceless_dmg(self.combusts_played)
             for enemy in active_enemies:
@@ -586,15 +505,15 @@ class Player:
         if self.buffs["Omega"] > 0:
             for enemy in active_enemies:
                 self.attack(self.buffs['Omega'], enemy)
-                sleep(0.1)
+                sleep(0.5)
         if self.buffs["The Bomb"] > 0:
             self.the_bomb_countdown -= 1
             if self.the_bomb_countdown == 0:
                 for enemy in active_enemies:
                     self.attack(self.buffs['The Bomb'], enemy)
-                    self.buffs["The Bomb"] = 0
-                    ansiprint("<light-cyan>The Bomb</light-cyan> wears off")
-                    self.the_bomb_countdown = 3
+                self.buffs["The Bomb"] = 0
+                ansiprint("<light-cyan>The Bomb</light-cyan> wears off")
+                self.the_bomb_countdown = 3
 
     def start_of_turn_effects(self):
         if self.buffs['Brutality'] > 0:
@@ -611,12 +530,11 @@ class Player:
         if relics['Brimstone'] in self.relics:
             ansiprint("From <bold>Brimstone</bold>:")
             for enemy in active_enemies:
-                enemy.buffs['Strength'] += 1
-                ansiprint(f"{enemy.name} gained 1 <light-cyan>Strength</light-cyan>")
-            self.buff('Strength', 2, False)
+                ei.apply_effect(enemy, 'Strength', 1)
+            ei.apply_effect(self, 'Strength', 2)
         if self.buffs['Demon Form'] > 0:
             ansiprint("From <buff>Demon Form</buff>: ", end='')
-            self.buff("Strength", self.buffs['Demon Form'])
+            ei.apply_effect(self, 'Strength', self.buffs['Demon Form'])
         if relics['Warped Tongs'] in self.relics:
             ansiprint("From <bold>Warped Tongs</bold>:")
             chosen_card = random.randint(0, len(self.hand) - 1)
@@ -697,7 +615,7 @@ class Player:
 
     def die(self):
         clear()
-        ansiprint("<red>You Died></red>")
+        ansiprint("<red>You Died</red>")
         input('Press enter > ')
         sys.exit()
 
@@ -738,26 +656,38 @@ class Enemy:
         self.max_health = health
         self.block = block
         self.name = name
+        self.third_person_ref = f"{self.name}'s" # Python f-strings suck so I have to use this
         if 'louse' in self.name:
             self.damage = [5, 7]
         self.past_moves = ['place'] * 3
         self.intent: str = ''
         self.next_move: str = ''
-        self.buffs = {}
-        for buff in ENEMY_BUFFS:
-            if buff not in NON_STACKING_EFFECTS:
-                self.buffs[buff] = 0
-            else:
-                self.buffs[buff] = False
-        self.debuffs = {}
-        for debuff in ENEMY_DEBUFFS:
-            if debuff not in NON_STACKING_EFFECTS:
-                self.debuffs[debuff] = 0
-            else:
-                self.debuffs[debuff] = False
+        self.buffs = ei.init_effects(self, 'Buffs')
+        self.debuffs = ei.init_effects(self, 'Debuffs')
         self.active_turns = 0
         if 'louse' in self.name:
             self.buffs["Curl Up"] = random.randint(3, 7)
+
+    def __str__(self):
+        return 'Enemy'
+
+    def __repr__(self):
+        status = f"\n{self.name} (<red>{self.health} </red>/ <red>{self.max_health}</red> | <light-blue>{self.block} Block</light-blue>) | "
+        for buff in self.buffs:
+            if self.buffs[buff] is True or self.buffs[buff] > 0:
+                status += f"<buff>{buff}</buff>{f' {self.buffs[buff]}' if isinstance(self.buffs[buff], int) else ''} | "
+        for debuff in self.debuffs:
+            if self.debuffs[debuff] is True or self.debuffs[debuff] > 0:
+                status += f"<debuff>{debuff}</debuff>{f' {self.debuffs[debuff]}' if isinstance(self.debuffs[debuff], int) else ''} | "
+        actual_intent, _ = display_actual_damage(self.intent, player, self)
+        status += 'Intent: ' + actual_intent
+        return status if status != f"\n{self.name} (<red>{self.health} </red>/ <red>{self.max_health}</red> | <light-blue>{self.block} Block</light-blue>)" else '\n'
+
+    def show_effects(self):
+        for buff in self.buffs:
+            ansiprint(f'<buff>{buff}</buff>: {ei.ALL_EFFECTS[buff].replace("X", str(self.buffs[buff]))})')
+        for debuff in self.debuffs:
+            ansiprint(f'<debuff>{debuff}</debuff>: {ei.ALL_EFFECTS[debuff].replace("X", str(self.debuffs[debuff]))}')
 
     def execute_move(self) -> tuple[str]:
         commands = self.next_move.split(' / ')
@@ -787,11 +717,11 @@ class Enemy:
                 buff_name = parameters[0]
                 amount = int(parameters[1] if len(parameters) > 1 else 1)
                 target = eval(parameters[2] if len(parameters) > 2 else 'self')
-                self.buff(buff_name, amount, target)
+                ei.apply_effect(target, buff_name, amount)
             elif func_name == 'Debuff':
                 debuff_name = parameters[0]
                 amount = int(parameters[1]) if len(parameters) > 1 else 1
-                self.debuff(debuff_name, amount)
+                ei.apply_effect(player, debuff_name, amount)
             elif func_name == 'Status':
                 locations = {'draw pile': player.draw_pile, 'discard pile': player.discard_pile}
                 status_name = parameters[0]
@@ -835,7 +765,7 @@ class Enemy:
             pass
         elif func_name == 'Rebirth':
             for debuff in self.debuffs:
-                if debuff not in NON_STACKING_EFFECTS:
+                if debuff not in ei.NON_STACKING_EFFECTS:
                     self.debuffs[debuff] = 0
                 else:
                     self.debuffs[debuff] = False
@@ -918,7 +848,7 @@ class Enemy:
                 elif random_num < 45 and self.past_moves[-1] != "Bellow":
                     self.next_move, self.intent = "Bellow_Buff_('Strength', 3) / Block_(6)", "<buff>Buff</buff> / <light-blue>Block</light-blue>"
                 elif self.past_moves[-2] != "Thrash":
-                    self.next_move, self.intent = "Thrash_Attack_(7) / Block_(5)", f"<attack>Attack</attack> Σ7 / <light-blue>Block</light-blue>"
+                    self.next_move, self.intent = "Thrash_Attack_(7) / Block_(5)", "<attack>Attack</attack> Σ7 / <light-blue>Block</light-blue>"
                 else:
                     continue
             elif 'louse' in self.name.lower():
@@ -932,32 +862,6 @@ class Enemy:
                 else:
                     continue
             break
-
-    def show_status(self, full_view=False):
-        status = f"\n{self.name} (<red>{self.health} </red>/ <red>{self.max_health}</red> | <light-blue>{self.block} Block</light-blue>)"
-        for buff in self.buffs:
-            if buff not in NON_STACKING_EFFECTS and self.buffs[buff] > 0:
-                status += f" | <buff>{buff}</buff>: {self.buffs[buff]}"
-            elif buff in NON_STACKING_EFFECTS and self.buffs[buff] is True:
-                status += f" | <buff>{buff}</buff>"
-        for debuff in self.debuffs:
-            if debuff not in NON_STACKING_EFFECTS and self.debuffs[debuff] > 0:
-                status += f" | <red>{debuff}</red>: {self.debuffs[debuff]}"
-            elif debuff in NON_STACKING_EFFECTS and self.debuffs[debuff] is True:
-                status += f" | <red>{debuff}</red>"
-        actual_intent, _ = calculate_actual_damage(self.intent, player, self)
-        status += ' | Intent: ' + actual_intent
-        ansiprint(status, '' if status == f"\n{self.name} (<red>{self.health} </red>/ <red>{self.max_health}</red> | <light-blue>{self.block} Block</light-blue>)" else '\n')
-        if full_view is True:
-            # int() function used to account for True|False variables.
-            for buff in self.buffs:
-                # .replace() method is used to replace any variable values with their current values
-                if int(self.buffs[buff]) > 0:
-                    ansiprint(f"<light-cyan>{buff}</light-cyan>: {all_effects[buff]}".replace("X", self.buffs[buff]))
-            for debuff in self.debuffs:
-                if int(self.debuffs[debuff]) > 0:
-                    ansiprint(f"<red>{debuff}<red>: {all_effects[debuff]}".replace("X", self.debuffs[debuff]))
-        print()
 
     def attack(self, dmg: int, times: int):
         dmg_affected_by = ''
@@ -1010,40 +914,6 @@ class Enemy:
             ansiprint("<bold>Meat on the Bone</bold>> activated.")
         sleep(1)
 
-    def buff(self, buff: str, amount=0, target: 'Enemy'=None):
-        if not target:
-            target = self
-        if buff not in all_effects:
-            ansiprint(f"<red>{buff} is not a valid debuff or buff. This is my mistake!</red>")
-            sys.exit(1)
-        if buff not in NON_STACKING_EFFECTS:
-            target.buffs[buff] += amount
-            ansiprint(f"{self.name} gained {amount} <buff>{buff}</buff>" if target == self else f"{self.name} applied {amount} <buff>{buff}</buff> to {target.name}")
-        else:
-            target.buffs[buff] = True
-            ansiprint(f"{self.name} gained <buff>{buff}</buff>" if target == self else f"{self.name} applied {amount} <buff>{buff}</buff> to {target.name}")
-        sleep(1)
-
-    def debuff(self, debuff: str, amount: int):
-        if debuff not in all_effects:
-            ansiprint(f"<red>{debuff} is not a valid debuff or buff. This is my mistake!</red>")
-            sys.exit(1)
-        if debuff == 'Weak' and relics['Ginger'] in player.relics:
-            ansiprint('<red>Weak</red> was blocked by your <bold>Ginger</bold>')
-            sleep(1)
-            return
-        if debuff == 'Frail' and relics['Turnip'] in player.relics:
-            ansiprint('<red>Frail</red> was blocked by your <bold>Turnip</bold>')
-            sleep(1)
-            return
-        if debuff not in NON_STACKING_EFFECTS:
-            player.debuffs[debuff] += amount
-            ansiprint(f"{self.name} applied {amount} <light-cyan>{debuff}</light-cyan> to you")
-        else:
-            player.debuffs[debuff] = True
-            ansiprint(f"{self.name} applied <light-cyan>{debuff}</light-cyan> to you")
-        sleep(1)
-
     def blocking(self, block: int):
         self.block += block
         ansiprint(f"{self.name} gained {block} <blue>Block</blue>")
@@ -1074,7 +944,7 @@ class Enemy:
                 ansiprint(f"{self.name}'s Block was not removed because of <light-cyan>Barricade</light-cyan")
         if self.buffs['Ritual'] > 0:
             ansiprint("From <buff>Ritual</buff>: ", end='')
-            self.buff("Strength", self.buffs['Ritual'], False)
+            ei.apply_effect(self, 'Strength', self.buffs['Ritual'])
         if self.debuffs["Vulnerable"] > 0:
             self.debuffs["Vulnerable"] -= 1
             ansiprint("<light-cyan>-1 Vulnerable</light-cyan>")
@@ -1091,7 +961,7 @@ class Enemy:
     def end_of_turn_effects(self):
         if self.buffs['Ritual'] > 0:
             ansiprint('<light-cyan>Ritual</light-cyan>: ', end='')
-            self.buff('Strength', self.buffs['Ritual'])
+            ei.apply_effect(self, 'Strength', self.buffs['Ritual'])
         if self.buffs['Metallicize'] > 0:
             ansiprint('<light-cyan>Metallicize</light-cyan>: ', end='')
             self.blocking(self.buffs['Metallicize'])
@@ -1103,7 +973,7 @@ class Enemy:
             self.health = min(self.health + self.buffs['regen'], self.max_health)
         if self.buffs['Strength Up'] > 0:
             ansiprint('<light-cyan>Strength Up</light-cyan>: ', end='')
-            self.buff('Strength', self.buffs['Strength Up'])
+            ei.apply_effect(self, 'Strength', self.buffs['Strength Up'])
 
 
 # Characters
