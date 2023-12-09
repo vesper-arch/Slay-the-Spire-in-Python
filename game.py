@@ -3,19 +3,14 @@ from copy import deepcopy
 import math
 import random
 from ansi_tags import ansiprint
-from debuff_and_buffs import ei
 from events import choose_event
-from items import relics, potions, cards, activate_sacred_bark, gen
+from items import relics, potions, cards, activate_sacred_bark
+from helper import active_enemies, combat_turn, potion_dropchance, view, gen, ei
 from entities import player, enemy_encounters
-from display_util import active_enemies, combat_turn, combat_potion_dropchance, display_actual_damage, display_actual_block, clear, view, list_input
-
 
 def combat(tier) -> None:
     """There's too much to say here."""
-    global combat_turn, combat_potion_dropchance
-    killed_enemies: bool = False
-    # The Smoke Bomb potion allows you to escape from a non-boss encounter but you recieve no rewards.
-    escaped: bool = False
+    global combat_turn
     # Spawns enemies and shuffles the player's deck into their draw pile.
     start_combat(tier)
     if relics['Preserved Insect'] in player.relics and tier == 'Elite':
@@ -29,70 +24,71 @@ def combat(tier) -> None:
         for enemy in active_enemies:
             enemy.start_turn()
         while True:
+            if len(active_enemies) == 0:
+                end_combat(tier, True, False)
+                break
             print(f"Turn {combat_turn}: ")
             _ = player.draw_cards(True, 1) if len(player.hand) == 0 and relics['Unceasing Top'] in player.relics else None # Assigned to _ so my linter shuts up
             # Shows the player's potions, cards(in hand), amount of cards in discard and draw pile, and shows the status for you and the enemies.
-            view.display_ui(player)
-            ansiprint(f"1: <blue>Play a card</blue> \n2: <light-red>Play Potion</light-red> \n3: <green>View Relics</green> \n4: <magenta>View debuffs and buffs</magenta> \n5: View deck({len(player.deck)}) \n6: View draw pile({len(player.draw_pile)}) \n7: View discard pile({len(player.discard_pile)}) \n8: End turn")
-            commands: dict = {'1': play_card, '2': play_potion, '3': view.view_relics, '4': ei.full_view, '5': player.deck, '6': player.draw_pile, '7': player.discard_pile}
-            option = input('> ')
-            if option in ('1', '2'):
-                commands.get(option)()
-            elif option == '3':
-                commands.get(option)(player)
-            elif option == '4':
-                commands.get(option)(player, active_enemies)
-            elif option in ('5', '6', '7'):
-                pile, entity = (commands[option], player)
-                view.view_piles(pile, entity, True)
-            elif option == '8':
-                sleep(1.5)
-                clear()
+            view.display_ui(player, active_enemies)
+            print("1-0: Play card, P: Play Potion, D: View Deck, A: View Draw Pile, S: View Discard Pile, X: View Exhaust Pile, E: End Turn, F: View Debuffs and Buffs")
+            action = input("> ").lower()
+            other_options = {'d': lambda: view.view_piles(player.deck, player, True), 'a': lambda: view.view_piles(player.draw_pile, player, True),
+                     's': lambda: view.view_piles(player.discard_pile, player, True), 'x': lambda: view.view_piles(player.exhaust_pile, player, True),
+                     'p': play_potion, 'f': lambda: ei.full_view(player, active_enemies)}
+            if action.isdigit():
+                option = int(action) - 1
+                if option + 1 in range(len(player.hand) + 1):
+                    play_card(player.hand[option])
+                else:
+                    view.clear()
+                    continue
+            elif action in other_options:
+                other_options[action]()
+            elif action == 'e':
+                view.clear()
                 break
             else:
-                print("Invalid input")
-            sleep(1.5)
-            clear()
-            if len(active_enemies) == 0:
-                killed_enemies = True
-                break
-            continue
-        if killed_enemies is True and escaped is False:
-            player.in_combat = False
-            player.hand.clear()
-            player.discard_pile.clear()
-            player.draw_pile.clear()
-            player.exhaust_pile.clear()
-            potion_chance = random.randint(0, 100)
-            ansiprint("<green>Combat finished!</green>")
-            player.gain_gold(random.randint(10, 20))
-            if potion_chance < combat_potion_dropchance or relics['White Beast Statue'] in player.relics:
-                gen.claim_potions(True, 1, potions, player)
-                combat_potion_dropchance -= 10
-            else:
-                combat_potion_dropchance += 10
-            for _ in range(int(relics['Prayer Wheel'] in player.relics) + 1):
-                gen.card_rewards(tier, True, player, cards)
-            combat_turn = 0
-            sleep(1.5)
-            clear()
-            break
-        if escaped is True:
-            print("Escaped...")
-            player.in_combat = False
-            sleep(0.8)
-            print("You recieve nothing.")
-            sleep(1.5)
-            clear()
-            combat_turn = 1
-            break
+                view.clear()
+                continue
+            sleep(1)
+            view.clear()
         player.end_player_turn()
         for enemy in active_enemies:
             enemy.execute_move()
             input('Press enter to continue > ')
-            sleep(1.5)
-            clear()
+            view.clear()
         combat_turn += 1
+
+def end_combat(tier, killed_enemies, escaped):
+    global potion_dropchance, combat_turn
+    if killed_enemies is True and escaped is False:
+        player.in_combat = False
+        player.hand.clear()
+        player.discard_pile.clear()
+        player.draw_pile.clear()
+        player.exhaust_pile.clear()
+        potion_roll = random.randint(0, 100)
+        ansiprint("<green>Combat finished!</green>")
+        player.gain_gold(random.randint(10, 20) * 1 if relics['Golden Idol'] not in player.relics else 1.25)
+        if potion_roll < potion_dropchance or relics['White Beast Statue'] in player.relics:
+            gen.claim_potions(True, 1, player, potions)
+            potion_dropchance -= 10
+        else:
+            potion_dropchance += 10
+        for _ in range(int(relics['Prayer Wheel'] in player.relics) + 1):
+            gen.card_rewards(tier, True, player, cards)
+        combat_turn = 0
+        sleep(1.5)
+        view.clear()
+    elif escaped is True:
+        print("Escaped...")
+        player.in_combat = False
+        sleep(0.8)
+        print("You recieve nothing.")
+        sleep(1.5)
+        view.clear()
+        combat_turn = 1
 
 def rest():
     """
@@ -108,47 +104,57 @@ def rest():
     valid_inputs = ['rest', 'smith']
     if relics['Ancient Tea Set'] in player.relics and not player.ancient_tea_set:
         player.ancient_tea_set = True
-        ansiprint('<italic><light-black>Ancient Tea Set activated</light-black></italic>')
+        ansiprint('<bold>Ancient Tea Set activated</bold>')
     while True:
+        ansiprint(player)
         ansiprint("You come across a <green>Rest Site</green>")
         if relics['Eternal Feather'] in player.relics:
             player.health_actions(len(player.deck) // 5 * 3, "Heal")
         sleep(1)
-        ansiprint(str(player))
-        ansiprint(f"<bold>[Rest]</bold> Heal for 30 percent of your Max HP({math.floor(player.max_health * 0.30)} {'+ 15 from <bold>Regal Pillow</bold>' if relics['Regal Pillow'] in player.relics else ''}) \n<bold>[Smith]</bold> Upgrade a card in your deck ")
-        relic_actions = {'Girya': ('lift', "<bold>[Lift]</bold> Gain 1 <light-cyan>Strength</light-cyan>"),
-            'Peace Pipe': ('toke', "<bold>[Toke]</bold> Remove a card from your deck"),
-            'Shovel': ('dig', "<bold>[Dig]</bold> Obtain a relic")}
+        ansiprint(f"<bold>[Rest]</bold> <green>Heal for 30% of your <light-blue>Max HP</light-blue>({math.floor(player.max_health * 0.30 + 15 if relics['Regal Pillow'] in player.relics else 0)})</green> \n<bold>[Smith]</bold> <green><keyword>Upgrade</keyword> a card in your deck</green> ")
+        ansiprint("+15 from <bold>Regal Pillow</bold>\n" if relics['Regal Pillow'] in player.relics else '', end='')
+        relic_actions = {'Girya': ('lift', "<bold>[Lift]</bold> <green>Gain 1 <light-cyan>Strength</light-cyan></green>"),
+            'Peace Pipe': ('toke', "<bold>[Toke]</bold> <green>Remove a card from your deck</green>"),
+            'Shovel': ('dig', "<bold>[Dig]</bold> <green>Obtain a relic</green>")}
         for relic, (action, message) in relic_actions.items():
             if relics[relic] in player.relics:
                 valid_inputs.append(action)
                 ansiprint(message, end='')
         action = input('> ').lower()
         if action not in valid_inputs:
-            ansiprint("<red>Valid Inputs</red>: " + valid_inputs)
+            ansiprint("<red>Valid Inputs: " + valid_inputs + "</red>")
             sleep(1.5)
-            clear()
+            view.clear()
             continue
         if action == 'rest':
+            if relics['Coffee Dripper'] in player.relics:
+                ansiprint("<red>You cannot rest because of </red><bold>Coffee Dripper</bold>.")
+                sleep(1)
+                view.clear()
+                continue
             # heal_amount is equal to 30% of the player's max health rounded down.
             heal_amount = math.floor(player.max_health * 0.30)
             if relics['Regal Pillow'] in player.relics:
                 heal_amount += 15
             sleep(1)
-            clear()
+            view.clear()
             player.health_actions(heal_amount, "Heal")
             if relics['Dream Catcher'] in player.relics:
                 ansiprint('<bold><italic>Dreaming...</italic></bold>')
                 gen.card_rewards('Normal', True, player, cards)
             break
         if action == 'smith':
-            # Prints all of the non-upgraded cards in the player's deck.
-            view.view_piles(player.deck, player, False, 'not card.get("Upgraded") and card.get("Name") != "Curse"')
-            upgrade_card = list_input('What card do you want to upgrade?', player.deck)
-            if not upgrade_card or player.deck[upgrade_card]['Upgraded'] or player.deck[upgrade_card]['Name'] == 'Curse':
-                ansiprint('That card is either already upgraded, a <fg #5f00af>Curse</fg #5f00af>, or does not exist')
+            if relics['Fusion Hammer'] in player.relics:
+                ansiprint("<red>You cannot smith because of <bold>Fusion Hammer</bold>.</red>")
                 sleep(1.5)
-                clear()
+                view.clear()
+                continue
+            view.upgrade_preview(player.deck)
+            upgrade_card = view.list_input('What card do you want to upgrade?', player.deck)
+            if not upgrade_card or player.deck[upgrade_card].get('Upgraded') or player.deck[upgrade_card]['Name'] == 'Curse':
+                ansiprint('That card is either already upgraded, a <curse>Curse</curse>, or does not exist')
+                sleep(1.5)
+                view.clear()
                 continue
             # Upgrades the selected card
             player.card_actions(player.deck[upgrade_card], upgrade_card, 'Upgrade', player.deck)
@@ -162,15 +168,15 @@ def rest():
                 break
             ansiprint('You cannot use <bold>Girya</bold> anymore')
             sleep(1.5)
-            clear()
+            view.clear()
             continue
         if action == 'toke':
             view.view_piles(player.deck, player, False, 'card.get("Removable") is not False')
-            option = list_input('What card would you like to remove? > ', player.deck)
+            option = view.list_input('What card would you like to remove? > ', player.deck)
             if not option or not player.deck['Option']['Removable']:
                 ansiprint('The card you selected is either invalid or not removable')
                 sleep(1.5)
-                clear()
+                view.clear()
                 continue
             player.card_actions(player.deck[option], option, 'Remove', player.deck)
             break
@@ -178,33 +184,23 @@ def rest():
             gen.claim_relics(False, player, 1, relics, None, False)
             break
     while True:
-        option = input("[View Deck] or [Leave]\n> ").lower()
+        option = input("<bold>[View Deck]</bold> or <bold>[Leave]</bold>\n> ").lower()
         if option == 'view deck':
             view.view_piles(player.deck, player)
-        elif option == 'leave':
-            print("You leave...")
-            print()
-            sleep(1.5)
-            clear()
+            input("Press enter to leave > ")
+            sleep(0.5)
+            view.clear()
             break
-        else:
-            print("Invalid input")
-            sleep(1.5)
-            clear()
+        if option == 'leave':
+            sleep(1)
+            view.clear()
+            break
+        print("Invalid input")
+        sleep(1.5)
+        view.clear()
 
-def start_combat(combat_type):
-    print("Starting combat")
+def start_combat(combat_tier):
     player.in_combat = True
-    if relics['Du-Vu Doll'] in player.relics:
-        num_curses = len([card for card in player.deck if card.get('Type') == 'Curse'])
-        if num_curses > 0:
-            ansiprint('From <bold>Du-Vu Doll</bold>: ', end='')
-            ei.apply_effect(player, 'Strength', num_curses)
-    if relics['Pantograph'] in player.relics and combat_type == 'Boss':
-        ansiprint('From <bold>Pantograph</bold>: ', end='')
-        player.health_actions(25, 'Heal')
-    if relics['Fossilized Helix'] in player.relics:
-        ei.apply_effect(player, 'Buffer', 1)
     # Shuffles the player's deck into their draw pile
     player.draw_pile = random.sample(player.deck, len(player.deck))
     encounter_enemies = random.choice(enemy_encounters)
@@ -214,7 +210,7 @@ def start_combat(combat_type):
         # Enemies have 2 health values, [min, max]. This chooses a random number between those min and max values.
         enemy.health = random.randint(enemy.health[0], enemy.health[1])
         enemy.max_health = enemy.health
-    player.start_of_combat_relics()
+    player.start_of_combat_relics(combat_tier)
 
 def unknown() -> None:
     # CHances
@@ -251,60 +247,31 @@ def play_potion():
     view.view_potions(player)
     input('Press enter to leave > ')
 
-def play_card():
-    while True:
-        print()
-        view.view_piles(player.hand, player, False, 'card.get("Playable") is not False')
-        card_used = list_input('What card do you want to play?', player.hand)
-        if player.hand[card_used].get('Type') == 'Curse' and relics['Blue Candle'] not in player.relics:
-            print('<red>This card is a <bold>Curse</bold>.</red>')
-            sleep(1.5)
-            clear()
-            break
-        if player.hand[card_used].get('Type') == 'Status' and not player.hand[card_used].get('Playable') and relics['Medical Kit'] not in player.relics:
-            print('This card is an <bold>Unplayable Status</bold> card.')
-            sleep(1)
-            clear()
-            break
-        if card_used is None:
-            sleep(1.5)
-            clear()
-            break
-        playing_card = player.hand[card_used]
-        # Prevents the player from using a card that they don't have enough energy for.
-        if playing_card.get("Energy") > player.energy:
-            ansiprint("<red>You don't have enough energy to use this card.</red>")
-            sleep(1.5)
-            clear()
-            continue
-        if playing_card.get("Target") is None and len(active_enemies) > 1:
-            target = list_input("What enemy do you want to use it on? >", active_enemies)
-            if not target:
-                clear()
-                continue
-        elif len(active_enemies) == 1:
-            target = 0
-        else:
-            target = 0
-        # Lets the player go back if they don't want to use the card.
-        if player.hand[card_used].get("Block") is None:
-            effect, affected_by = display_actual_damage(player.hand[card_used]['Info'], active_enemies[target], player, player.hand[card_used])
-        else:
-            effect, affected_by = display_actual_block(player.hand[card_used]['Info'], player)
-        ansiprint(f"True effect | {effect}")
-        ansiprint(affected_by, '\n')
-        option = input("Are you sure? (y|n) > ").lower()
-        if option == 'n':
-            sleep(1.5)
-            clear()
-            break
-        player.use_card(playing_card, active_enemies[target], False, player.hand)
-        break
+def play_card(card):
+    # Prevents the player from using a card that they don't have enough energy for.
+    if card.get("Energy", float('inf')) > player.energy:
+        ansiprint("<red>You don't have enough energy to use this card.</red>")
+        sleep(1.5)
+        view.clear()
+        return
+    if card.get("Target") == 'Single' and len(active_enemies) > 1:
+        target = view.list_input("What enemy do you want to use it on? >", active_enemies)
+        if not target:
+            view.clear()
+            return
+    elif len(active_enemies) == 1:
+        target = 0
+    else:
+        target = 0
+    player.use_card(card, active_enemies[target], False, player.hand)
 
 
 def main():
-    order_of_encounters = [unknown, combat, rest, combat, combat, unknown, rest]
-    for encounter in order_of_encounters:
+    possible_encounters = [lambda: combat("Normal"), unknown, lambda: combat("Normal"), rest]
+    # Note that Elite and Boss encounters don't exist yet, so those are replaced with normal combats
+    game_map = random.choices(possible_encounters, weights=[0.45, 0.24, 0.19, 0.12], k=14)
+    game_map.append(lambda: combat("Normal"))
+    for encounter in game_map:
         if encounter.__name__ == 'combat':
             combat('Normal')
         else:

@@ -2,8 +2,7 @@ import random
 from time import sleep
 from copy import deepcopy
 from ansi_tags import ansiprint
-from display_util import list_input, clear, view
-from debuff_and_buffs import ei
+from helper import view, ei
 
 
 
@@ -46,7 +45,7 @@ def use_clash(targeted_enemy, using_card, entity):
         if card['Type'] != 'Attack':
             print('You have non-Attack cards in your hand')
             sleep(1.5)
-            clear()
+            view.clear()
             return
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
 
@@ -84,11 +83,11 @@ def use_armaments(using_card, entity):
     else:
         while True:
             view.view_piles(entity.hand, entity, False, 'not card.get("Upgraded") and (card.get("Name") == "Burn" or card.get("Type") not in ("Status", "Curse"))')
-            option = list_input("Choose a card to upgrade > ", entity.hand)
+            option = view.list_input("Choose a card to upgrade > ", entity.hand)
             if entity.hand[option].get('Upgraded') or (entity.hand[option].get('Name') != "Burn" and card.get('Type') in ('Status', 'Curse')):
                 ansiprint('That card is either already upgraded, a status, or a curse.')
                 sleep(1.5)
-                clear()
+                view.clear()
                 continue
             entity.card_actions(entity.hand[option], option, 'Upgrade', entity.hand)
             break
@@ -113,11 +112,11 @@ def use_headbutt(targeted_enemy, using_card, entity):
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
     while True:
         view.view_piles(entity.discard_pile, entity)
-        choice = list_input('What card do you want to put on top of your draw pile? > ', entity.discard_pile)
+        choice = view.list_input('What card do you want to put on top of your draw pile? > ', entity.discard_pile)
         if not choice:
             ansiprint('<red>The card you entered was invalid</red>.')
             sleep(1)
-            clear()
+            view.clear()
             continue
         entity.move_card(entity.discard_pile[choice], entity.discard_pile, entity.draw_pile, True)
         break
@@ -130,7 +129,7 @@ def use_shrugitoff(using_card, entity):
 def use_swordboomerang(enemies, using_card, entity):
     '''Deal 3 damage to a random enemy 3(4) times.'''
     for _ in range(using_card['Times']):
-        entity.attack(using_card['Damage'], random.choice(enemies), using_card)
+        entity.attack(3, random.choice(enemies), using_card)
 
 def use_thunderclap(enemies, using_card, entity):
     '''Deal 4(7) damage and apply 1 Vulnerable to ALL enemies.'''
@@ -138,7 +137,7 @@ def use_thunderclap(enemies, using_card, entity):
         entity.attack(using_card['Damage'], enemy, using_card)
         ei.apply_effect(enemy, 'Vulnerable', 1, entity)
     sleep(0.5)
-    clear()
+    view.clear()
 
 def use_ironwave(targeted_enemy, using_card, entity):
     '''Gain 5(7) Block. Deal 5(7) damage.'''
@@ -157,11 +156,11 @@ def use_truegrit(using_card, entity):
     if using_card.get('Upgraded'):
         while True:
             view.view_piles(entity.hand, entity)
-            option = list_input('Choose a card to Exhaust', entity.hand)
+            option = view.list_input('Choose a card to Exhaust', entity.hand)
             if not option:
                 ansiprint('<red>The card you entered is invalid</red>')
                 sleep(1)
-                clear()
+                view.clear()
                 continue
             entity.move_card(entity.deck[option], entity.exhaust_pile, entity.hand, False)
             break
@@ -178,11 +177,11 @@ def use_warcry(using_card, entity):
     entity.draw_cards(True, using_card['Cards'])
     while True:
         view.view_piles(entity.hand, entity)
-        option = list_input('Choose a card to put on top of your draw pile.', entity.hand)
+        option = view.list_input('Choose a card to put on top of your draw pile.', entity.hand)
         if not option:
             ansiprint('<red>The card you entered is invalid</red>')
             sleep(1)
-            clear()
+            view.clear()
             continue
         entity.draw_pile.append(entity.hand[option])
         del entity.hand[option]
@@ -213,11 +212,11 @@ def use_burningpact(using_card, entity):
     '''Exhaust one card. Draw 1(2) cards.'''
     while True:
         view.view_piles(entity.hand, entity)
-        option = list_input('Choose a card to <keyword>Exhaust</keyword> > ', entity.hand)
+        option = view.list_input('Choose a card to <keyword>Exhaust</keyword> > ', entity.hand)
         if not option:
             ansiprint('<red>The card you entered is invalid.</red>')
             sleep(1)
-            clear()
+            view.clear()
             continue
         entity.move_card(using_card, entity.exhaust_pile, entity.hand, False)
         ansiprint(f"{entity.hand[option]['Name']} was <keyword>Exhausted</keyword>")
@@ -254,11 +253,11 @@ def use_dualwield(using_card, entity):
     '''Create a(2) copy(copies) of an Attack or Power card.'''
     while True:
         view.view_piles(entity.hand, entity, False, 'card.get("Type") in ("Attack", "Power")')
-        option = list_input(f"Choose a card to make {'a copy' if not using_card.get('Upgraded') else '2 copies'} of > ", entity.hand)
+        option = view.list_input(f"Choose a card to make {'a copy' if not using_card.get('Upgraded') else '2 copies'} of > ", entity.hand)
         if not option or entity.hand[option]['Type'] not in ('Attack', 'Power'):
             ansiprint('<red>The card you entered is either not an Attack or Power or it\'s invalid.</red>')
             sleep(1.5)
-            clear()
+            view.clear()
             continue
         for _ in range(using_card['Copies']):
             entity.hand.insert(option, deepcopy(entity.hand[option]))
@@ -403,7 +402,7 @@ def use_whirlwind(enemies, using_card, entity):
             entity.attack(using_card['Damage'], enemy, using_card)
             sleep(0.5)
         sleep(1)
-        clear()
+        view.clear()
 
 def use_barricade(using_card, entity):
     '''Block is not removed at the start of your turn.'''
@@ -442,11 +441,11 @@ def use_exhume(using_card, entity):
     _ = using_card
     while True:
         view.view_piles(entity.exhaust_pile, entity)
-        option = list_input("Choose a card to return to your hand > ", entity.exhaust_pile)
+        option = view.list_input("Choose a card to return to your hand > ", entity.exhaust_pile)
         if not option:
             ansiprint('<red>The card you entered is invalid</red>')
             sleep(1.5)
-            clear()
+            view.clear()
             continue
         entity.hand.append(entity.exhaust_pile)
         del entity.exhaust_pile[option]
@@ -500,7 +499,7 @@ def use_reaper(enemies, using_card, entity):
         entity.attack(using_card['Damage'], enemy, using_card)
         sleep(0.5)
     sleep(1)
-    clear()
+    view.clear()
 relics: dict[str: dict] = {
     # Starter Relics
     'Burning Blood': {'Name': 'Burning Blood', 'Class': 'Ironclad', 'Rarity': 'Starter', 'Health': 6, 'Info': 'At the end of combat, heal 6 HP', 'Flavor': "Your body's own blood burns with an undying rage."},
@@ -512,7 +511,7 @@ relics: dict[str: dict] = {
     'Anchor': {'Name': 'Anchor', 'Class': 'Any', 'Rarity': 'Common', 'Block': 10, 'Info': 'At the start of combat, gain 10 <keyword>Block</keyword>.', 'Flavor': 'Holding this miniature trinket, your feel heavier and more stable.'},
     'Ancient Tea Set': {'Name': 'Ancient Tea Set', 'Class': 'Any', 'Rarity': 'Common', 'Energy': 2, 'Info': 'Whenever you enter a Rest Site, start the next combat with 2 additional energy.', 'Flavor': "The key to a refreshing night's rest."},
     'Art of War': {'Name': 'Art of War', 'Class': 'Any', 'Rarity': 'Common', 'Energy': 1, 'Info': 'If you do not play Attacks during your turn, gain an extra <keyword>Energy</keyword> next turn.', 'Flavor': 'The ancient manuscript contains wisdom from a past age.'},
-    'Bag of Marbles': {'Name': 'Bag of Marbles', 'Class': 'Any', 'Rarity': 'Common', 'Target': 'All', 'Vulnerable': 1, 'Info': 'At the start of each combat, apply 1 <debuff>Vulnerable</debuff> to ALL enemies.', 'Flavor': 'A once popular toy in the city. Useful for throwing enemies off balance.'},
+    'Bag of Marbles': {'Name': 'Bag of Marbles', 'Class': 'Any', 'Rarity': 'Common', 'Target': 'Any', 'Vulnerable': 1, 'Info': 'At the start of each combat, apply 1 <debuff>Vulnerable</debuff> to ALL enemies.', 'Flavor': 'A once popular toy in the city. Useful for throwing enemies off balance.'},
     'Bag of Preparation': {'Name': 'Bag of Preparation', 'Class': 'Any', 'Rarity': 'Common', 'Cards': 2, 'Info': 'At the start of each combat, draw 2 additional cards.', 'Flavor': "Oversized adventurer's pack. Has many pockets and straps."},
     'Blood Vial': {'Name': 'Blood Vial', 'Class': 'Any', 'Rarity': 'Common', 'HP': 2, 'Info': 'At the start of each combat, heal 2 HP.', 'Flavor': 'A vial containing the blood of a pure and elder vampire.'},
     'Bronze Scales': {'Name': 'Bronze Scales', 'Class': 'Any', 'Rarity': 'Common', 'Thorns': 3, 'Info': 'Whenever you take damage, deal 3 damage back.', 'Flavor': 'The sharp scales of the Guardian. Rearranges itself to protect its user.'},
@@ -710,7 +709,7 @@ cards = {
     'Clash': {'Name': 'Clash', 'Damage': 14, 'Energy': 0, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Can only be played is every card in your hand is an <attack>Attack<attack>. Deal Σ14 damage.', 
               'Effects+': {'Damage': 18, 'Info': 'Can only be played if every card in your hand is an <attack>Attack</attack>. Deal Σ18 damage.'}, 'Function': use_clash},
 
-    'Cleave': {'Name': 'Cleave', 'Damage': 8, 'Target': 'All', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ8 damage to ALL enemies', 'Effects+': {'Damage': 11, 'Info': 'Deal Σ11 damage to ALL enemies.'}, 'Function': use_cleave},
+    'Cleave': {'Name': 'Cleave', 'Damage': 8, 'Target': 'Any', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ8 damage to ALL enemies', 'Effects+': {'Damage': 11, 'Info': 'Deal Σ11 damage to ALL enemies.'}, 'Function': use_cleave},
 
     'Clothesline': {'Name': 'Clothesline', 'Energy': 2, 'Damage': 12, 'Weak': 2, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ12 damage. Apply 2 <debuff>Weak</debuff>', 'Effects+': {'Damage': 14, 'Weak': 3, 'Info': 'Deal Σ14 damage. Apply 3 <debuff>Weak</debuff>.'}, 'Function': use_clothesline},
 
@@ -736,7 +735,7 @@ cards = {
 
     'Sword Boomerang': {'Name': 'Sword Boomerang', 'Times': 3, 'Target': 'Random', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ3 damage to a random enemy 3 times.', 'Effects+': {'Times': 4, 'Info': 'Deal Σ3 damage to a random enemy 4 times.'}, 'Function': use_swordboomerang},
 
-    'Thunderclap': {'Name': 'Thunderclap', 'Damage': 4, 'Target': 'All', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ4 damage and apply 1 <debuff>Vulnerable</debuff> to ALL enemies.', 
+    'Thunderclap': {'Name': 'Thunderclap', 'Damage': 4, 'Target': 'Any', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ4 damage and apply 1 <debuff>Vulnerable</debuff> to ALL enemies.', 
                     'Effects+': {'Damage': 7, 'Info': 'Deal Σ7 damage and apply 1 <debuff>Vulnerable</debuff> to ALL enemies.'}, 'Function': use_thunderclap},
 
     'True Grit': {'Name': 'True Grit', 'Class': 'Ironclad', 'Rarity': 'Common', 'Target': 'Yourself', 'Type': 'Skill', 'Block': 7, 'Energy': 1, 'Info': 'Gain ꫱7 <keyword>Block</keyword>. <keyword>Exhaust</keyword> a random card in your hand.', 
@@ -903,243 +902,57 @@ cards = {
     'Writhe': {'Name': 'Writhe', 'Playable': False, 'Innate': True, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable. Innate.</keyword>'}
 }
 
-golden_multi: int = 1
+sacred_multi: int = 1
 def activate_sacred_bark():
-    global golden_multi
-    golden_multi = 2
+    global sacred_multi
+    sacred_multi = 2
 potions = {
     # Common | All Classes
-    'Attack Potion': {'Name': 'Attack Potion', 'Cards': 1 * golden_multi, 'Card Type': 'Attack', 'Class': 'All', 'Rarity': 'Common', 'Info': f'Add {"1" if golden_multi < 2 else "2 copies"} of 3 random <attack>Attack</attack> cards to your hand, {"it" if golden_multi < 2 else "they"} costs 0 this turn'},
-    'Power Potion': {'Name': 'Power Potion', 'Cards': 1 * golden_multi, 'Card Type': 'Power', 'Class': 'All', 'Rarity': 'Common', 'Info': f'Add {"1" if golden_multi < 2 else "2 copies"} of 3 random <power>Power</power> cards to your hand, {"it" if golden_multi < 2 else "they"} costs 0 this turn'},
-    'Skill Potion': {'Name': 'Skill Potion', 'Cards': 1 * golden_multi, 'Card Type': 'Skill', 'Class': 'All', 'Rarity': 'Common', 'Info': f'Add {"1" if golden_multi < 2 else "2 copies"} of 3 random <skill>Skill</skill> cards to your hand, {"it" if golden_multi < 2 else "they"} costs 0 this turn'},
-    'Colorless Potion': {'Name': 'Colorless Potion', 'Cards': 1 * golden_multi, 'Card Type': 'Colorless', 'Class': 'All', 'Rarity': 'Common', 'Info': f'Choose {"1" if golden_multi < 2 else "2 copies"} of 3 random Colorless cards to add to your hand, {"it" if golden_multi < 2 else "they"} costs 0 this turn'},
-    'Block Potion': {'Name': 'Block Potion', 'Block': 12 * golden_multi, 'Class': 'All', 'Rarity': 'Common', 'Info': f'Gain {12 * golden_multi} <keyword>Block</keyword>'},
-    'Dexterity Potion': {'Name': 'Dexterity Potion', 'Dexterity': 2 * golden_multi, 'Class': 'All', 'Rarity': 'Common', 'Info': f'Gain {2 * golden_multi} <buff>Dexterity<buff>'},
-    'Energy Potion': {'Name': 'Energy Potion', 'Energy': 2 * golden_multi, 'Class': 'All', 'Rarity': 'Common', 'Info': f'Gain {2 * golden_multi} <keyword>Energy</keyword>'},
-    'Explosive Potion': {'Name': 'Explosive Potion', 'Damage': 10 * golden_multi, 'Target': 'All', 'Class': 'All', 'Rarity': 'Common', 'Info': f'Deal {10 * golden_multi} damage to ALL enemies'},
-    'Fear Potion': {'Name': 'Fear Potion', 'Vulnerable': 3 * golden_multi, 'Target': 'Enemy', 'Class': 'All', 'Rarity': 'Common', 'Info': f'Apply {3 * golden_multi} <debuff>Vulnerable</debuff>'},
-    'Fire Potion': {'Name': 'Fire Potion', 'Damage': 20 * golden_multi, 'Target': 'Enemy', 'Class': 'All', 'Rarity': 'Common', 'Info': f'Deal {20 * golden_multi} damage to target enemy'},
-    'Flex Potion': {'Name': 'Flex Potion', 'Strength': 5 * golden_multi, 'Class': 'All', 'Rarity': 'Common', 'Info': f'Gain {5 * golden_multi} <buff>Strength</buff>. At the end of your turn lose {5 * golden_multi} <buff>Strength</buff>'},
-    'Speed Potion': {'Name': 'Speed Potion', 'Dexterity': 5 * golden_multi, 'Class': 'All', 'Rarity': 'Common', 'Info': f'Gain {5 * golden_multi} <buff>Dexterity</buff>. At the end of your turn, lose {5 * golden_multi} <buff>Dexterity</buff>'},
-    'Strength Potion': {'Name': 'Strength Potion', 'Strength': 2 * golden_multi, 'Class': 'All', 'Rarity': 'Common', 'Info': f'Gain {2 * golden_multi} <buff>Strength</buff>'},
-    'Swift Potion': {'Name': 'Swift Potion', 'Cards': 3 * golden_multi, 'Class': 'All', 'Rarity': 'Common', 'Info': 'Draw 3 cards'},
+    'Attack Potion': {'Name': 'Attack Potion', 'Cards': 1 * sacred_multi, 'Card Type': 'Attack', 'Class': 'Any', 'Rarity': 'Common', 'Info': f'Add {"1" if sacred_multi < 2 else "2 copies"} of 3 random <attack>Attack</attack> cards to your hand, {"it" if sacred_multi < 2 else "they"} costs 0 this turn'},
+    'Power Potion': {'Name': 'Power Potion', 'Cards': 1 * sacred_multi, 'Card Type': 'Power', 'Class': 'Any', 'Rarity': 'Common', 'Info': f'Add {"1" if sacred_multi < 2 else "2 copies"} of 3 random <power>Power</power> cards to your hand, {"it" if sacred_multi < 2 else "they"} costs 0 this turn'},
+    'Skill Potion': {'Name': 'Skill Potion', 'Cards': 1 * sacred_multi, 'Card Type': 'Skill', 'Class': 'Any', 'Rarity': 'Common', 'Info': f'Add {"1" if sacred_multi < 2 else "2 copies"} of 3 random <skill>Skill</skill> cards to your hand, {"it" if sacred_multi < 2 else "they"} costs 0 this turn'},
+    'Colorless Potion': {'Name': 'Colorless Potion', 'Cards': 1 * sacred_multi, 'Card Type': 'Colorless', 'Class': 'Any', 'Rarity': 'Common', 'Info': f'Choose {"1" if sacred_multi < 2 else "2 copies"} of 3 random Colorless cards to add to your hand, {"it" if sacred_multi < 2 else "they"} costs 0 this turn'},
+    'Block Potion': {'Name': 'Block Potion', 'Block': 12 * sacred_multi, 'Class': 'Any', 'Rarity': 'Common', 'Info': f'Gain {12 * sacred_multi} <keyword>Block</keyword>'},
+    'Dexterity Potion': {'Name': 'Dexterity Potion', 'Dexterity': 2 * sacred_multi, 'Class': 'Any', 'Rarity': 'Common', 'Info': f'Gain {2 * sacred_multi} <buff>Dexterity<buff>'},
+    'Energy Potion': {'Name': 'Energy Potion', 'Energy': 2 * sacred_multi, 'Class': 'Any', 'Rarity': 'Common', 'Info': f'Gain {2 * sacred_multi} <keyword>Energy</keyword>'},
+    'Explosive Potion': {'Name': 'Explosive Potion', 'Damage': 10 * sacred_multi, 'Target': 'Any', 'Class': 'Any', 'Rarity': 'Common', 'Info': f'Deal {10 * sacred_multi} damage to ALL enemies'},
+    'Fear Potion': {'Name': 'Fear Potion', 'Vulnerable': 3 * sacred_multi, 'Target': 'Enemy', 'Class': 'Any', 'Rarity': 'Common', 'Info': f'Apply {3 * sacred_multi} <debuff>Vulnerable</debuff>'},
+    'Fire Potion': {'Name': 'Fire Potion', 'Damage': 20 * sacred_multi, 'Target': 'Enemy', 'Class': 'Any', 'Rarity': 'Common', 'Info': f'Deal {20 * sacred_multi} damage to target enemy'},
+    'Flex Potion': {'Name': 'Flex Potion', 'Strength': 5 * sacred_multi, 'Class': 'Any', 'Rarity': 'Common', 'Info': f'Gain {5 * sacred_multi} <buff>Strength</buff>. At the end of your turn lose {5 * sacred_multi} <buff>Strength</buff>'},
+    'Speed Potion': {'Name': 'Speed Potion', 'Dexterity': 5 * sacred_multi, 'Class': 'Any', 'Rarity': 'Common', 'Info': f'Gain {5 * sacred_multi} <buff>Dexterity</buff>. At the end of your turn, lose {5 * sacred_multi} <buff>Dexterity</buff>'},
+    'Strength Potion': {'Name': 'Strength Potion', 'Strength': 2 * sacred_multi, 'Class': 'Any', 'Rarity': 'Common', 'Info': f'Gain {2 * sacred_multi} <buff>Strength</buff>'},
+    'Swift Potion': {'Name': 'Swift Potion', 'Cards': 3 * sacred_multi, 'Class': 'Any', 'Rarity': 'Common', 'Info': 'Draw 3 cards'},
     # Uncommon | All Classes
-    'Ancient Potion': {'Name': 'Ancient Potion', 'Artifact': 1 * golden_multi, 'Class': 'All', 'Rarity': 'Uncommon', 'Info': f'Gain {1 * golden_multi} <buff>Artifact</buff>.'},
-    'Distilled Chaos': {'Name': 'Distilled Chaos', 'Cards': 3 * golden_multi, 'Class': 'All', 'Rarity': 'Uncommon', 'Info': f'Play the top {3 * golden_multi} cards of your draw pile'},
-    'Duplication Potion': {'Name': 'Duplication Potion', 'Cards': 1 * golden_multi, 'Class': 'All', 'Rarity': 'Uncommon', 'Info': f'This turn, the next {"card is" if golden_multi < 2 else "2 cards are"} played twice.'},
-    'Essence of Steel': {'Name': 'Essence of Steel', 'Plated Armor': 4 * golden_multi, 'Class': 'All', 'Rarity': 'Uncommon', 'Info': f'Gain {4 * golden_multi} <buff>Plated Armor</buff>'},
-    "Gambler's Brew": {'Name': "Gambler's Brew", 'Class': 'All', 'Rarity': 'Uncommon', 'Info': 'Discard any number of cards, then draw that many'},
-    'Liquid Bronze': {'Name': 'Liquid Bronze', 'Thorns': 3 * golden_multi, 'Class': 'All', 'Rarity': 'Uncommon', 'Info': f'Gain {3 * golden_multi} <buff>Thorns</buff>'},
-    'Liquid Memories': {'Name': 'Liquid Memories', 'Cards': 1 * golden_multi, 'Class': 'All', 'Rarity': 'Uncommon', 'Info': f'Choose {"a card" if golden_multi < 2 else "2 cards"} in your discard pile and return {"it" if golden_multi < 2 else "them"} to your hand. {"It" if golden_multi < 2 else "They"} costs 0 this turn'},
-    'Regen Potion': {'Name': 'Regen Potion', 'Regen': 5 * golden_multi, 'Class': 'All', 'Rarity': 'Common', 'Info': f'Gain {5 * golden_multi} <buff>Regeneration</buff>.'},
+    'Ancient Potion': {'Name': 'Ancient Potion', 'Artifact': 1 * sacred_multi, 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': f'Gain {1 * sacred_multi} <buff>Artifact</buff>.'},
+    'Distilled Chaos': {'Name': 'Distilled Chaos', 'Cards': 3 * sacred_multi, 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': f'Play the top {3 * sacred_multi} cards of your draw pile'},
+    'Duplication Potion': {'Name': 'Duplication Potion', 'Cards': 1 * sacred_multi, 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': f'This turn, the next {"card is" if sacred_multi < 2 else "2 cards are"} played twice.'},
+    'Essence of Steel': {'Name': 'Essence of Steel', 'Plated Armor': 4 * sacred_multi, 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': f'Gain {4 * sacred_multi} <buff>Plated Armor</buff>'},
+    "Gambler's Brew": {'Name': "Gambler's Brew", 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'Discard any number of cards, then draw that many'},
+    'Liquid Bronze': {'Name': 'Liquid Bronze', 'Thorns': 3 * sacred_multi, 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': f'Gain {3 * sacred_multi} <buff>Thorns</buff>'},
+    'Liquid Memories': {'Name': 'Liquid Memories', 'Cards': 1 * sacred_multi, 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': f'Choose {"a card" if sacred_multi < 2 else "2 cards"} in your discard pile and return {"it" if sacred_multi < 2 else "them"} to your hand. {"It" if sacred_multi < 2 else "They"} costs 0 this turn'},
+    'Regen Potion': {'Name': 'Regen Potion', 'Regen': 5 * sacred_multi, 'Class': 'Any', 'Rarity': 'Common', 'Info': f'Gain {5 * sacred_multi} <buff>Regeneration</buff>.'},
     # Rare | All Classes
-    'Cultist Potion': {'Name': 'Cultist Potion', 'Ritual': 1 * golden_multi, 'Class': 'All', 'Rarity': 'Rare', 'Info': f'Gain {1 * golden_multi} <buff>Ritual</buff>'},
-    'Entropic Brew': {'Name': 'Entropic Brew', 'Type': 'Entropic', 'Class': 'All', 'Rarity': 'Rare', 'Info': 'Fill all your empty potion slots with random potions'},
-    'Fairy in a Bottle': {'Name': 'Fairy in a Bottle', 'Playable': False, 'Revive Health': 0.3 * golden_multi, 'Class': 'All', 'Rarity': 'Rare', 'Info': f'When you would die, heal to {30 * golden_multi}% of your Max HP instead and discard this potion'},
-    'Fruit Juice': {'Name': 'Fruit Juice', 'Playable Everywhere?': True, 'Max Health': 5 * golden_multi, 'Class': 'All', 'Rarity': 'Rare', 'Info': f'Gain {5 * golden_multi} Max HP'},
-    'Smoke Bomb': {'Name': 'Smoke Bomb', 'Escape from boss': False, 'Target': 'Nothing', 'Class': 'All', 'Rarity': 'Rare', 'Info': 'Escape from a non-boss combat. You recieve no rewards.'},
-    'Sneko Oil': {'Name': 'Snecko Oil', 'Cards': 5 * golden_multi, 'Type': 'Snecko', 'Class': 'All', 'Rarity': 'Rare', 'Info': f'Draw {5 * golden_multi} cards. Randomize the costs of all cards in your hand for the rest of combat.'},
+    'Cultist Potion': {'Name': 'Cultist Potion', 'Ritual': 1 * sacred_multi, 'Class': 'Any', 'Rarity': 'Rare', 'Info': f'Gain {1 * sacred_multi} <buff>Ritual</buff>'},
+    'Entropic Brew': {'Name': 'Entropic Brew', 'Type': 'Entropic', 'Class': 'Any', 'Rarity': 'Rare', 'Info': 'Fill all your empty potion slots with random potions'},
+    'Fairy in a Bottle': {'Name': 'Fairy in a Bottle', 'Playable': False, 'Revive Health': 0.3 * sacred_multi, 'Class': 'Any', 'Rarity': 'Rare', 'Info': f'When you would die, heal to {30 * sacred_multi}% of your Max HP instead and discard this potion'},
+    'Fruit Juice': {'Name': 'Fruit Juice', 'Playable Everywhere?': True, 'Max Health': 5 * sacred_multi, 'Class': 'Any', 'Rarity': 'Rare', 'Info': f'Gain {5 * sacred_multi} Max HP'},
+    'Smoke Bomb': {'Name': 'Smoke Bomb', 'Escape from boss': False, 'Target': 'Nothing', 'Class': 'Any', 'Rarity': 'Rare', 'Info': 'Escape from a non-boss combat. You recieve no rewards.'},
+    'Sneko Oil': {'Name': 'Snecko Oil', 'Cards': 5 * sacred_multi, 'Type': 'Snecko', 'Class': 'Any', 'Rarity': 'Rare', 'Info': f'Draw {5 * sacred_multi} cards. Randomize the costs of all cards in your hand for the rest of combat.'},
     # Ironclad Potions
-    'Blood Potion': {'Name': 'Blood Potion', 'Health': 0.2 * golden_multi, 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Info': f'Heal for {20 * golden_multi}% of your Max HP'},
+    'Blood Potion': {'Name': 'Blood Potion', 'Health': 0.2 * sacred_multi, 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Info': f'Heal for {20 * sacred_multi}% of your Max HP'},
     'Elixir': {'Name': 'Elixir', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Info': 'Exhaust any number of cards in your hand'},
-    'Heart of Iron': {'Name': 'Heart of Iron', 'Metallicize': 8 * golden_multi, 'Class': 'Ironclad', 'Rarity': 'Rare', 'Info': f'Gain {8 * golden_multi} <buff>Metallicize</buff>'},
+    'Heart of Iron': {'Name': 'Heart of Iron', 'Metallicize': 8 * sacred_multi, 'Class': 'Ironclad', 'Rarity': 'Rare', 'Info': f'Gain {8 * sacred_multi} <buff>Metallicize</buff>'},
     # Silent potion
-    'Poison Potion': {'Name': 'Poison Potion', 'Poison': 6 * golden_multi, 'Target': 'Enemy', 'Class': 'Silent', 'Rarity': 'Common', 'Info': f'Apply {6 * golden_multi} <debuff>Poison</debuff> to target enemy'},
+    'Poison Potion': {'Name': 'Poison Potion', 'Poison': 6 * sacred_multi, 'Target': 'Enemy', 'Class': 'Silent', 'Rarity': 'Common', 'Info': f'Apply {6 * sacred_multi} <debuff>Poison</debuff> to target enemy'},
     # Shiv card doesn't not exist yet
-    'Cunning Potion': {'Name': 'Cunning Potion', 'Shivs': 3 * golden_multi, 'Card': 'placehold', 'Class': 'Silent', 'Rarity': 'Uncommon', 'Info': f'Add {3 * golden_multi} <keyword>Upgraded</keyword> Shivs to your hand'},
-    'Ghost in a Jar': {'Name': 'Ghost in a Jar', 'Intangible': 1 * golden_multi, 'Class': 'Silent', 'Rarity': 'Rare', 'Info': f'Gain {1 * golden_multi} <buff>Intangible</buff>.'},
+    'Cunning Potion': {'Name': 'Cunning Potion', 'Shivs': 3 * sacred_multi, 'Card': 'placehold', 'Class': 'Silent', 'Rarity': 'Uncommon', 'Info': f'Add {3 * sacred_multi} <keyword>Upgraded</keyword> Shivs to your hand'},
+    'Ghost in a Jar': {'Name': 'Ghost in a Jar', 'Intangible': 1 * sacred_multi, 'Class': 'Silent', 'Rarity': 'Rare', 'Info': f'Gain {1 * sacred_multi} <buff>Intangible</buff>.'},
     # Defect Potions
-    'Focus Potion': {'Name': 'Focus Potion', 'Focus': 2 * golden_multi, 'Class': 'Defect', 'Rarity': 'Common', 'Info': f'Gain {2 * golden_multi} <buff>Focus</buff>'},
-    'Potion of Capacity': {'Name': 'Potion of Capacity', 'Orb Slots': 2 * golden_multi, 'Class': 'Defect', 'Rarity': 'Uncommon', 'Info': f'Gain {2 * golden_multi} <keyword>Orb</keyword> slots'},
-    'Essence of Darkness': {'Name': 'Essence of Darkness', 'Type': 'Dark Essence', 'Class': 'Defect', 'Rarity': 'Rare', 'Info': f'<keyword>Channel</keyword> {1 * golden_multi} <keyword>Dark</keyword> for each <keyword>Orb</keyword> slot'},
+    'Focus Potion': {'Name': 'Focus Potion', 'Focus': 2 * sacred_multi, 'Class': 'Defect', 'Rarity': 'Common', 'Info': f'Gain {2 * sacred_multi} <buff>Focus</buff>'},
+    'Potion of Capacity': {'Name': 'Potion of Capacity', 'Orb Slots': 2 * sacred_multi, 'Class': 'Defect', 'Rarity': 'Uncommon', 'Info': f'Gain {2 * sacred_multi} <keyword>Orb</keyword> slots'},
+    'Essence of Darkness': {'Name': 'Essence of Darkness', 'Type': 'Dark Essence', 'Class': 'Defect', 'Rarity': 'Rare', 'Info': f'<keyword>Channel</keyword> {1 * sacred_multi} <keyword>Dark</keyword> for each <keyword>Orb</keyword> slot'},
     # Watcher Potions
-    'Bottled Miracle': {'Name': 'Bottled Miracle', 'Miracles': 2 * golden_multi, 'Card': 'placehold', 'Class': 'Watcher', 'Rarity': 'Common', 'Info': f'Add {2 * golden_multi} Miracles to your hand'},
+    'Bottled Miracle': {'Name': 'Bottled Miracle', 'Miracles': 2 * sacred_multi, 'Card': 'placehold', 'Class': 'Watcher', 'Rarity': 'Common', 'Info': f'Add {2 * sacred_multi} Miracles to your hand'},
     'Stance Potion': {'Name': 'Stance Potion', 'Stances': ['Calm', 'Wrath'], 'Class': 'Watcher', 'Rarity': 'Uncommon', 'Info': 'Enter <keyword>Calm</keyword> or <keyword>Wrath</keyword>'},
     'Ambrosia': {'Name': 'Ambrosia', 'Stance': 'Divinity', 'Class': 'Watcher', 'Rarity': 'Rare', 'Info': 'Enter <keyword>Divinity</keyword>'}
 }
-
-class Generators():
-    '''Generates relics, potions, and cards'''
-    def __init__(self):
-        pass
-
-    def generate_card_rewards(self, reward_tier: str, amount: int, entity: object, card_pool: dict) -> list[dict]:
-        """
-        Normal combat rewards:
-        Rare: 3% | Uncommon: 37% | Common: 60%
-        
-        Elite combat rewards:
-        Rare: 10% | Uncommon: 40% | Common: 50%
-        
-        Boss combat rewards:
-        Rare: 100% | Uncommon: 0% | Common: 0%
-        """
-        common_cards = [card for card in card_pool.values() if card.get("Rarity") == "Common" and card.get("Type") not in ('Status', 'Curse') and not card.get('Upgraded') and card.get('Class') == entity.player_class]
-        uncommon_cards = [card for card in card_pool.values() if card.get("Rarity") == "Uncommon" and card.get("Type") not in ('Status', 'Curse') and not card.get('Upgraded') and card.get('Class') == entity.player_class]
-        rare_cards = [card for card in card_pool.values() if card.get("Rarity") == "Rare" and card.get("Type") not in ('Status', 'Curse') and not card.get('Upgraded') and card.get('Class') == entity.player_class]
-        rarities =  [common_cards, uncommon_cards, rare_cards]
-        rewards = []
-
-        if reward_tier == 'Normal':
-            chances = [0.60, 0.37, 0.03]
-        elif reward_tier == 'Elite':
-            chances = [0.5, 0.4, 0.1]
-        elif reward_tier == 'Boss':
-            chances = [0, 0, 1]
-        for _ in range(amount):
-            chosen_pool = random.choices(rarities, chances, k=1)[0]
-            rewards.append(deepcopy(random.choice(chosen_pool)))
-        return rewards
-
-
-    def generate_potion_rewards(self, amount: int, entity: object, potion_pool: dict, chance_based=True) -> list[dict]:
-        """You have a 40% chance to get a potion at the end of combat.
-        -10% when you get a potion.
-        +10% when you don't get a potion."""
-        common_potions: list[dict] = [potion for potion in potion_pool.values() if potion.get("Rarity") == "Common" and (potion.get("Class") == "All" or entity.player_class in potion.get('Class'))]
-        uncommon_potions: list[dict] = [potion for potion in potion_pool.values() if potion.get("Rarity") == "Uncommon" and (potion.get("Class") == "All" or entity.player_class in potion.get('Class'))]
-        rare_potions: list[dict] = [potion for potion in potion_pool.values() if potion.get("Rarity") == "Rare" and (potion.get("Class") == "All" or entity.player_class in potion.get('Class'))]
-        all_potions = common_potions + uncommon_potions + rare_potions
-        potion_pools = [common_potions, uncommon_potions, rare_potions]
-        rewards = []
-        for _ in range(amount):
-            if chance_based:
-                rewards.append(random.choice(random.choices(potion_pools, [0.65, 0.25, 0.1], k=1)[0]))
-            else:
-                rewards.append(random.choice(all_potions))
-        return rewards
-
-
-    def generate_relic_rewards(self, source: str, amount: int, entity, relic_pool: dict, chance_based=True) -> list[dict]:
-        common_relics = [relic for relic in relic_pool.values() if relic.get('Rarity') == 'Common' and relic.get('Class') == entity.player_class]
-        uncommon_relics = [relic for relic in relic_pool.values() if relic.get('Rarity') == 'Uncommon' and relic.get('Class') == entity.player_class]
-        rare_relics = [relic for relic in relic_pool.values() if relic.get('Rarity') == 'Rare' and relic.get('Class') == entity.player_class]
-        all_relics = common_relics + uncommon_relics + rare_relics
-        relic_pools = [common_relics, uncommon_relics, rare_relics]
-        rewards = []
-        if source == 'Chest':
-            common_chance = 0.49
-            uncommon_chance = 0.42
-            rare_chance = 0.09
-        else:
-            common_chance = 0.50
-            uncommon_chance = 0.33
-            rare_chance = 0.17
-        for _ in range(amount):
-            if chance_based:
-                rewards.append(random.choice(random.choices(relic_pools, [common_chance, uncommon_chance, rare_chance], k=1)[0]))
-            else:
-                rewards.append(random.choice(all_relics))
-        return rewards
-
-    def claim_relics(self, choice: bool, entity: object, relic_amount: int, relic_pool: dict=None, rewards: list=None, chance_based=True):
-        relic_pool = relics if not relic_pool else relic_pool
-        if not rewards:
-            rewards = self.generate_relic_rewards('Other', relic_amount, entity, relic_pool, chance_based)
-        if not choice:
-            for i in range(relic_amount):
-                entity.relics.append(rewards[i])
-                entity.on_relic_pickup(rewards[i])
-                ansiprint(f"{entity.name} obtained {rewards[i]['Name']} | {rewards[i]['Info']}")
-                rewards.remove(rewards[i])
-                sleep(0.5)
-            sleep(0.5)
-        while len(rewards) > 0 and choice:
-            counter = 1
-            for relic in rewards:
-                ansiprint(f"{counter}: {relic['Name']} | {relic['Class']} | <light-black>{relic['Rarity']}</light-black> | <yellow>{relic['Info']}</yellow> | <blue><italic>{relic['Flavor']}</italic></blue>")
-                counter += 1
-                sleep(0.05)
-            option = list_input('What relic do you want? > ', rewards)
-            if not option:
-                sleep(1.5)
-                clear()
-                continue
-            entity.relics.append(rewards[option])
-            entity.on_relic_pickup(rewards[option])
-            print(f"{entity.name} obtained {rewards[option]['Name']}.")
-            rewards.remove(rewards[i])
-
-    def claim_potions(self, choice: bool, potion_amount: int, entity,  potion_pool: dict=None, rewards=None, chance_based=True):
-        potion_pool = potions if not potion_pool else potion_pool
-        if not rewards:
-            rewards = self.generate_potion_rewards(potion_amount, entity, potion_pool, chance_based)
-        if not choice:
-            for i in range(potion_amount):
-                entity.potions.append(rewards[i])
-                print(f"{entity.name} obtained {rewards[i]['Name']} | {rewards[i]['Info']}")
-                rewards.remove(rewards[i])
-            sleep(1.5)
-            clear()
-        while len(rewards) > 0:
-            counter = 1
-            print(f"Potion Bag: ({len(entity.potions)} / {entity.max_potions})")
-            view.view_potions(entity, False)
-            print()
-            print("Potion reward(s):")
-            counter = 1
-            for potion in rewards:
-                ansiprint(f"{counter}: <blue>{potion['Name']}</blue> | <light-black>{potion['Rarity']}</light-black> | <green>{potion['Class']}</green> | <yellow>{potion['Info']}</yellow>")
-                counter += 1
-            print()
-            option = list_input('What potion you want? >', rewards)
-            if len(entity.potions) == entity.max_potions:
-                ansiprint("<red>Potion bag full!")
-                sleep(1)
-                option = input("Discard a potion?(y|n) > ")
-                if option == 'y':
-                    counter = 1
-                    for potion in entity.potions:
-                        ansiprint(f"{counter}: <light-black>{potion['Rarity']}</light-black> | <green>{potion['Class']}</green> | <blue>{potion['Name']}</blue> | <yellow>{potion['Info']}</yellow>")
-                        counter += 1
-                    option = list_input('What potion do you want to discard? > ', entity.potions)
-                    print(f"Discarded {entity.potions[option]['Name']}.")
-                    entity.potions.remove(entity.potions[option])
-                    sleep(1.5)
-                    clear()
-                else:
-                    sleep(1.5)
-                    clear()
-                continue
-            entity.potions.append(rewards[option])
-            rewards.remove(rewards[option])
-            sleep(0.2)
-            clear()
-
-    def card_rewards(self, tier: str, choice: bool, entity, card_pool: dict, rewards=None):
-        if not rewards:
-            rewards = self.generate_card_rewards(tier, entity.card_reward_choices, entity, card_pool)
-        while True:
-            if choice:
-                view.view_piles(rewards, entity)
-                chosen_reward = list_input('What card do you want? > ', rewards)
-                if (entity.upgrade_attacks or entity.upgrade_skills or entity.upgrade_powers) and rewards[chosen_reward]['Type'] in ['Attack', 'Skill', 'Power']:
-                    entity.card_actions(rewards[chosen_reward], 'Upgrade')
-                if relics['Ceramic Fish'] in entity.relics:
-                    ansiprint("From <bold>Ceramic Fish</bold>: ", end='')
-                    entity.gain_gold(9)
-                entity.deck.append(rewards[chosen_reward])
-                print(f"{entity.name} obtained <bold>{rewards[chosen_reward]['Name']}</bold>")
-                rewards.clear()
-                break
-            for card in rewards:
-                if card.get('Type') == 'Curse' and entity.block_curses > 0:
-                    ansiprint(f"{card['Name']} was negated by <bold>Omamori</bold>.")
-                    entity.block_curses -= 1
-                    if entity.block_curses == 0:
-                        ansiprint('<bold>Omamori</bold> is depleted.')
-                    continue
-                if card.get('Type') == 'Curse' and entity.darkstone_health:
-                    ansiprint("<bold>Darkstone Periapt</bold> activated.")
-                    entity.health_actions(6, "Max Health")
-                entity.deck.append(card)
-                print(f"{entity.name} obtained {card['Name']}")
-                rewards.remove(card)
-            if entity.gold_on_card_add:
-                entity.gold += 9
-                ansiprint('You gained 9 <yellow>Gold</yellow> from <bold>Ceramic Fish</bold>.')
-            break
-        rewards.clear()
-        sleep(1)
-
-gen = Generators()
