@@ -788,10 +788,10 @@ class Enemy:
             elif action == 'Block':
                 block = int(parameters[0])
                 self.blocking(block)
-            sleep(0.5)
+            sleep(0.2)
+            moves += 1
         sleep(0.5)
         self.past_moves.append(display_name)
-        moves += 1
 
     def misc_move(self):
         if len(self.next_move > 2):

@@ -184,7 +184,8 @@ def rest():
             gen.claim_relics(False, player, 1, relics, None, False)
             break
     while True:
-        option = input("<bold>[View Deck]</bold> or <bold>[Leave]</bold>\n> ").lower()
+        ansiprint("<bold>[View Deck]</bold> or <bold>[Leave]</bold>")
+        option = input("> ").lower()
         if option == 'view deck':
             view.view_piles(player.deck, player)
             input("Press enter to leave > ")
