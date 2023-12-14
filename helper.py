@@ -77,7 +77,7 @@ class Displayer():
         for potion in entity.potions:
             chosen_class_color = class_colors[potion['Class']]
             chosen_rarity_color = rarity_colors[potion['Rarity']]
-            ansiprint(f"{f'{counter}: ' if numbered_list else ''}<{chosen_rarity_color}>{potion['Name']}<{chosen_rarity_color}> | <{chosen_class_color}>{potion['Class']}<{chosen_class_color}> | <yellow>{potion['Info']}</yellow>")
+            ansiprint(f"{f'{counter}: ' if numbered_list else ''}<{chosen_rarity_color}>{potion['Name']}</{chosen_rarity_color}> | <{chosen_class_color}>{potion['Class']}</{chosen_class_color}> | <yellow>{potion['Info']}</yellow>")
             counter += 1
         for _ in range(entity.max_potions - len(entity.potions)):
             ansiprint(f"<light-black>{f'{counter}: ' if numbered_list else ''}(Empty)</light-black>")
@@ -90,9 +90,12 @@ class Displayer():
         ansiprint("<bold>Hand: </bold>")
         self.view_piles(entity.hand, entity, False, "Playable")
         if combat is True:
+            counter = 1
+            ansiprint("\n<bold>Enemies:</bold>")
             for enemy in enemies:
-                ansiprint(repr(enemy))
-            ansiprint(repr(entity))
+                ansiprint(f"{counter}: " + repr(enemy))
+                counter += 1
+            ansiprint("\n" + repr(entity))
         else:
             ansiprint(str(entity))
         print()
@@ -208,9 +211,9 @@ class Generators():
 
 
     def generate_relic_rewards(self, source: str, amount: int, entity, relic_pool: dict, chance_based=True) -> list[dict]:
-        common_relic_pool = [relic for relic in relic_pool.values() if relic.get('Rarity') == 'Common' and relic.get('Class') == entity.player_class and relic not in entity.relics]
-        uncommon_relic_pool = [relic for relic in relic_pool.values() if relic.get('Rarity') == 'Uncommon' and relic.get('Class') == entity.player_class and relic not in entity.relics]
-        rare_relic_pool = [relic for relic in relic_pool.values() if relic.get('Rarity') == 'Rare' and relic.get('Class') == entity.player_class and relic not in entity.relics]
+        common_relic_pool = [relic for relic in relic_pool.values() if (relic.get('Rarity') == 'Common') and (relic.get('Class') == entity.player_class) and (relic not in entity.relics)]
+        uncommon_relic_pool = [relic for relic in relic_pool.values() if (relic.get('Rarity') == 'Uncommon') and (relic.get('Class') == entity.player_class) and (relic not in entity.relics)]
+        rare_relic_pool = [relic for relic in relic_pool.values() if (relic.get('Rarity') == 'Rare') and (relic.get('Class') == entity.player_class) and (relic not in entity.relics)]
         all_relic_pool = common_relic_pool + uncommon_relic_pool + rare_relic_pool
         rarities = [common_relic_pool, uncommon_relic_pool, rare_relic_pool]
         rewards = []
@@ -478,20 +481,20 @@ class EffectInterface():
             "Explosive": "Explodes in N turns, dealing X damage",
             "Fading": "Dies in X turns",
             "Invincible": "Can only lose X more HP this turn",
-            "Life Link": "If other <bold>Darklings</bold> are still alive, revives in 2 turns",
-            "Malleable": "On recieving attack damage, gains X <bold>Block</bold>. <bold>Block</bold> increases by 1 every time it's triggered. Resets to X at the start of your turn",
+            "Life Link": "If other Darklings are still alive, revives in 2 turns",
+            "Malleable": "On recieving attack damage, gains X <keyword>Block</keyword>. <keyword>Block</keyword> increases by 1 every time it's triggered. Resets to X at the start of your turn",
             "Minion": "Minions abandon combat without their leader",
             "Mode Shift": "After recieving X damage, changes to a defensive form",
-            "Painful Stabs": "Whenever you recieve unblocked attack damage from this enemy, add X <bold>Wounds</bold> into your discard pile",
+            "Painful Stabs": "Whenever you recieve unblocked attack damage from this enemy, add X <status>Wounds</status> into your discard pile",
             "Reactive": "Upon recieving attack damage, changes its intent",
             "Sharp Hide": "Whenever you play an Attack, take X damage",
-            "Shifting": "Upon losing HP, loses that much <bold>Strength</bold> until the end of its turn",
+            "Shifting": "Upon losing HP, loses that much <buff>Strength</buff> until the end of its turn",
             "Split": "When its HP is at 50% or lower, splits into 2 smaller slimes with its current HP as their Max HP",
-            "Spore Cloud": "On death, applies X <bold>Vulnerable</bold>",
+            "Spore Cloud": "On death, applies X <debuff>Vulnerable</debuff>",
             "Stasis": "On death, returns a stolen card to your hand",
-            "Strength Up": "At the end of its turn, gains X <bold>Strength</bold>",
+            "Strength Up": "At the end of its turn, gains X <buff>Strength</buff>",
             "Thievery": "Steals X <yellow>Gold</yellow> when it attacks",
-            "Time Warp": "Whenever you play N cards, ends your turn and gains X <bold>Strength</bold>",
+            "Time Warp": "Whenever you play N cards, ends your turn and gains X <buff>Strength</buff>",
             "Unawakened": "This enemy hasn't awakened yet...",
         }
         self.ENEMY_DEBUFFS = {
@@ -509,10 +512,11 @@ class EffectInterface():
 
         self.ALL_EFFECTS = {**self.PLAYER_BUFFS, **self.PLAYER_DEBUFFS, **self.ENEMY_BUFFS, **self.ENEMY_DEBUFFS}
 
-    def init_effects(self, entity, get_effect_group: str):
+    def init_effects(self, effect_pool: str):
+        effect_pool = effect_pool.lower()
         initialized_effects = {}
-        effect_groups = {'Debuffs': {'Player': self.PLAYER_DEBUFFS, 'Enemy': self.ENEMY_DEBUFFS}, 'Buffs': {'Player': self.PLAYER_BUFFS, 'Enemy': self.ENEMY_BUFFS}}
-        for buff in effect_groups[get_effect_group][entity.__class__.__name__]:
+        effect_groups = {'player debuffs': self.PLAYER_DEBUFFS, 'player buffs': self.PLAYER_BUFFS, 'enemy debuffs': self.ENEMY_DEBUFFS, 'enemy buffs': self.ENEMY_BUFFS}
+        for buff in effect_groups[effect_pool]:
             if buff not in self.NON_STACKING_EFFECTS:
                 initialized_effects[buff] = 0
             else:

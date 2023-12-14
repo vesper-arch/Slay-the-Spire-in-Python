@@ -15,6 +15,7 @@ user_tags = {
     "dark-blue": "\033[38;5;20m",
     "dark-green": "\033[38;5;28m",
     "true-blue": "\033[38;5;21m",
+    "light-black": "\033[38;5;242m",
     'watcher-purple': "\033[38;5;93m",
     "event": "\033[38;2;254;49;236m",
     "starter": "\033[38;5;247m",

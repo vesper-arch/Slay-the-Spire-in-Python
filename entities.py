@@ -23,7 +23,9 @@ class Player:
     max_potions: The max amount of potions the player can have
     """
 
-    def __init__(self, health: int, block: int, max_energy: int, deck: list):
+    def __init__(self, health: int, block: int, max_energy: int, deck: list, powers: dict=None):
+        if not powers:
+            powers = {}
         self.health: int = health
         self.block: int = block
         self.name: str = "Ironclad"
@@ -46,8 +48,8 @@ class Player:
         self.orbs = []
         self.orb_slots: int = 3
         self.gold: int = 100
-        self.debuffs: dict[str: int] = ei.init_effects(self, 'Debuffs')
-        self.buffs: dict[str: int] = ei.init_effects(self, 'Buffs')
+        self.debuffs: dict[str: int] = ei.init_effects("Player Debuffs") | powers
+        self.buffs: dict[str: int] = ei.init_effects("Player Buffs") | powers
         # Alternate debuff/buff effects
         self.combusts_played = 0
         self.the_bomb_countdown = 3
@@ -104,7 +106,7 @@ class Player:
         for debuff in self.debuffs:
             ansiprint(f'<debuff>{debuff}</debuff>: {ei.ALL_EFFECTS[debuff].replace("X", str(self.debuffs[debuff]))}')
 
-    def use_card(self, card: dict, target: object, exhaust, pile) -> None:
+    def use_card(self, card: dict, target: 'Enemy', exhaust, pile) -> None:
         """
         Uses a card
         Wow!
@@ -146,6 +148,8 @@ class Player:
             self.move_card(card, self.exhaust_pile, pile, True)
         else:
             self.move_card(card, self.discard_pile, pile, True)
+        if target.buffs["Sharp Hide"] > 0:
+            target.attack(target.buffs["Sharp Hide"], 1)
         sleep(0.5)
         view.clear()
 
@@ -168,7 +172,7 @@ class Player:
             ansiprint(f"<bold>{relic['Name']}</bold>:")
             for _ in range(min(len(valid_cards), 2)):
                 chosen_card = random.randint(0, len(self.deck) - 1)
-                self.card_actions(self.deck[chosen_card], chosen_card, 'Upgrade', self.deck, valid_cards)
+                self.deck[chosen_card] = self.card_actions(self.deck[chosen_card], 'Upgrade', valid_cards)
         elif relic.get('Name') in ('Strawberry', 'Pear', 'Mango'):
             health_values = {'Strawberry': 7, 'Pear': 10, 'Mango': 14}
             self.health_actions(health_values[relic['Name']], 'Max Health')
@@ -177,13 +181,13 @@ class Player:
         elif relic['Name'] == 'Astrolabe':
             while True:
                 try:
-                    view.view_piles(self.deck, self, False, 'not card.get("Removable")')
+                    view.view_piles(self.deck, self, False, 'Removable')
                     target_cards = literal_eval(f"({input('Choose 3 cards to <keyword>Transform</keyword> and <keyword>Upgrade</keyword> separated by colons > ')})")
                     if len(target_cards) != 3:
                         raise TypeError("")
                     for card in target_cards:
-                        self.card_actions(self.deck[card], card, 'Transform', self.deck)
-                        self.card_actions(self.deck[card], card, "Upgrade", self.deck)
+                        self.deck[card] = self.card_actions(self.deck[card], 'Transform', cards)
+                        self.deck[card] = self.card_actions(self.deck[card], "Upgrade", cards)
                     break
                 except (TypeError, ValueError):
                     ansiprint("<red>Incorrect syntax, wrong length, or invalid card number</red> Correct: '_, _, _'")
@@ -195,7 +199,7 @@ class Player:
             for _ in range(3):
                 gen.claim_relics(True, self, 3)
         elif relic['Name'] == 'Empty Cage':
-            view.view_piles(self.deck, self, False, 'card.get("Removable") is not False')
+            view.view_piles(self.deck, self, False, 'Removable')
             backup_counter = 2
             for _ in range(backup_counter):
                 option = view.list_input("Choose a card to remove > ", self.deck)
@@ -205,11 +209,11 @@ class Player:
                     view.clear()
                     backup_counter += 1
                     continue
-                self.card_actions(self.deck[option], option, 'Remove', self.deck)
+                self.deck[option] = self.card_actions(self.deck[option], 'Remove', cards)
         elif relic['Name'] == "Pandora's Box":
-            for index, card in enumerate(self.deck):
+            for card in self.deck:
                 if card['Name'] in ('Strike', 'Defend'):
-                    self.card_actions(card, index, 'Upgrade', self.deck)
+                    card = self.card_actions(card, 'Upgrade', cards)
         elif relic['Name'] == 'Sacred Bark':
             activate_sacred_bark()
         _ = self.gain_gold(300) if relic['Name'] == 'Old Coin' else None
@@ -283,7 +287,7 @@ class Player:
             self.hand.extend(player.draw_pile[-draw_cards:])
             # Removes those cards
             player.draw_pile = player.draw_pile[:-draw_cards]
-            print(f"{self.name} drew {draw_cards} cards.")
+            print(f"Drew {draw_cards} cards.")
             for card in player.hand[-draw_cards:]:
                 if card['Type'] in ('Status', 'Curse') and self.buffs['Fire Breathing'] > 0:
                     for enemy in active_enemies:
@@ -325,7 +329,7 @@ class Player:
             self.health += heal
             ansiprint(f"Your Max HP is {'increased' if heal > 0 else 'decreased'} by <{'light-blue' if heal > 0 else 'red'}>{heal}</{'light-blue' if heal > 0 else 'red'}>")
 
-    def card_actions(self, subject_card: dict, index: int, action: str, pile: list[dict], card_pool: list[dict] = None):
+    def card_actions(self, subject_card: dict, action: str,  card_pool: list[dict] = None):
         '''[action] == 'Remove', remove [card] from your deck.
         [action] == 'Upgrade', Upgrade [card]
         [action] == 'Transform', transform a card into another random card.
@@ -335,8 +339,7 @@ class Player:
             card_pool = cards
         while True:
             if action == "Remove":
-                del pile[index]
-                break
+                del subject_card
             elif action == 'Transform':
                 # Curse cards can only be transformed into other Curses
                 ansiprint(f"{subject_card['Name']} was <bold>transformed</bold> into ", end='')
@@ -348,11 +351,8 @@ class Player:
                     new_card = random.choice(options)
                     if new_card == subject_card:
                         continue
-                    del pile[index]
-                    player.deck.insert(index, new_card)
                     ansiprint(f"{new_card['Name']} | <yellow>{new_card['Info']}</yellow>")
-                    break
-                break
+                    return new_card
             elif action == 'Upgrade':
                 if "Searing Blow" not in subject_card['Name']:
                     effects_plus: dict = subject_card.pop('Effects+')
@@ -368,7 +368,7 @@ class Player:
                     subject_card['Info'] = f"Deal Σ{subject_card['Damage']}. Can be <bold>upgraded</bold> any number of times."
 
                 ansiprint(f"{subject_card['Name'].replace('+', '')} was upgraded to <green>{subject_card['Name']}</green>")
-                break
+                return subject_card
 
     def end_player_turn(self):
         self.discard_pile += self.hand
@@ -444,6 +444,13 @@ class Player:
                 target.health -= dmg
                 ansiprint(f"You dealt {dmg} damage(<light-blue>{target.block} Blocked</light-blue>) to {target.name}")
                 ansiprint(f"Affected by: \n{dmg_affected_by.rstrip(' | ') if dmg_affected_by else 'Nothing'}")
+                if target.buffs['Curl Up'] > 0:
+                    target.blocking(target.buffs['Curl Up'])
+                    target.buffs['Curl Up'] = 0
+                    ansiprint("<buff>Curl Up</buff> wears off.")
+                if target.buffs.get('Split'):
+                    if target.name == 'Spike Slime (L)':
+                        target.next_move, target.intent = [("Split", "Split")], "<yellow>Unknown</yellow>"
                 if dmg_affected_by.count(" | ") > 0:
                     sleep(math.log(dmg_affected_by.count(" | "), 12) + 0.2)
                 if target.health <= 0:
@@ -582,7 +589,7 @@ class Player:
         if relics['Warped Tongs'] in self.relics:
             ansiprint("From <bold>Warped Tongs</bold>:")
             chosen_card = random.randint(0, len(self.hand) - 1)
-            self.card_actions(self.hand[chosen_card], chosen_card, 'Upgrade', self.hand)
+            self.hand[chosen_card] = self.card_actions(self.hand[chosen_card], 'Upgrade', cards)
         if relics['Horn Cleat'] in self.relics:
             self.blocking(14, False)
 
@@ -714,20 +721,26 @@ class Enemy:
     ritual: At the end of it's turn, gains X Strength(intensity stack)
     '''
 
-    def __init__(self, health: list, block: int, name: str):
-        self.health = health
-        self.max_health = health
+    def __init__(self, health_range: list, block: int, name: str, powers: dict=None):
+        if not powers:
+            powers = {}
+        actual_health = random.randint(health_range[0], health_range[1])
+        self.health = actual_health
+        self.max_health = actual_health
         self.block = block
         self.name = name
         self.third_person_ref = f"{self.name}'s" # Python f-strings suck so I have to use this
-        if 'louse' in self.name:
-            self.damage = [5, 7]
         self.past_moves = ['place'] * 3
         self.intent: str = ''
         self.next_move: list[tuple[str, str, tuple] | tuple[str, tuple]] = ''
-        self.buffs = ei.init_effects(self, 'Buffs')
-        self.debuffs = ei.init_effects(self, 'Debuffs')
-        self.active_turns = 0
+        self.buffs = ei.init_effects("Enemy Buffs") | powers
+        self.debuffs = ei.init_effects("Enemy Debuffs") | powers
+        self.stolen_gold = 0
+        self.awake_turns = 0
+        self.mode = ""
+        self.flames = -1
+        self.upgrade_burn = False
+        self.active_turns = 1
         if 'louse' in self.name:
             self.buffs["Curl Up"] = random.randint(3, 7)
 
@@ -735,16 +748,18 @@ class Enemy:
         return 'Enemy'
 
     def __repr__(self):
-        status = f"\n{self.name} (<red>{self.health} </red>/ <red>{self.max_health}</red> | <light-blue>{self.block} Block</light-blue>) | "
+        status = f"{self.name} (<red>{self.health} </red>/ <red>{self.max_health}</red> | <light-blue>{self.block} Block</light-blue>) | "
         for buff in self.buffs:
             if self.buffs[buff] is True or self.buffs[buff] > 0:
                 status += f"<buff>{buff}</buff>{f' {self.buffs[buff]}' if isinstance(self.buffs[buff], int) else ''} | "
         for debuff in self.debuffs:
             if self.debuffs[debuff] is True or self.debuffs[debuff] > 0:
                 status += f"<debuff>{debuff}</debuff>{f' {self.debuffs[debuff]}' if isinstance(self.debuffs[debuff], int) else ''} | "
+        if self.flames > 0:
+            status += f"<yellow>{self.flames} Flames</yellow> | "
         actual_intent, _ = view.display_actual_damage(self.intent, player, self)
         status += 'Intent: ' + actual_intent if relics['Runic Dome'] not in player.relics else "<light-black>Hidden</light-black>"
-        return status if status != f"\n{self.name} (<red>{self.health} </red>/ <red>{self.max_health}</red> | <light-blue>{self.block} Block</light-blue>)" else '\n'
+        return status
 
     def show_effects(self):
         for buff in self.buffs:
@@ -752,13 +767,16 @@ class Enemy:
         for debuff in self.debuffs:
             ansiprint(f'<debuff>{debuff}</debuff>: {ei.ALL_EFFECTS[debuff].replace("X", str(self.debuffs[debuff]))}')
 
+    def set_intent(self):
+        pass
+
     def execute_move(self) -> tuple[str]:
         moves = 1
-        for move in self.next_move:
-            if moves == 1 and len(move) > 2:
-                display_name, action, parameters = move
+        for action in self.next_move:
+            if moves == 1 and len(action) > 2:
+                display_name, action, parameters = action
             else:
-                action, parameters = move
+                action, parameters = action
             if action in ('Cowardly', 'Sleeping', 'Stunned') or action not in ('Attack', 'Buff', 'Debuff', 'Status', 'Block'):
                 self.misc_move()
                 sleep(1)
@@ -767,34 +785,47 @@ class Enemy:
             ansiprint(f"<bold>{display_name}</bold>\n" if moves == 1 else '', end='')
             sleep(0.6)
             if action == 'Attack':
-                dmg = int(parameters[0])
-                times = int(parameters[1] if len(parameters) > 1 else 1)
+                dmg = parameters[0]
+                times = parameters[1] if len(parameters) > 1 else 1
                 self.attack(dmg, times)
             elif action == 'Buff':
                 buff_name = parameters[0]
-                amount = int(parameters[1] if len(parameters) > 1 else 1)
+                amount = parameters[1] if len(parameters) > 1 else 1
                 target = parameters[2] if len(parameters) > 2 else self
                 ei.apply_effect(target, buff_name, amount)
             elif action == 'Debuff':
                 debuff_name = parameters[0]
-                amount = int(parameters[1]) if len(parameters) > 1 else 1
+                amount = parameters[1] if len(parameters) > 1 else 1
                 ei.apply_effect(player, debuff_name, amount)
+            elif action == 'Remove Effect':
+                effect_name = parameters[0]
+                effect_type = parameters[1]
+                self.remove_effect(effect_name, effect_type)
             elif action == 'Status':
                 locations = {'draw pile': player.draw_pile, 'discard pile': player.discard_pile}
                 status_name = parameters[0]
-                amount = int(parameters[1])
+                amount = parameters[1]
                 location = locations[parameters[2].lower()]
                 self.status(status_name, amount, location)
             elif action == 'Block':
-                block = int(parameters[0])
-                self.blocking(block)
+                block = parameters[0]
+                target = parameters[1] if len(parameters) > 1 else self
+                self.blocking(block, target)
             sleep(0.2)
             moves += 1
+        if display_name == 'Inferno' and self.flames > -1:
+            self.upgrade_burn = True
+            self.flames = 0
         sleep(0.5)
         self.past_moves.append(display_name)
+        self.active_turns += 1
+        if not self.debuffs.get('Asleep'):
+            self.awake_turns += 1
+        if self.flames > -1:
+            self.flames += 1
 
     def misc_move(self):
-        if len(self.next_move > 2):
+        if len(self.next_move[0] > 2):
             name, func_name, parameters = self.next_move[0]
         else:
             name, func_name = self.next_move[0]
@@ -802,11 +833,13 @@ class Enemy:
         sleep(0.6)
         if func_name == 'Cowardly':
             ansiprint("<italic>Hehe. Thanks for the money.<italic>")
+            active_enemies.remove(self)
+            ansiprint(f"<italic><red>{self.name} has escaped</red></italic>")
         elif func_name == 'Sleeping':
             sleeptalk = parameters[0]
             ansiprint(f'<italic>{sleeptalk}</italic>')
         elif func_name == 'Stunned':
-            pass
+            ansiprint("<italic>Stunned!</italic>")
         elif func_name == 'Summon':
             enemies = tuple(parameters[0])
             amount = int(parameters[1]) if len(parameters) > 1 else 1
@@ -826,12 +859,16 @@ class Enemy:
             self.health = math.floor(self.health * 0.5)
             ansiprint(f"<bold>{self.name}</bold> revived!")
         elif func_name == 'Charging':
-            ansiprint('Charging...')
+            message = parameters[0]
+            ansiprint(f'{message}')
         elif func_name == 'Split':
-            split_into = {"Slime Boss": Enemy(self.health, 0, 'Acid Slime(L)'), "Acid Slime(L)": Enemy(self.health, 0, 'Acid Slime(M)')}
+            split_into = {"Slime Boss": (Enemy(self.health, 0, 'Acid Slime(L)'), Enemy(self.health, 0, 'Spike Slime (L)')),
+                          "Acid Slime (L)": (Enemy(self.health, 0, 'Acid Slime(M)'), Enemy(self.health, 0, 'Acid Slime(M)')),
+                          "Spike Slime (L)": (Enemy(self.health, 0, 'Spike Slime (M)'), Enemy(self.health, 0, "Spike Slime (M)"))}
             for _ in range(2):
                 active_enemies.append(split_into[self.name])
             ansiprint(f'{self.name} split into 2 {split_into[self.name].name}s')
+        self.active_turns += 1
 
     def die(self):
         """
@@ -861,58 +898,6 @@ class Enemy:
                 use_count = 0
 
         return True
-
-    def set_intent(self):
-        self.active_turns += 1
-        while True:
-            if self.name == "Cultist":
-                if self.active_turns == 1:
-                    self.next_move, self.intent = [("Incantation", "Buff", ('Ritual', 3))], "<buff>Buff</buff>"
-                else:
-                    self.next_move, self.intent = [("Dark Strike", "Attack", (6,))], "<attack>Attack</attack> Σ6"
-            elif self.name in ('Acid Slime (L)', 'Acid Slime (M)'):
-                random_num = random.randint(0, 100)
-                if self.health < math.floor(self.max_health * 0.5) and self.name == "Acid Slime (L)":
-                    self.next_move, self.intent = [("Split", "Split")], "<yellow>Unknown</yellow>"
-                elif random_num < 30 and self.move_spam_check("Corrosive Spit", 3):
-                    self.next_move, self.intent = [("Corrosive Spit", "Attack", (12,))], "<attack>Attack</attack> Σ11 / <debuff>Debuff</debuff>"
-                elif random_num > 70 and self.move_spam_check("Lick", 3):
-                    self.next_move, self.intent = [("Lick", "Debuff", ('Weak', 2))], "<debuff>Debuff</debuff>"
-                elif self.move_spam_check("Tackle", 2):
-                    self.next_move, self.intent = [("Tackle","Attack", (16))], "<attack>Attack</attack> Σ16"
-                else:
-                    continue
-            elif self.name == "Acid Slime (S)":
-                random_num = random.randint(0, 100)
-                if self.active_turns == 1:
-                    self.next_move, self.intent = ([("Lick","Debuff", ('Weak', 1))], "<debuff>Debuff</debuff>") if random_num > 50 else ("Tackle_Attack_(3)", "<attack>Attack</attack> Σ3")
-                elif self.past_moves[-1] == 'Lick':
-                    self.next_move, self.intent = [("Tackle", "Attack", (3,))], "<attack>Attack</attack> Σ3"
-                elif self.move_spam_check("Lick", 3):
-                    self.next_move, self.intent = [("Lick","Debuff",('Weak', 1))], "<debuff>Debuff</debuff>"
-                else:
-                    continue
-            elif self.name == "Jaw Worm":
-                random_num = random.randint(0, 100)
-                if self.active_turns == 1 or (random_num > 75 and self.past_moves[-1] != "Chomp"):
-                    self.next_move, self.intent = [("Chomp", "Attack", (11,))], "<attack>Attack</attack> Σ11"
-                elif random_num < 45 and self.past_moves[-1] != "Bellow":
-                    self.next_move, self.intent = [("Bellow", "Buff", ("Strength", 3)), ('Block', (6,))], "<buff>Buff</buff> / <light-blue>Block</light-blue>"
-                elif self.past_moves[-2] != "Thrash":
-                    self.next_move, self.intent = [("Thrash", "Attack", (7,)), ("Block", (6,))], "<attack>Attack</attack> Σ7 / <light-blue>Block</light-blue>"
-                else:
-                    continue
-            elif 'louse' in self.name.lower():
-                random_num = random.randint(0, 100)
-                if random_num < 75 and self.move_spam_check('Bite', 2):
-                    self.next_move, self.intent = [("Bite", "Attack", (self.damage, ))], f"<attack>Attack</attack> Σ{self.damage}"
-                elif self.move_spam_check('Grow', 2) and self.name == "Red Louse":
-                    self.next_move, self.intent = [("Grow", "Buff", ('Strength', 3))], "<buff>Buff</buff>"
-                elif self.move_spam_check('Spit Web', 2) and self.name == "Green Louse":
-                    self.next_move, self.intent = [("Spit Web", "Debuff", ('Weak', 2))], '<debuff>Debuff</debuff>'
-                else:
-                    continue
-            break
 
     def attack(self, dmg: int, times: int):
         dmg_affected_by = ''
@@ -965,9 +950,20 @@ class Enemy:
             ansiprint("<bold>Meat on the Bone</bold>> activated.")
         sleep(1)
 
-    def blocking(self, block: int):
-        self.block += block
-        ansiprint(f"{self.name} gained {block} <blue>Block</blue>")
+    def remove_effect(self, effect_name, effect_type):
+        if effect_name not in ei.ALL_EFFECTS:
+            raise ValueError(f"{effect_name} is not a member of any debuff or buff list.")
+        effect_types = {"Buffs": self.buffs, "Debuffs": self.debuffs}
+        if effect_name not in ei.NON_STACKING_EFFECTS:
+            effect_types[effect_type][effect_name] = 0
+        else:
+            effect_types[effect_type][effect_name] = False
+
+    def blocking(self, block: int, target: 'Enemy'=None):
+        if not target:
+            target = self
+        target.block += block
+        ansiprint(f"{target.name} gained {block} <blue>Block</blue>")
         sleep(1)
 
     def status(self, status_card: str, amount: int, location: list):
@@ -1030,6 +1026,3 @@ class Enemy:
 # Characters
 player = Player(80, 0, 3, [deepcopy(card) for card in [cards['Strike'], cards['Strike'], cards['Strike'], cards['Strike'], cards['Strike'], cards['Defend'], cards['Defend'], cards['Defend'], cards['Defend'], cards['Bash'],]])
 player.relics.append(relics['Burning Blood'])
-# Enemies
-Cultist = Enemy(random.randint(48, 54), 0, 'Cultist')
-enemy_encounters = [[Enemy([48, 54], 0, "Cultist")], [Enemy([40, 44], 0, "Jaw Worm")]]

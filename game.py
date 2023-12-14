@@ -1,12 +1,13 @@
 from time import sleep
-from copy import deepcopy
 import math
 import random
+from copy import copy
 from ansi_tags import ansiprint
 from events import choose_event
 from items import relics, potions, cards, activate_sacred_bark
 from helper import active_enemies, combat_turn, potion_dropchance, view, gen, ei
-from entities import player, enemy_encounters
+from enemy_catalog import act1_normal_encounters, act1_elites, act1_boss
+from entities import player
 
 def combat(tier) -> None:
     """There's too much to say here."""
@@ -25,7 +26,10 @@ def combat(tier) -> None:
             enemy.start_turn()
         while True:
             if len(active_enemies) == 0:
-                end_combat(tier, True, False)
+                end_combat(tier, killed_enemies=True)
+                break
+            if all((getattr(enemy, 'escaped', False) for enemy in active_enemies)):
+                end_combat(tier, robbed=True)
                 break
             print(f"Turn {combat_turn}: ")
             _ = player.draw_cards(True, 1) if len(player.hand) == 0 and relics['Unceasing Top'] in player.relics else None # Assigned to _ so my linter shuts up
@@ -60,9 +64,9 @@ def combat(tier) -> None:
             view.clear()
         combat_turn += 1
 
-def end_combat(tier, killed_enemies, escaped):
+def end_combat(tier, killed_enemies=False, escaped=False, robbed=False):
     global potion_dropchance, combat_turn
-    if killed_enemies is True and escaped is False:
+    if killed_enemies is True:
         player.in_combat = False
         player.hand.clear()
         player.discard_pile.clear()
@@ -82,6 +86,7 @@ def end_combat(tier, killed_enemies, escaped):
         sleep(1.5)
         view.clear()
     elif escaped is True:
+        active_enemies.clear()
         print("Escaped...")
         player.in_combat = False
         sleep(0.8)
@@ -89,8 +94,17 @@ def end_combat(tier, killed_enemies, escaped):
         sleep(1.5)
         view.clear()
         combat_turn = 1
+    elif robbed:
+        active_enemies.clear()
+        print("Robbed...")
+        player.in_combat = False
+        sleep(0.8)
+        print("You recieve nothing.")
+        sleep(1.2)
+        view.clear()
+        combat_turn = 1
 
-def rest():
+def rest_site():
     """
     Actions:
     Rest: Heal for 30% of you max hp(rounded down)
@@ -157,7 +171,7 @@ def rest():
                 view.clear()
                 continue
             # Upgrades the selected card
-            player.card_actions(player.deck[upgrade_card], upgrade_card, 'Upgrade', player.deck)
+            player.deck[upgrade_card] = player.card_actions(player.deck[upgrade_card], 'Upgrade', cards)
             break
         if action == 'lift':
             if player.girya_charges > 0:
@@ -178,7 +192,7 @@ def rest():
                 sleep(1.5)
                 view.clear()
                 continue
-            player.card_actions(player.deck[option], option, 'Remove', player.deck)
+            player.deck[option] = player.card_actions(player.deck[option], 'Remove', cards)
             break
         if action == 'dig':
             gen.claim_relics(False, player, 1, relics, None, False)
@@ -204,13 +218,10 @@ def start_combat(combat_tier):
     player.in_combat = True
     # Shuffles the player's deck into their draw pile
     player.draw_pile = random.sample(player.deck, len(player.deck))
-    encounter_enemies = random.choice(enemy_encounters)
+    encounter_types = {'Normal': act1_normal_encounters, 'Elite': act1_elites, 'Boss': act1_boss}
+    encounter_enemies = encounter_types[combat_tier][0]
     for enemy in encounter_enemies:
-        enemy = deepcopy(enemy)
         active_enemies.append(enemy)
-        # Enemies have 2 health values, [min, max]. This chooses a random number between those min and max values.
-        enemy.health = random.randint(enemy.health[0], enemy.health[1])
-        enemy.max_health = enemy.health
     player.start_of_combat_relics(combat_tier)
 
 def unknown() -> None:
@@ -268,10 +279,19 @@ def play_card(card):
 
 
 def main():
-    possible_encounters = [lambda: combat("Normal"), unknown, lambda: combat("Normal"), rest]
+    encounter_weights = [0.45, 0.24, 0.19, 0.12]
+    possible_encounters = [lambda: combat("Normal"), unknown, lambda: combat("Elite"), rest_site]
     # Note that Elite and Boss encounters don't exist yet, so those are replaced with normal combats
-    game_map = random.choices(possible_encounters, weights=[0.45, 0.24, 0.19, 0.12], k=14)
-    game_map.append(lambda: combat("Normal"))
+    game_map = random.choices(possible_encounters, weights=encounter_weights, k=14)
+    game_map.append(lambda: combat("Boss"))
+    game_map[0] = lambda: combat('Normal')
+    for i, encounter in enumerate(game_map[0:5]):
+        if encounter in (lambda: combat("Elite"), rest_site):
+            game_map[i] = random.choices([lambda: combat('Normal'), unknown], weights=[0.80, 0.24])[0]
+    for i in range(len(possible_encounters) - 1):
+        if (game_map[i] == game_map[i + 1]) and (game_map[i] in (rest_site, lambda: combat('Elite')) and game_map[i+1] in (rest_site, lambda: combat('Elite'))):
+            mod_weights = copy(encounter_weights).remove(encounter_weights[i+1])
+            game_map[i + 1] = random.choices(copy(possible_encounters).remove(game_map[i+1]), weights=mod_weights)
     for encounter in game_map:
         if encounter.__name__ == 'combat':
             combat('Normal')

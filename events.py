@@ -189,7 +189,7 @@ def event_OminousForge():
                 sleep(1)
                 view.clear()
                 continue
-            player.card_actions(player.deck[option], option, "Upgrade", player.deck)
+            player.deck[option] = player.card_actions(player.deck[option], "Upgrade", cards)
             break
         if option == 'rummage':
             ansiprint('''You decide to see if you can find anything of use. After uncovering tarps, looking through boxes, and checking nooks and crannies, you find a dust covered <yellow>relic!</yellow>.
@@ -219,7 +219,7 @@ def event_Purifier():
                 sleep(1.5)
                 view.clear()
                 continue
-            player.card_actions(player.deck[remove_card], remove_card, 'Remove', player.deck)
+            player.deck[remove_card] = player.card_actions(player.deck[remove_card], 'Remove', cards)
             print('As you kneel in reverence, you feel a weight lifted off your shoulders.')
             break
         if option == 'leave':
@@ -249,7 +249,7 @@ def event_Transmogrifier():
                 sleep(1.5)
                 view.clear()
                 continue
-            player.card_actions(player.deck[transform_card], transform_card, 'Transform', player.deck)
+            player.deck[transform_card] = player.card_actions(player.deck[transform_card], 'Transform', cards)
             print('As the power of the shrine flows through you, your mind feels altered.')
             break
         if option == 'leave':
@@ -284,7 +284,7 @@ def event_UpgradeShrine():
                 sleep(1.5)
                 view.clear()
                 continue
-            player.card_actions(player.deck[upgrade_card], upgrade_card, 'Upgrade', player.deck)
+            player.deck[upgrade_card] = player.card_actions(player.deck[upgrade_card], 'Upgrade', cards)
             break
         if option == 'leave':
             print('You ignore the shrine.')
@@ -528,7 +528,7 @@ def event_TheCleric():
 The creature grins.
                       
 <bold>Cleric</bold>: "Cleric talented. Have a good day!"''')
-            player.card_actions(player.deck[option], option, "Remove", player.deck)
+            player.deck[option] = player.card_actions(player.deck[option], "Remove", cards)
             break
         if option == 'leave':
             ansiprint("You don't trust this <light-blue>'Cleric'</light-blue>, so you leave.")
