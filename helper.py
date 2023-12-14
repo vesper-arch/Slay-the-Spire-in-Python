@@ -322,8 +322,8 @@ class Generators():
                         ansiprint("From <bold>Ceramic Fish</bold>: ", end='')
                         entity.gain_gold(9)
                 entity.deck.append(rewards[chosen_reward])
-                print(f"{entity.name} obtained <bold>{rewards[chosen_reward]['Name']}</bold>")
-                rewards.view.clear()
+                ansiprint(f"{entity.name} obtained <bold>{rewards[chosen_reward]['Name']}</bold>")
+                rewards.clear()
                 break
             for card in rewards:
                 if card.get('Type') == 'Curse' and entity.block_curses > 0:
