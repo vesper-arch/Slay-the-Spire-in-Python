@@ -220,7 +220,7 @@ class WizardGremlin(Enemy):
         if self.active_turns - 1 in attack_indices:
             self.next_move, self.intent = [("Ultimate Blast", "Attack", (25,))], "<attack>Attack</attack> Σ25"
         else:
-            self.next_move, self.intent = [("Charging.", "Charging")], "<yellow>Charging</yellow>"
+            self.next_move, self.intent = [("Charging.", ("Charging",))], "<yellow>Charging</yellow>"
 
 class Looter(Enemy):
     def __init__(self):
