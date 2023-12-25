@@ -827,7 +827,7 @@ class Enemy:
             self.flames += 1
 
     def misc_move(self):
-        if len(self.next_move[0] > 2):
+        if len(self.next_move[0]) > 2:
             name, func_name, parameters = self.next_move[0]
         else:
             name, func_name = self.next_move[0]
