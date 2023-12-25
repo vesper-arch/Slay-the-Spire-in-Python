@@ -1026,6 +1026,9 @@ class Enemy:
             ei.apply_effect(self, 'Strength', self.buffs['Strength Up'])
 
 
+def create_player():
+    return Player(80, 0, 3, [deepcopy(card) for card in [cards['Strike'], cards['Strike'], cards['Strike'], cards['Strike'], cards['Strike'], cards['Defend'], cards['Defend'], cards['Defend'], cards['Defend'], cards['Bash'],]])
+
 # Characters
-player = Player(80, 0, 3, [deepcopy(card) for card in [cards['Strike'], cards['Strike'], cards['Strike'], cards['Strike'], cards['Strike'], cards['Defend'], cards['Defend'], cards['Defend'], cards['Defend'], cards['Bash'],]])
+player = create_player()
 player.relics.append(relics['Burning Blood'])
