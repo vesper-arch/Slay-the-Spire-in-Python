@@ -772,6 +772,7 @@ class Enemy:
 
     def execute_move(self) -> tuple[str]:
         moves = 1
+        display_name = "DEFAULT: UKNOWN"
         for action in self.next_move:
             if moves == 1 and len(action) > 2:
                 display_name, action, parameters = action
@@ -802,6 +803,7 @@ class Enemy:
                 effect_type = parameters[1]
                 self.remove_effect(effect_name, effect_type)
             elif action == 'Status':
+                assert len(parameters) >= 3, f"Status action requires 3 parameters: given {parameters}"
                 locations = {'draw pile': player.draw_pile, 'discard pile': player.discard_pile}
                 status_name = parameters[0]
                 amount = parameters[1]
@@ -825,7 +827,7 @@ class Enemy:
             self.flames += 1
 
     def misc_move(self):
-        if len(self.next_move[0] > 2):
+        if len(self.next_move[0]) > 2:
             name, func_name, parameters = self.next_move[0]
         else:
             name, func_name = self.next_move[0]
@@ -966,10 +968,11 @@ class Enemy:
         ansiprint(f"{target.name} gained {block} <blue>Block</blue>")
         sleep(1)
 
-    def status(self, status_card: str, amount: int, location: list):
+    def status(self, status_card_name: str, amount: int, location: list):
         for _ in range(amount):
-            status_card = deepcopy(cards[status_card])
-            insert_index = random.randint(0, len(location) - 1)
+            status_card = deepcopy(cards[status_card_name])
+            upper_bound = len(location) - 1 if len(location) > 0 else 1
+            insert_index = random.randint(0, upper_bound)
             location.insert(insert_index, status_card)
         print(f"{player.name} gained {amount} {status_card['Name']}({status_card['Info']}) \nPlaced into {location}")
         sleep(1)
@@ -1023,6 +1026,9 @@ class Enemy:
             ei.apply_effect(self, 'Strength', self.buffs['Strength Up'])
 
 
+def create_player():
+    return Player(80, 0, 3, [deepcopy(card) for card in [cards['Strike'], cards['Strike'], cards['Strike'], cards['Strike'], cards['Strike'], cards['Defend'], cards['Defend'], cards['Defend'], cards['Defend'], cards['Bash'],]])
+
 # Characters
-player = Player(80, 0, 3, [deepcopy(card) for card in [cards['Strike'], cards['Strike'], cards['Strike'], cards['Strike'], cards['Strike'], cards['Defend'], cards['Defend'], cards['Defend'], cards['Defend'], cards['Bash'],]])
+player = create_player()
 player.relics.append(relics['Burning Blood'])

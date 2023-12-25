@@ -68,7 +68,7 @@ class SpikeSlimeL(Enemy):
             if self.health < math.floor(self.max_health * 0.5):
                 self.next_move, self.intent = [("Split", "Split")], "<yellow>Unknown</yellow>"
             elif move_roll <= 0.3 and self.move_spam_check("Flame Tackle", 3):
-                self.next_move, self.intent = [("Flame Tackle", "Attack", (16,)), ("Status", ("Slimed", 2))]
+                self.next_move, self.intent = [("Flame Tackle", "Attack", (16,)), ("Status", ("Slimed", 2, "discard pile"))], "<attack>Attack</attack> Σ16 / <debuff>Debuff</debuff>"
             elif move_roll < 0.3 and self.move_spam_check("Lick", 3):
                 self.next_move, self.intent = [("Lick", "Debuff", ("Frail", 2))], "<debuff>Debuff</debuff>"
             else:
@@ -83,7 +83,7 @@ class SpikeSlimeM(Enemy):
         while True:
             move_roll = random.random()
             if move_roll <= 0.3 and self.move_spam_check("Flame Tackle", 3):
-                self.next_move, self.intent = [("Flame Tackle", "Attack", (16,)), ("Status", ("Slimed", 2))], "<attack>Attack</attack> Σ16 / <debuff>Debuff</debuff>"
+                self.next_move, self.intent = [("Flame Tackle", "Attack", (16,)), ("Status", ("Slimed", 2, "discard pile"))], "<attack>Attack</attack> Σ16 / <debuff>Debuff</debuff>"
             elif move_roll < 0.3 and self.move_spam_check("Lick", 3):
                 self.next_move, self.intent = [("Lick", "Debuff", ("Frail", 2))], "<debuff>Debuff</debuff>"
             else:
@@ -220,7 +220,7 @@ class WizardGremlin(Enemy):
         if self.active_turns - 1 in attack_indices:
             self.next_move, self.intent = [("Ultimate Blast", "Attack", (25,))], "<attack>Attack</attack> Σ25"
         else:
-            self.next_move, self.intent = [("Charging.", "Charging")], "<yellow>Charging</yellow>"
+            self.next_move, self.intent = [("Charging.", ("Charging",))], "<yellow>Charging</yellow>"
 
 class Looter(Enemy):
     def __init__(self):

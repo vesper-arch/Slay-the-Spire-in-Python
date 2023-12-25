@@ -1,0 +1,44 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/python
+{
+	"name": "Python 3",
+
+	"build": {
+    "dockerfile": "Dockerfile",
+    "context": "..",
+    "args": {
+      // Update 'VARIANT' to pick a Python version: 3, 3.10, 3.9, 3.8, 3.7, 3.6
+      // Append -bullseye or -buster to pin to an OS version.
+      // Use -bullseye variants on local on arm64/Apple Silicon.
+      "VARIANT": "3.10",
+      // Options
+      "POETRY_VERSION": "1.1.13"
+			}
+		},
+
+		// Set *default* container specific settings.json values on container create.
+		"settings": {
+			"python.defaultInterpreterPath": "/usr/local/bin/python",
+			"python.formatting.autopep8Path": "/usr/local/py-utils/bin/autopep8",
+			"python.formatting.blackPath": "/usr/local/py-utils/bin/black",
+			"python.formatting.yapfPath": "/usr/local/py-utils/bin/yapf",
+			"python.analysis.lintingEnabled": true,
+			"python.analysis.linter": "pylint",
+			"python.analysis.linting.pylintArgs": ["--rcfile", "/path/to/your/.pylintrc"]
+		},
+		// Add the IDs of extensions you want installed when the container is created.
+		"extensions": [
+			"ms-python.python",
+			"ms-python.vscode-pylance",
+	    "ms-python.pylint"
+		],
+
+	// Use 'postCreateCommand' to run commands after the container is created.
+	  "postCreateCommand": "bash ./.devcontainer/post-install.sh"
+
+	// Configure tool-specific properties.
+	// "customizations": {},
+
+	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+	// "remoteUser": "root"
+}
