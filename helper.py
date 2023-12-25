@@ -44,9 +44,10 @@ class Displayer():
             keywords = {'Upgraded': card.get('Upgraded', False), 'Upgradable': not card.get('Upgraded') and (card['Name'] == 'Burn 'or card['Type'] not in ('Curse', 'Status')),
                           'Removable': card.get('Removable', True), 'Skill': card['Type'] == 'Skill', 'Attack': card['Type'] == 'Attack', 'Power': card['Type'] == 'Power',
                           'Playable': card.get('Energy', float('inf')) <= entity.energy}
+            assert condition in keywords, f"The passed condition('{condition}') is not a valid condition."
             changed_energy = 'light-red' if not card.get('Changed Energy') else 'green'
             if keywords.get(condition, True):
-                ansiprint(f"{counter}: <{card['Type'].lower()}>{card['Name']}</{card['Type'].lower()}> | <{changed_energy}>{card.get('Energy', 'Unplayable')}{' Energy' if card.get('Energy') is not None else ''}</{changed_energy}> | <yellow>{card['Info']}</yellow>".replace('Σ', '').replace('꫱', ''))
+                ansiprint(f"{counter}: <{card['Rarity'].lower()}>{card['Name']}</{card['Rarity'].lower()}> | <{card['Type'].lower()}>{card['Type']}</{card['Type'].lower()}> | <{changed_energy}>{card.get('Energy', 'Unplayable')}{' Energy' if card.get('Energy') is not None else ''}</{changed_energy}> | <yellow>{card['Info']}</yellow>".replace('Σ', '').replace('꫱', ''))
                 counter += 1
                 sleep(0.05)
             else:
@@ -178,6 +179,9 @@ class Generators():
         uncommon_cards = [card for card in card_pool.values() if card.get("Rarity") == "Uncommon" and card.get("Type") not in ('Status', 'Curse') and card.get('Class') == entity.player_class]
         rare_cards = [card for card in card_pool.values() if card.get("Rarity") == "Rare" and card.get("Type") not in ('Status', 'Curse') and card.get('Class') == entity.player_class]
         rarities =  [common_cards, uncommon_cards, rare_cards]
+        for pool in rarities:
+            identifier = {common_cards: "Common", uncommon_cards: "Uncommon", rare_cards: "Rare"}
+            assert len(pool) > 0, f"{identifier[pool]} pool is empty."
         rewards = []
 
         if reward_tier == 'Normal':
@@ -201,6 +205,9 @@ class Generators():
         rare_potions: list[dict] = [potion for potion in potion_pool.values() if potion.get("Rarity") == "Rare" and (potion.get("Class") == "All" or entity.player_class in potion.get('Class'))]
         all_potions = common_potions + uncommon_potions + rare_potions
         rarities = [common_potions, uncommon_potions, rare_potions]
+        for pool in rarities:
+            idenifier = {common_potions: "Common", uncommon_potions: "Uncommon", rare_potions: "Rare"}
+            assert len(pool) > 0, f"{idenifier[pool]} pool is empty."
         rewards = []
         for _ in range(amount):
             if chance_based:
@@ -211,11 +218,13 @@ class Generators():
 
 
     def generate_relic_rewards(self, source: str, amount: int, entity, relic_pool: dict, chance_based=True) -> list[dict]:
-        common_relic_pool = [relic for relic in relic_pool.values() if (relic.get('Rarity') == 'Common') and (relic.get('Class') == entity.player_class) and (relic not in entity.relics)]
-        uncommon_relic_pool = [relic for relic in relic_pool.values() if (relic.get('Rarity') == 'Uncommon') and (relic.get('Class') == entity.player_class) and (relic not in entity.relics)]
-        rare_relic_pool = [relic for relic in relic_pool.values() if (relic.get('Rarity') == 'Rare') and (relic.get('Class') == entity.player_class) and (relic not in entity.relics)]
-        all_relic_pool = common_relic_pool + uncommon_relic_pool + rare_relic_pool
-        rarities = [common_relic_pool, uncommon_relic_pool, rare_relic_pool]
+        common_relics = [relic for relic in relic_pool.values() if (relic.get('Rarity') == 'Common') and (relic.get('Class') == entity.player_class) and (relic not in entity.relics)]
+        uncommon_relics = [relic for relic in relic_pool.values() if (relic.get('Rarity') == 'Uncommon') and (relic.get('Class') == entity.player_class) and (relic not in entity.relics)]
+        rare_relics = [relic for relic in relic_pool.values() if (relic.get('Rarity') == 'Rare') and (relic.get('Class') == entity.player_class) and (relic not in entity.relics)]
+        all_relic_pool = common_relics + uncommon_relics + rare_relics
+        rarities = [common_relics, uncommon_relics, rare_relics]
+        for pool in rarities:
+            identifier = {common_relics: "Common", uncommon_relics: "Uncommon", rare_relics: "Rare"}
         rewards = []
         if source == 'Chest':
             percent_common = 0.49
@@ -524,6 +533,7 @@ class EffectInterface():
         return initialized_effects
 
     def apply_effect(self, target, effect_name: str,  amount=0, user=None) -> None:
+        assert effect_name in self.ALL_EFFECTS, f"{effect_name} is not a valid debuff or buff."
         current_relic_pool = [relic.get('Name') for relic in user.relics] if getattr(user, 'player_class', 'placehold') in str(user) else []
         color = 'debuff' if amount < 0 or (effect_name in self.ENEMY_DEBUFFS or effect_name in self.PLAYER_DEBUFFS) else 'buff'
         if str(user) == 'Player' and effect_name in ('Weak', 'Frail'):
@@ -532,8 +542,6 @@ class EffectInterface():
             elif 'Ginger' in current_relic_pool and effect_name == 'Weak':
                 ansiprint('<debuff>Weak</debuff> was blocked by <bold>Ginger</bold>')
             return
-        if effect_name not in self.ALL_EFFECTS:
-            raise NameError(f"'{effect_name}' is not a valid debuff or buff.")
         if ((effect_name in self.ENEMY_DEBUFFS or effect_name in self.PLAYER_DEBUFFS) or amount < 0) and target.buffs['Artifact'] > 0:
             subject = getattr(target, 'third_person_ref', 'Your')
             ansiprint(f"<debuff>{effect_name}</debuff> was blocked by {subject} <buff>Artifact</buff>.")

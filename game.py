@@ -166,7 +166,7 @@ def rest_site():
             view.upgrade_preview(player.deck)
             upgrade_card = view.list_input('What card do you want to upgrade?', player.deck)
             if not upgrade_card or player.deck[upgrade_card].get('Upgraded') or player.deck[upgrade_card]['Name'] == 'Curse':
-                ansiprint('That card is either already upgraded, a <curse>Curse</curse>, or does not exist')
+                ansiprint('That card is either already upgraded, a <keyword>Curse</keyword>, or does not exist')
                 sleep(1.5)
                 view.clear()
                 continue

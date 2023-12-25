@@ -734,7 +734,7 @@ class Enemy:
         self.intent: str = ''
         self.next_move: list[tuple[str, str, tuple] | tuple[str, tuple]] = ''
         self.buffs = ei.init_effects("Enemy Buffs") | powers
-        self.debuffs = ei.init_effects("Enemy Debuffs") | powers
+        self.debuffs = ei.init_effects("Enemy Debuffs")
         self.stolen_gold = 0
         self.awake_turns = 0
         self.mode = ""

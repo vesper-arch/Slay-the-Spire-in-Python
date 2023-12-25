@@ -130,8 +130,8 @@ def event_GoldenShrine():
         sleep(0.8)
         print("Before you lies an elaborate shrine to an ancient spirit.")
         sleep(0.8)
-        ansiprint("<bold>[Pray]</bold> <green>Gain 100 gold</green> \n<bold>[Desecrate]</bold> <green>Gain 275 gold.</green> <red>Become <bold>Cursed - <curse>Regret</curse></bold></red> \n<bold>[Leave]</bold> Nothing happens")
-        ansiprint("<curse>Regret</curse>: <keyword>Unplayable</keyword>. At the end of your turn, lose 1 HP for each card in your hand")
+        ansiprint("<bold>[Pray]</bold> <green>Gain 100 gold</green> \n<bold>[Desecrate]</bold> <green>Gain 275 gold.</green> <red>Become <bold>Cursed - <keyword>Regret</keyword></bold></red> \n<bold>[Leave]</bold> Nothing happens")
+        ansiprint("<curse>Regret</curse> | <yellow><keyword>Unplayable</keyword>. At the end of your turn, lose 1 HP for each card in your hand.</yellow>")
         option = input('> ').lower()
         if option == 'pray':
             player.gain_gold(100, False)
@@ -145,7 +145,7 @@ def event_GoldenShrine():
                       
 As you pocket the riches, something <red>weighs heavily on you.</red>""")
             player.deck.append(cards["Regret"])
-            ansiprint(f"{player.name} gained <yellow>Regret</yellow>")
+            ansiprint(f"{player.name} gained <curse>Regret</curse>")
             sleep(1.5)
             view.clear()
             break
@@ -179,10 +179,10 @@ def event_OminousForge():
         sleep(0.8)
         print("You duck into a small hut. Inside, you find what appears to be a forge. The smithing tools are covered with dust, yet a fire roars inside the furnace. You feel on edge...")
         sleep(0.8)
-        ansiprint("<bold>[Forge]</bold> <green>Upgrade a Card</green> \n<bold>[Rummage]</bold> <green>Obtain Warped Tongs.</green> <red>Become <bold>Cursed | Pain</bold></red> \n<bold>[Leave]</bold> Nothing happens")
+        ansiprint("<bold>[Forge]</bold> <green>Upgrade a Card</green> \n<bold>[Rummage]</bold> <green>Obtain Warped Tongs.</green> <red>Become <keyword>Cursed | Pain</keyword></red> \n<bold>[Leave]</bold> Nothing happens")
         option = input('> ').lower()
         if option == 'forge':
-            view.view_piles(player.deck, player, False, 'card.get("Upgraded") is not True')
+            view.view_piles(player.deck, player, False, 'Upgradable')
             option = view.list_input("What card do you want to upgrade? > ", player.deck)
             if player.deck[option].get("Upgraded") is True:
                 print("That card is already Upgraded")
@@ -461,7 +461,7 @@ What do you do?''')
         print()
         sleep(0.8)
         ansiprint(f'<bold>[Banana]</bold> <green>Heal {math.floor(player.max_health / 3)} HP</green> \n<bold>[Donut]</bold> <green>Max HP +5</green> \n<bold>[Box]</bold> <green>Recieve a relic.</green> <red>Become Cursed: <bold>Regret</bold></red>')
-        ansiprint(f'<curse>Regret</curse> | <yellow>{cards["Regret"]["Info"]}</yellow>') # curse is purple
+        ansiprint(f'<keyword>Regret</keyword> | <yellow>{cards["Regret"]["Info"]}</yellow>') # curse is purple
         option = input('> ').lower()
         if option == 'banana':
             ansiprint('You eat the <yellow>banana</yellow>. It is nutritious and slightly <light-blue>magical</light-blue>, healing you.')
@@ -558,7 +558,7 @@ You're sure you don't see any traps nearby.\n""")
             ansiprint("""As you grab the idol and stow it away, a giant boulder smashes through the ceiling into the ground next to you.
                       
 You realize that the floor is slanted downwards as the boulder starts to roll towards you.""")
-            ansiprint(f"<bold>[Outrun]</bold> <red>Become <bold>Cursed</bold></red> - <curse>Injury</curse> \n<bold>[Smash]</bold> <red>Take {math.floor(player.max_health * 0.25)} damage</red> \n<bold>[Hide]</bold> <red>Lose {math.floor(player.max_health * 0.08)} Max HP</red>")
+            ansiprint(f"<bold>[Outrun]</bold> <red>Become <bold>Cursed</bold></red> - <keyword>Injury</keyword> \n<bold>[Smash]</bold> <red>Take {math.floor(player.max_health * 0.25)} damage</red> \n<bold>[Hide]</bold> <red>Lose {math.floor(player.max_health * 0.08)} Max HP</red>")
             option = input('> ').lower()
             if option == 'outrun':
                 ansiprint("""<italic>RUUUUUUUUUUUUUUUN!</italic>
