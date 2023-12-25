@@ -802,6 +802,7 @@ class Enemy:
                 effect_type = parameters[1]
                 self.remove_effect(effect_name, effect_type)
             elif action == 'Status':
+                assert len(parameters) >= 3, f"Status action requires 3 parameters: given {parameters}"
                 locations = {'draw pile': player.draw_pile, 'discard pile': player.discard_pile}
                 status_name = parameters[0]
                 amount = parameters[1]
