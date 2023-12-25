@@ -1,0 +1,12 @@
+{
+    "python.analysis.typeCheckingMode": "off",
+    "zenMode.centerLayout": false,
+    "zenMode.hideLineNumbers": false,
+    "zenMode.showTabs": "multiple",
+    "python.analysis.autoFormatStrings": true,
+    "editor.minimap.enabled": false,
+    "editor.lineHeight": 23,
+    "editor.cursorBlinking": "solid",
+    "editor.cursorSmoothCaretAnimation": "on",
+    "editor.fontFamily": "Fira Code, monospace"
+}
