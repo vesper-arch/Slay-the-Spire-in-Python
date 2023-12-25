@@ -772,6 +772,7 @@ class Enemy:
 
     def execute_move(self) -> tuple[str]:
         moves = 1
+        display_name = "DEFAULT: UKNOWN"
         for action in self.next_move:
             if moves == 1 and len(action) > 2:
                 display_name, action, parameters = action
