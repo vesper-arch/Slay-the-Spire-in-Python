@@ -167,10 +167,10 @@ class Generators():
         """
         Normal combat rewards:
         Rare: 3% | Uncommon: 37% | Common: 60%
-        
+
         Elite combat rewards:
         Rare: 10% | Uncommon: 40% | Common: 50%
-        
+
         Boss combat rewards:
         Rare: 100% | Uncommon: 0% | Common: 0%
         """
@@ -512,7 +512,7 @@ class EffectInterface():
 
         self.ALL_EFFECTS = {**self.PLAYER_BUFFS, **self.PLAYER_DEBUFFS, **self.ENEMY_BUFFS, **self.ENEMY_DEBUFFS}
 
-    def init_effects(self, effect_pool: str):
+    def init_effects(self, effect_pool: str) -> dict:
         effect_pool = effect_pool.lower()
         initialized_effects = {}
         effect_groups = {'player debuffs': self.PLAYER_DEBUFFS, 'player buffs': self.PLAYER_BUFFS, 'enemy debuffs': self.ENEMY_DEBUFFS, 'enemy buffs': self.ENEMY_BUFFS}
@@ -523,7 +523,7 @@ class EffectInterface():
                 initialized_effects[buff] = False
         return initialized_effects
 
-    def apply_effect(self, target, effect_name: str,  amount=0, user=None):
+    def apply_effect(self, target, effect_name: str,  amount=0, user=None) -> None:
         current_relic_pool = [relic.get('Name') for relic in user.relics] if getattr(user, 'player_class', 'placehold') in str(user) else []
         color = 'debuff' if amount < 0 or (effect_name in self.ENEMY_DEBUFFS or effect_name in self.PLAYER_DEBUFFS) else 'buff'
         if str(user) == 'Player' and effect_name in ('Weak', 'Frail'):
@@ -554,7 +554,7 @@ class EffectInterface():
                 ansiprint(f"{'You' if 'Player' in str(target) else target.name} gained{(' ' + str(amount)) if effect_name not in self.NON_STACKING_EFFECTS else ''} <{color}>{effect_name}</{color}>.")
             if 'Champion Belt' in current_relic_pool and 'Player' in str(user):
                 self.apply_effect(target, 'Weak', 1, user)
-        sleep(0.5)
+        # sleep(0.5)  # In testing, this sleep causes a huge delay.
 
     def tick_effects(self, subject):
         for buff in subject.buffs:
