@@ -968,10 +968,11 @@ class Enemy:
         ansiprint(f"{target.name} gained {block} <blue>Block</blue>")
         sleep(1)
 
-    def status(self, status_card: str, amount: int, location: list):
+    def status(self, status_card_name: str, amount: int, location: list):
         for _ in range(amount):
-            status_card = deepcopy(cards[status_card])
-            insert_index = random.randint(0, len(location) - 1)
+            status_card = deepcopy(cards[status_card_name])
+            upper_bound = len(location) - 1 if len(location) > 0 else 1
+            insert_index = random.randint(0, upper_bound)
             location.insert(insert_index, status_card)
         print(f"{player.name} gained {amount} {status_card['Name']}({status_card['Info']}) \nPlaced into {location}")
         sleep(1)
