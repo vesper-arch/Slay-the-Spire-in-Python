@@ -180,7 +180,7 @@ class Generators():
         rare_cards = [card for card in card_pool.values() if card.get("Rarity") == "Rare" and card.get("Type") not in ('Status', 'Curse') and card.get('Class') == entity.player_class]
         rarities =  [common_cards, uncommon_cards, rare_cards]
         for pool in rarities:
-            identifier = {common_cards: "Common", uncommon_cards: "Uncommon", rare_cards: "Rare"}
+            identifier = {"Common": common_cards, "Uncommon": uncommon_cards,  "Rare": rare_cards}
             assert len(pool) > 0, f"{identifier[pool]} pool is empty."
         rewards = []
 
