@@ -278,7 +278,9 @@ def play_card(card):
     player.use_card(card, active_enemies[target], False, player.hand)
 
 
-def main():
+def main(seed=None):
+    if seed is not None:
+        random.seed(seed)
     encounter_weights = [0.45, 0.24, 0.19, 0.12]
     possible_encounters = [lambda: combat("Normal"), unknown, lambda: combat("Elite"), rest_site]
     # Note that Elite and Boss encounters don't exist yet, so those are replaced with normal combats
