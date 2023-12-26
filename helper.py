@@ -206,7 +206,7 @@ class Generators():
         all_potions = common_potions + uncommon_potions + rare_potions
         rarities = [common_potions, uncommon_potions, rare_potions]
         for pool in rarities:
-            idenifier = {common_potions: "Common", uncommon_potions: "Uncommon", rare_potions: "Rare"}
+            idenifier = {"Common": common_potions, "Uncommon": uncommon_potions, "Rare": rare_potions}
             assert len(pool) > 0, f"{idenifier[pool]} pool is empty."
         rewards = []
         for _ in range(amount):
