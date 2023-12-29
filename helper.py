@@ -224,8 +224,9 @@ class Generators():
         rare_relics = [relic for relic in relic_pool.values() if (relic.get('Rarity') == 'Rare') and (relic.get('Class') == entity.player_class) and (relic not in entity.relics)]
         all_relic_pool = common_relics + uncommon_relics + rare_relics
         rarities = [common_relics, uncommon_relics, rare_relics]
-        for pool in rarities:
-            identifier = {common_relics: "Common", uncommon_relics: "Uncommon", rare_relics: "Rare"}
+        assert len(common_relics) > 0, "Common relics pool is empty."
+        assert len(uncommon_relics) > 0, "Uncommon relics pool is empty."
+        assert len(rare_relics) > 0, "Rare relics pool is empty."
         rewards = []
         if source == 'Chest':
             percent_common = 0.49
