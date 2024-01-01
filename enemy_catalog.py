@@ -482,6 +482,11 @@ def lagavulin():
 remaining_act1_encounters = [gremlin_gang, large_slime, lots_of_slimes, blue_slaver, red_slaver,
                              three_louses, two_fungi_beasts, exordium_thugs, exordium_wildlife, looter]
 
-act1_normal_encounters = [random.choice(first3_encounters)() for _ in range(3)] + [random.choices(remaining_act1_encounters, weights=[6.25, 12.5, 6.35, 12.5, 6.25, 12.5, 12.5, 9.375, 9.375, 12.5], k=1)[0]() for _ in range(15)]
-act1_elites = [random.choice([gremlin_nob, sentries, lagavulin])() for _ in range(4)]
-act1_boss = [random.choice([SlimeBoss(), Hexaghost(player.health), Guardian()])]
+def create_act1_normal_encounters():
+    return [random.choice(first3_encounters)() for _ in range(3)] + [random.choices(remaining_act1_encounters, weights=[6.25, 12.5, 6.35, 12.5, 6.25, 12.5, 12.5, 9.375, 9.375, 12.5], k=1)[0]() for _ in range(15)]
+
+def create_act1_elites():
+    return [random.choice([gremlin_nob, sentries, lagavulin])() for _ in range(4)]
+
+def create_act1_boss():
+    return [random.choice([SlimeBoss(), Hexaghost(player.health), Guardian()])]
