@@ -6,7 +6,7 @@ from ansi_tags import ansiprint
 from events import choose_event
 from items import relics, potions, cards, activate_sacred_bark
 from helper import active_enemies, combat_turn, potion_dropchance, view, gen, ei
-from enemy_catalog import act1_normal_encounters, act1_elites, act1_boss
+from enemy_catalog import create_act1_normal_encounters, create_act1_elites, create_act1_boss
 from entities import player
 
 def combat(tier) -> None:
@@ -218,6 +218,9 @@ def start_combat(combat_tier):
     player.in_combat = True
     # Shuffles the player's deck into their draw pile
     player.draw_pile = random.sample(player.deck, len(player.deck))
+    act1_normal_encounters  = create_act1_normal_encounters()
+    act1_elites = create_act1_elites()
+    act1_boss = create_act1_boss()
     encounter_types = {'Normal': act1_normal_encounters, 'Elite': act1_elites, 'Boss': act1_boss}
     encounter_enemies = encounter_types[combat_tier][0]
     for enemy in encounter_enemies:
