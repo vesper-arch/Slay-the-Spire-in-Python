@@ -1,7 +1,7 @@
 from time import sleep
 import math
 import random
-from copy import copy
+from copy import copy, deepcopy
 from ansi_tags import ansiprint
 from events import choose_event
 from items import relics, potions, cards, activate_sacred_bark
@@ -281,13 +281,13 @@ def play_card(card):
 def main():
     encounter_weights = [0.45, 0.24, 0.19, 0.12]
     possible_encounters = [lambda: combat("Normal"), unknown, lambda: combat("Elite"), rest_site]
-    # Note that Elite and Boss encounters don't exist yet, so those are replaced with normal combats
     game_map = random.choices(possible_encounters, weights=encounter_weights, k=14)
     game_map.append(lambda: combat("Boss"))
     game_map[0] = lambda: combat('Normal')
     for i, encounter in enumerate(game_map[0:5]):
+        # Checks the first 6 floors for rest sites or eleite combats
         if encounter in (lambda: combat("Elite"), rest_site):
-            game_map[i] = random.choices([lambda: combat('Normal'), unknown], weights=[0.80, 0.24])[0]
+            game_map[i] = random.choices(deepcopy(possible_encounters).remove(encounter), weights=encounter_weights[0:possible_encounters.index(encounter) - 1] + encounter_weights[possible_encounters.index(encounter) + 1:])[0]
     for i in range(len(possible_encounters) - 1):
         if (game_map[i] == game_map[i + 1]) and (game_map[i] in (rest_site, lambda: combat('Elite')) and game_map[i+1] in (rest_site, lambda: combat('Elite'))):
             mod_weights = copy(encounter_weights).remove(encounter_weights[i+1])

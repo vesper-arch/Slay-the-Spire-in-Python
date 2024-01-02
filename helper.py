@@ -205,9 +205,9 @@ class Generators():
         rare_potions: list[dict] = [potion for potion in potion_pool.values() if potion.get("Rarity") == "Rare" and (potion.get("Class") == "All" or entity.player_class in potion.get('Class'))]
         all_potions = common_potions + uncommon_potions + rare_potions
         rarities = [common_potions, uncommon_potions, rare_potions]
-        for pool in rarities:
-            idenifier = {common_potions: "Common", uncommon_potions: "Uncommon", rare_potions: "Rare"}
-            assert len(pool) > 0, f"{idenifier[pool]} pool is empty."
+        assert len(common_potions) > 0, "Common potions pool is empty."
+        assert len(uncommon_potions) > 0, "Uncommon potions pool is empty."
+        assert len(rare_potions) > 0, "Rare potions pool is empty."
         rewards = []
         for _ in range(amount):
             if chance_based:
