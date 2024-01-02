@@ -290,9 +290,10 @@ def main(seed=None):
     game_map.append(lambda: combat("Boss"))
     game_map[0] = lambda: combat('Normal')
     for i, encounter in enumerate(game_map[0:5]):
-        # Checks the first 6 floors for rest sites or eleite combats
+        # Checks the first 6 floors for rest sites or elite combats
         if encounter in (lambda: combat("Elite"), rest_site):
-            game_map[i] = random.choices(deepcopy(possible_encounters).remove(encounter), weights=encounter_weights[0:possible_encounters.index(encounter) - 1] + encounter_weights[possible_encounters.index(encounter) + 1:])[0]
+            mod_encounters = possible_encounters.remove(encounter)
+            game_map[i] = random.choices(mod_encounters, weights=encounter_weights[0:possible_encounters.index(encounter) - 1] + encounter_weights[possible_encounters.index(encounter) + 1:])[0]
     for i in range(len(possible_encounters) - 1):
         if (game_map[i] == game_map[i + 1]) and (game_map[i] in (rest_site, lambda: combat('Elite')) and game_map[i+1] in (rest_site, lambda: combat('Elite'))):
             mod_weights = copy(encounter_weights).remove(encounter_weights[i+1])
