@@ -178,12 +178,12 @@ class Generators():
         common_cards = [card for card in card_pool.values() if card.get("Rarity") == "Common" and card.get("Type") not in ('Status', 'Curse') and card.get('Class') == entity.player_class]
         uncommon_cards = [card for card in card_pool.values() if card.get("Rarity") == "Uncommon" and card.get("Type") not in ('Status', 'Curse') and card.get('Class') == entity.player_class]
         rare_cards = [card for card in card_pool.values() if card.get("Rarity") == "Rare" and card.get("Type") not in ('Status', 'Curse') and card.get('Class') == entity.player_class]
-        rarities =  [common_cards, uncommon_cards, rare_cards]
-        for pool in rarities:
-            identifier = {common_cards: "Common", uncommon_cards: "Uncommon", rare_cards: "Rare"}
-            assert len(pool) > 0, f"{identifier[pool]} pool is empty."
-        rewards = []
+        assert len(common_cards) > 0, f"Common pool is empty."
+        assert len(uncommon_cards) > 0, f"Uncommon pool is empty."
+        assert len(rare_cards) > 0, f"Rare pool is empty."
 
+        rarities =  [common_cards, uncommon_cards, rare_cards]
+        rewards = []
         if reward_tier == 'Normal':
             chances = [0.60, 0.37, 0.03]
         elif reward_tier == 'Elite':
@@ -200,14 +200,15 @@ class Generators():
         """You have a 40% chance to get a potion at the end of combat.
         -10% when you get a potion.
         +10% when you don't get a potion."""
-        common_potions: list[dict] = [potion for potion in potion_pool.values() if potion.get("Rarity") == "Common" and (potion.get("Class") == "All" or entity.player_class in potion.get('Class'))]
-        uncommon_potions: list[dict] = [potion for potion in potion_pool.values() if potion.get("Rarity") == "Uncommon" and (potion.get("Class") == "All" or entity.player_class in potion.get('Class'))]
-        rare_potions: list[dict] = [potion for potion in potion_pool.values() if potion.get("Rarity") == "Rare" and (potion.get("Class") == "All" or entity.player_class in potion.get('Class'))]
+        common_potions: list[dict] = [potion for potion in potion_pool.values() if potion.get("Rarity") == "Common" and (potion.get("Class") == "Any" or entity.player_class in potion.get('Class'))]
+        uncommon_potions: list[dict] = [potion for potion in potion_pool.values() if potion.get("Rarity") == "Uncommon" and (potion.get("Class") == "Any" or entity.player_class in potion.get('Class'))]
+        rare_potions: list[dict] = [potion for potion in potion_pool.values() if potion.get("Rarity") == "Rare" and (potion.get("Class") == "Any" or entity.player_class in potion.get('Class'))]
+        assert len(common_potions) > 0, f"Common potions pool is empty."
+        assert len(uncommon_potions) > 0, f"Uncommon potions pool is empty."
+        assert len(rare_potions) > 0, f"Rare potions pool is empty."
+
         all_potions = common_potions + uncommon_potions + rare_potions
         rarities = [common_potions, uncommon_potions, rare_potions]
-        assert len(common_potions) > 0, "Common potions pool is empty."
-        assert len(uncommon_potions) > 0, "Uncommon potions pool is empty."
-        assert len(rare_potions) > 0, "Rare potions pool is empty."
         rewards = []
         for _ in range(amount):
             if chance_based:
@@ -223,8 +224,9 @@ class Generators():
         rare_relics = [relic for relic in relic_pool.values() if (relic.get('Rarity') == 'Rare') and (relic.get('Class') == entity.player_class) and (relic not in entity.relics)]
         all_relic_pool = common_relics + uncommon_relics + rare_relics
         rarities = [common_relics, uncommon_relics, rare_relics]
-        for pool in rarities:
-            identifier = {common_relics: "Common", uncommon_relics: "Uncommon", rare_relics: "Rare"}
+        assert len(common_relics) > 0, "Common relics pool is empty."
+        assert len(uncommon_relics) > 0, "Uncommon relics pool is empty."
+        assert len(rare_relics) > 0, "Rare relics pool is empty."
         rewards = []
         if source == 'Chest':
             percent_common = 0.49
