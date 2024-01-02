@@ -83,6 +83,14 @@ class Displayer():
         for _ in range(entity.max_potions - len(entity.potions)):
             ansiprint(f"<light-black>{f'{counter}: ' if numbered_list else ''}(Empty)</light-black>")
             counter += 1
+    
+    def view_map(self, entity, encounters, boss_name):
+        display_names = {'normal_combat': "<aggresive>Monster</aggresive>", "elite_combat": "<underline><aggresive>Elite</aggresive></underline>",
+                         'boss_combat': f"<bold>\033[38;5;163m{boss_name}\033[38;5;15m</bold>", 'rest_site': "<green>Rest Site</green>", 'unknown': "<yellow>Unknown</yellow>"}
+        for index, encounter in enumerate(encounters):
+            ansiprint(f"{index + 1}: {display_names[encounter.__name__]}" + ("<italic>(Current Floor)</italic>" if index + 1 == entity.floors else ""))
+        sleep(0.2)
+        input("Press enter to leave > ")
 
     def display_ui(self, entity, enemies, combat=True):
         # Repeats for every card in the entity's hand

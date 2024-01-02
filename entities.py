@@ -31,6 +31,7 @@ class Player:
         self.name: str = "Ironclad"
         self.player_class: str = "Ironclad"
         self.in_combat = False
+        self.floors = 1
         self.max_health: int = health
         self.energy: int = 0
         self.max_energy: int = max_energy
@@ -811,7 +812,7 @@ class Enemy:
                 self.status(status_name, amount, location)
             elif action == 'Block':
                 block = parameters[0]
-                target = parameters[1] if len(parameters) > 1 else self
+                target = parameters[1] if len(parameters) > 1 else None
                 self.blocking(block, target)
             sleep(0.2)
             moves += 1

@@ -9,11 +9,11 @@ from helper import active_enemies, combat_turn, potion_dropchance, view, gen, ei
 from enemy_catalog import create_act1_normal_encounters, create_act1_elites, create_act1_boss
 from entities import player
 
-def combat(tier) -> None:
+def combat(tier, current_map) -> None:
     """There's too much to say here."""
     global combat_turn
     # Spawns enemies and shuffles the player's deck into their draw pile.
-    start_combat(tier)
+    boss_name = start_combat(tier)
     if relics['Preserved Insect'] in player.relics and tier == 'Elite':
         for enemy in active_enemies:
             enemy.health -= round(enemy.health * 0.25)
@@ -35,11 +35,11 @@ def combat(tier) -> None:
             _ = player.draw_cards(True, 1) if len(player.hand) == 0 and relics['Unceasing Top'] in player.relics else None # Assigned to _ so my linter shuts up
             # Shows the player's potions, cards(in hand), amount of cards in discard and draw pile, and shows the status for you and the enemies.
             view.display_ui(player, active_enemies)
-            print("1-0: Play card, P: Play Potion, D: View Deck, A: View Draw Pile, S: View Discard Pile, X: View Exhaust Pile, E: End Turn, F: View Debuffs and Buffs")
+            print("1-0: Play card, P: Play Potion, M: View Map, D: View Deck, A: View Draw Pile, S: View Discard Pile, X: View Exhaust Pile, E: End Turn, F: View Debuffs and Buffs")
             action = input("> ").lower()
             other_options = {'d': lambda: view.view_piles(player.deck, player, True), 'a': lambda: view.view_piles(player.draw_pile, player, True),
                      's': lambda: view.view_piles(player.discard_pile, player, True), 'x': lambda: view.view_piles(player.exhaust_pile, player, True),
-                     'p': play_potion, 'f': lambda: ei.full_view(player, active_enemies)}
+                     'p': play_potion, 'f': lambda: ei.full_view(player, active_enemies), 'm': lambda: view.view_map(player, current_map, boss_name)}
             if action.isdigit():
                 option = int(action) - 1
                 if option + 1 in range(len(player.hand) + 1):
@@ -226,6 +226,7 @@ def start_combat(combat_tier):
     for enemy in encounter_enemies:
         active_enemies.append(enemy)
     player.start_of_combat_relics(combat_tier)
+    return act1_boss[0].name
 
 def unknown() -> None:
     # CHances
@@ -270,8 +271,8 @@ def play_card(card):
         view.clear()
         return
     if card.get("Target") == 'Single' and len(active_enemies) > 1:
-        target = view.list_input("What enemy do you want to use it on? >", active_enemies)
-        if not target:
+        target = view.list_input("What enemy do you want to use it on? > ", active_enemies)
+        if target is None:
             view.clear()
             return
     elif len(active_enemies) == 1:
@@ -285,21 +286,27 @@ def main(seed=None):
     if seed is not None:
         random.seed(seed)
     encounter_weights = [0.45, 0.24, 0.19, 0.12]
-    possible_encounters = [lambda: combat("Normal"), unknown, lambda: combat("Elite"), rest_site]
-    game_map = random.choices(possible_encounters, weights=encounter_weights, k=14)
-    game_map.append(lambda: combat("Boss"))
-    game_map[0] = lambda: combat('Normal')
+    # Assigning names so they can be used as keys in a dictionary for the view.piles function
+    normal_combat = lambda map: combat("Normal", map)
+    normal_combat.__name__ = 'normal_combat'
+    elite_combat = lambda map: combat('Elite', map)
+    elite_combat.__name__ = 'elite_combat'
+    boss_combat = lambda map: combat("Boss", map)
+    boss_combat.__name__ = 'boss_combat'
+    possible_encounters = [normal_combat, unknown, elite_combat, rest_site]
+    game_map = [normal_combat] + random.choices(possible_encounters, weights=encounter_weights, k=13) + [boss_combat]
     for i, encounter in enumerate(game_map[0:5]):
         # Checks the first 6 floors for rest sites or elite combats
-        if encounter in (lambda: combat("Elite"), rest_site):
-            mod_encounters = possible_encounters.remove(encounter)
-            game_map[i] = random.choices(mod_encounters, weights=encounter_weights[0:possible_encounters.index(encounter) - 1] + encounter_weights[possible_encounters.index(encounter) + 1:])[0]
+        if encounter in (elite_combat, rest_site):
+            mod_encounters = possible_encounters[:possible_encounters.index(encounter)] + possible_encounters[possible_encounters.index(encounter) + 1:]
+            mod_weights = encounter_weights[:possible_encounters.index(encounter)] + encounter_weights[possible_encounters.index(encounter) + 1:]
+            game_map[i] = random.choices(mod_encounters, weights=mod_weights)[0]
     for i in range(len(possible_encounters) - 1):
-        if (game_map[i] == game_map[i + 1]) and (game_map[i] in (rest_site, lambda: combat('Elite')) and game_map[i+1] in (rest_site, lambda: combat('Elite'))):
-            mod_weights = copy(encounter_weights).remove(encounter_weights[i+1])
-            game_map[i + 1] = random.choices(copy(possible_encounters).remove(game_map[i+1]), weights=mod_weights)
+        if (game_map[i] == game_map[i + 1]) and (game_map[i] in (rest_site, elite_combat) and game_map[i+1] in (rest_site, elite_combat)):
+            mod_encounters = possible_encounters[:possible_encounters.index(game_map[i + 1])] + possible_encounters[possible_encounters.index(game_map[i + 1]) + 1:]
+            mod_weights = encounter_weights[:possible_encounters.index(encounter)] + encounter_weights[possible_encounters.index(encounter) + 1:]
+            game_map[i + 1] = random.choices(mod_encounters, weights=mod_weights)
     for encounter in game_map:
-        if encounter.__name__ == 'combat':
-            combat('Normal')
-        else:
-            encounter()
+        if encounter.__name__ in ('normal_combat', 'elite_combat', 'boss_combat'):
+            encounter(game_map)
+            player.floors += 1
