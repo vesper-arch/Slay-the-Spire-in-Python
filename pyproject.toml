@@ -9,7 +9,7 @@ readme = "README.md"
 slay = "game:main"
 
 [tool.poetry.dependencies]
-python = ">=3.10.0,<3.11"
+python = ">=3.11.0,<4.0"
 ansimarkup = "^2.1.0"
 pytest = "^7.4.3"
 
