@@ -277,10 +277,7 @@ def play_card(card):
         player.use_card(card, active_enemies[target], False, player.hand)
         break
 
-
-def main(seed=None):
-    if seed is not None:
-        random.seed(seed)
+def create_game_map():
     encounter_weights = [0.45, 0.24, 0.19, 0.12]
     # Assigning names so they can be used as keys in a dictionary for the view.piles function
     normal_combat = lambda map: combat("Normal", map)
@@ -302,6 +299,12 @@ def main(seed=None):
             mod_encounters = possible_encounters[:possible_encounters.index(game_map[i + 1])] + possible_encounters[possible_encounters.index(game_map[i + 1]) + 1:]
             mod_weights = encounter_weights[:possible_encounters.index(encounter)] + encounter_weights[possible_encounters.index(encounter) + 1:]
             game_map[i + 1] = random.choices(mod_encounters, weights=mod_weights)
+    return game_map
+
+def main(seed=None):
+    if seed is not None:
+        random.seed(seed)
+    game_map = create_game_map()
     for encounter in game_map:
         if encounter.__name__ in ('normal_combat', 'elite_combat', 'boss_combat'):
             encounter(game_map)
