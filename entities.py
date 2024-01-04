@@ -32,6 +32,7 @@ class Player:
         self.player_class: str = "Ironclad"
         self.in_combat = False
         self.floors = 1
+        self.fresh_effects: list[str] = [] # Shows what effects were applied after the player's turn
         self.max_health: int = health
         self.energy: int = 0
         self.max_energy: int = max_energy
@@ -501,6 +502,7 @@ class Player:
         self.draw_cards(False, (self.draw_strength + 3) if self.plays_this_turn <= 3 and relics['Pocketwatch'] in self.relics and combat_turn > 1 else 0)
         self.plays_this_turn = 0
         ei.tick_effects(self)
+        self.fresh_effects.clear()
         self.start_of_turn_relics()
         self.start_of_turn_effects()
         if combat_turn > 0:
@@ -773,7 +775,7 @@ class Enemy:
 
     def execute_move(self) -> tuple[str]:
         moves = 1
-        display_name = "DEFAULT: UKNOWN"
+        display_name = "DEFAULT: UNKNOWN"
         for action in self.next_move:
             if moves == 1 and len(action) > 2:
                 display_name, action, parameters = action
@@ -794,11 +796,11 @@ class Enemy:
                 buff_name = parameters[0]
                 amount = parameters[1] if len(parameters) > 1 else 1
                 target = parameters[2] if len(parameters) > 2 else self
-                ei.apply_effect(target, buff_name, amount)
+                ei.apply_effect(target, self, buff_name, amount)
             elif action == 'Debuff':
                 debuff_name = parameters[0]
                 amount = parameters[1] if len(parameters) > 1 else 1
-                ei.apply_effect(player, debuff_name, amount)
+                ei.apply_effect(player, self, debuff_name, amount)
             elif action == 'Remove Effect':
                 effect_name = parameters[0]
                 effect_type = parameters[1]

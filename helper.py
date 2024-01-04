@@ -542,7 +542,7 @@ class EffectInterface():
                 initialized_effects[buff] = False
         return initialized_effects
 
-    def apply_effect(self, target, effect_name: str,  amount=0, user=None) -> None:
+    def apply_effect(self, target, user, effect_name: str,  amount=0) -> None:
         assert effect_name in self.ALL_EFFECTS, f"{effect_name} is not a valid debuff or buff."
         current_relic_pool = [relic.get('Name') for relic in user.relics] if getattr(user, 'player_class', 'placehold') in str(user) else []
         color = 'debuff' if amount < 0 or (effect_name in self.ENEMY_DEBUFFS or effect_name in self.PLAYER_DEBUFFS) else 'buff'
@@ -566,29 +566,36 @@ class EffectInterface():
                     target.buffs[effect_name] = True
                 else:
                     target.buffs[effect_name] += amount
-            if user:
-                ansiprint(f"{'You' if str(target) != 'Enemy' else target.name} applied{(' ' + str(amount)) if effect_name not in self.NON_STACKING_EFFECTS else ''} <{color}>{effect_name}</{color}> to {target.name if 'Enemy' in str(target) else 'You'}")
-            else:
-                ansiprint(f"{'You' if 'Player' in str(target) else target.name} gained{(' ' + str(amount)) if effect_name not in self.NON_STACKING_EFFECTS else ''} <{color}>{effect_name}</{color}>.")
+            if target == user and getattr(target, 'player_class', '') in ("Ironclad", "Silent", "Defect", "Watcher"):
+                ansiprint(f"You gained {f'{amount} ' if effect_name not in self.NON_STACKING_EFFECTS else ''}<{color}>{effect_name}</{color}>")
+            elif target == user and str(user) == 'Enemy':
+                ansiprint(f"{target.name} gained {f'{amount} ' if effect_name not in self.NON_STACKING_EFFECTS else ''}<{color}>{effect_name}</{color}>")
+            elif str(user) == 'Enemy' and str(target) != "Enemy":
+                ansiprint(f"{user.name} applied {f'{amount} ' if effect_name not in self.NON_STACKING_EFFECTS else ''}<{color}>{effect_name}</{color}> to you.")
+            elif getattr(user, 'player_class', '') in ("Ironclad", "Silent", "Defect", "Watcher") and str(target) == 'Enemy':
+                ansiprint(f"You applied {f'{amount} ' if effect_name not in self.NON_STACKING_EFFECTS else ''}<{color}>{effect_name}</{color}> to {target.name}")
+            elif str(user) == str(target) and user != target:
+                ansiprint(f"{user.name} applied {f'{amount} ' if effect_name not in self.NON_STACKING_EFFECTS else ''}<{color}>{effect_name}</{color}> to {target.name}.")
             if 'Champion Belt' in current_relic_pool and 'Player' in str(user):
                 self.apply_effect(target, 'Weak', 1, user)
-        # sleep(0.5)  # In testing, this sleep causes a huge delay.
+            if 'Enemy' in str(user):
+                target.fresh_effects.append(effect_name)
 
     def tick_effects(self, subject):
         for buff in subject.buffs:
-            if buff in self.REMOVE_ON_TURN and subject.buffs.get(buff, 0) > 0:
+            if buff in self.REMOVE_ON_TURN and subject.buffs.get(buff, 0) > 0 and buff not in subject.fresh_effects:
                 subject.buffs[buff] = 0
                 ansiprint(f'<buff>{buff}</buff> wears off.')
-            elif buff in self.DURATION_EFFECTS and subject.buffs.get(buff, 0) > 0:
+            elif buff in self.DURATION_EFFECTS and subject.buffs.get(buff, 0) > 0 and buff not in subject.fresh_effects:
                 subject.buffs[buff] -= 1
                 if subject.buffs[buff] == 0:
                     ansiprint(f"<buff>{buff}</buff> wears off.")
         for debuff in subject.debuffs:
-            if debuff in self.REMOVE_ON_TURN and subject.debuffs.get(debuff, 0) > 0:
+            if debuff in self.REMOVE_ON_TURN and subject.debuffs.get(debuff, 0) > 0 and debuff not in subject.fresh_effects:
                 subject.debuffs[debuff] = 0
                 ansiprint(f'<debuff>{debuff}</debuff> wears off.')
                 continue
-            if debuff in self.DURATION_EFFECTS and subject.debuffs.get(debuff, 0) > 0:
+            if debuff in self.DURATION_EFFECTS and subject.debuffs.get(debuff, 0) > 0 and debuff not in subject.fresh_effects:
                 subject.debuffs[debuff] -= 1
                 if subject.debuffs[debuff] == 0:
                     ansiprint(f"<debuff>{debuff}</debuff> wears off.")

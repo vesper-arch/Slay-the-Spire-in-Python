@@ -26,7 +26,7 @@ def use_bash(targeted_enemy: object, using_card, entity):
     '''Deals 8(10) damage. Apply 2(3) Vulnerable'''
     print()
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
-    ei.apply_effect(targeted_enemy, 'Vulnerable', using_card['Vulnerable'], entity)
+    ei.apply_effect(targeted_enemy, entity, 'Vulnerable', using_card['Vulnerable'])
 
 
 def use_defend(using_card, entity):
@@ -95,7 +95,7 @@ def use_armaments(using_card, entity):
 def use_clothesline(targeted_enemy, using_card, entity):
     '''Deal 12(14) damage. Apply 2(3) Weak'''
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
-    ei.apply_effect(targeted_enemy, 'Weak', using_card['Weak'], entity)
+    ei.apply_effect(targeted_enemy, entity, 'Weak', using_card['Weak'])
 
 def use_havoc(enemies, using_card, entity):
     '''Play the top card of your draw pile and Exhaust it.'''
@@ -104,8 +104,8 @@ def use_havoc(enemies, using_card, entity):
 
 def use_flex(using_card, entity):
     '''Gain 2(4) Strength. At the end of your turn, lose 2(4) Strength'''
-    ei.apply_effect(entity, 'Strength', using_card['Strength'])
-    ei.apply_effect(entity, 'Strength Down', using_card['Strength'])
+    ei.apply_effect(entity, entity, 'Strength', using_card['Strength'])
+    ei.apply_effect(entity, entity, 'Strength Down', using_card['Strength'])
 
 def use_headbutt(targeted_enemy, using_card, entity):
     '''Deal 9(12) damage. Put a card from your discard pile on top of your draw pile.'''
@@ -135,7 +135,7 @@ def use_thunderclap(enemies, using_card, entity):
     '''Deal 4(7) damage and apply 1 Vulnerable to ALL enemies.'''
     for enemy in enemies:
         entity.attack(using_card['Damage'], enemy, using_card)
-        ei.apply_effect(enemy, 'Vulnerable', 1, entity)
+        ei.apply_effect(enemy, entity, 'Vulnerable', 1, entity)
     sleep(0.5)
     view.clear()
 
@@ -196,7 +196,7 @@ def use_wildstrike(targeted_enemy, using_card, entity):
 def use_battletrance(using_card, entity):
     '''Draw 3(4) cards. You cannot draw additonal cards this turn.'''
     entity.draw_cards(True, using_card['Cards'])
-    ei.apply_effect(entity, 'No Draw')
+    ei.apply_effect(entity, entity, 'No Draw')
 
 def use_bloodforblood(targeted_enemy, using_card, entity):
     '''Costs 1 less Energy for each time you lose HP this combat. Deal 18(22) damage.'''
@@ -229,17 +229,16 @@ def use_carnage(targeted_enemy, using_card, entity):
 
 def use_combust(using_card, entity):
     '''At the end of your turn, lose 1 HP and deal 5(7) damage to ALL enemies.'''
-    ei.apply_effect(entity, 'Combust', using_card['Combust'])
+    ei.apply_effect(entity, entity, 'Combust', using_card['Combust'])
 
 def use_darkembrace(using_card, entity):
     '''Whenever a card is Exhausted, draw 1 card.'''
     _ = using_card
-    ei.apply_effect(entity, 'Dark Embrace', 1)
+    ei.apply_effect(entity, entity, 'Dark Embrace', 1)
 
 def use_disarm(targeted_enemy, using_card, entity):
     '''Enemy loses 2(3) Strength. Exhaust.'''
-    _ = entity
-    ei.apply_effect(targeted_enemy, 'Strength', -using_card['Strength Loss'])
+    ei.apply_effect(targeted_enemy, entity, 'Strength', -using_card['Strength Loss'])
 
 def use_dropkick(targeted_enemy, using_card, entity):
     '''Deal 5(8) damage. If the enemy has Vulnerable, gain 1 Energy and draw 1 card.'''
@@ -271,20 +270,20 @@ def use_entrench(using_card, entity):
 
 def use_evolve(using_card, entity):
     '''Whenever you draw a Status card, draw 1(2) card.'''
-    ei.apply_effect(entity, 'Evolve', using_card['Evolve'])
+    ei.apply_effect(entity, entity, 'Evolve', using_card['Evolve'])
 
 def use_feelnopain(using_card, entity):
     '''Whenever a card is Exhausted, gain 3(4) Block.'''
-    ei.apply_effect(entity, 'Feel No Pain', using_card['Feel No Pain'])
+    ei.apply_effect(entity, entity, 'Feel No Pain', using_card['Feel No Pain'])
 
 def use_firebreathing(using_card, entity):
     '''Whenever you draw a Status or Curse card, deal 6(10) damage to ALL enemies.'''
-    ei.apply_effect(entity, 'Fire Breathing', using_card['Fire Breathing'])
+    ei.apply_effect(entity, entity, 'Fire Breathing', using_card['Fire Breathing'])
 
 def use_flamebarrier(using_card, entity):
     '''Gain 12(16) Block. Whenever you are attacked this turn, deal 4 damage back.'''
     entity.blocking(using_card['Block'])
-    ei.apply_effect(entity, 'Flame Barrier', 4)
+    ei.apply_effect(entity, entity, 'Flame Barrier', 4)
 
 def use_ghostlyarmor(using_card, entity):
     '''Ethereal. gain 10(13) Block.'''
@@ -303,17 +302,16 @@ def use_infernalblade(using_card, entity):
 
 def use_inflame(using_card, entity):
     '''Gain 2(3) Strength'''
-    ei.apply_effect(entity, 'Strength', using_card['Strength'])
+    ei.apply_effect(entity, entity, 'Strength', using_card['Strength'])
 
 def use_intimidate(enemies, using_card, entity):
     '''Apply 1(2) Weak to ALL enemies. Exhaust.'''
-    _ = entity
     for enemy in enemies:
-        ei.apply_effect(enemy, 'Weak', using_card['Weak'])
+        ei.apply_effect(enemy, entity, 'Weak', using_card['Weak'])
 
 def use_metallicize(using_card, entity):
     '''At the end of your turn, gain 3(4) Block'''
-    ei.apply_effect(entity, 'Metallicize', using_card['Metallicize'])
+    ei.apply_effect(entity, entity, 'Metallicize', using_card['Metallicize'])
 
 def use_powerthrough(using_card, entity):
     '''Add 2 Wounds into your hand. Gain 15(20) Block.'''
@@ -330,7 +328,7 @@ def use_pummel(targeted_enemy, using_card, entity):
 
 def use_rage(using_card, entity):
     '''Whenever you play an Attack this turn, gain 3(5) Block'''
-    ei.apply_effect(entity, 'Rage', using_card['Rage'])
+    ei.apply_effect(entity, entity, 'Rage', using_card['Rage'])
 
 def use_rampage(targeted_enemy, using_card, entity):
     '''Deal 8 damage. Increase this card's damage by 5(8).'''
@@ -345,7 +343,7 @@ def use_recklesscharge(targeted_enemy, using_card, entity):
 
 def use_rupture(using_card, entity):
     '''Whenever you lose HP from a card, gain 1(2) Strength.'''
-    ei.apply_effect(entity, 'Rupture', using_card['Rupture'])
+    ei.apply_effect(entity, entity, 'Rupture', using_card['Rupture'])
 
 def use_searingblow(targeted_enemy, using_card, entity):
     '''Deal 12(16) damage. Can be upgraded any number of times.'''
@@ -383,17 +381,16 @@ def use_seversoul(targeted_enemy, using_card, entity):
 
 def use_shockwave(enemies, using_card, entity):
     '''Apply 3(5) Weak and Vulnerable to ALL enemies. Exhaust.'''
-    _ = entity
     for enemy in enemies:
-        ei.apply_effect(enemy, 'Weak', using_card['Weak/Vulnerable'])
-        ei.apply_effect(enemy, 'Vulnerable', using_card['Weak/Vulnerable'])
+        ei.apply_effect(enemy, entity, 'Weak', using_card['Weak/Vulnerable'])
+        ei.apply_effect(enemy, entity, 'Vulnerable', using_card['Weak/Vulnerable'])
 
 def use_uppercut(targeted_enemy, using_card, entity):
     '''Deal 10(13) damage. Apply 1(2) Weak. Apply 1(2) Vulnerable.'''
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
     sleep(1)
-    ei.apply_effect(targeted_enemy, 'Weak', using_card['Weak/Vulnerable'])
-    ei.apply_effect(targeted_enemy, 'Vulnerable', using_card['Weak/Vulnerable'])
+    ei.apply_effect(targeted_enemy, entity, 'Weak', using_card['Weak/Vulnerable'])
+    ei.apply_effect(targeted_enemy, entity, 'Vulnerable', using_card['Weak/Vulnerable'])
 
 def use_whirlwind(enemies, using_card, entity):
     '''Deal 5(8) damage to ALL enemies X times.'''
@@ -407,12 +404,12 @@ def use_whirlwind(enemies, using_card, entity):
 def use_barricade(using_card, entity):
     '''Block is not removed at the start of your turn.'''
     _ = using_card
-    ei.apply_effect(entity, 'Barricade')
+    ei.apply_effect(entity, entity, 'Barricade')
 
 def use_berzerk(using_card, entity):
     '''Gain 2(1) Vulnerable. At the start of your turn, gain 1 Energy.'''
-    ei.apply_effect(entity, 'Vulnerable', using_card['Self Vulnerable'])
-    ei.apply_effect(entity, 'Berzerk', 1)
+    ei.apply_effect(entity, entity, 'Vulnerable', using_card['Self Vulnerable'])
+    ei.apply_effect(entity, entity, 'Berzerk', 1)
 
 def use_bludgeon(targeted_enemy, using_card, entity):
     '''Deal 32(42) damage.'''
@@ -421,20 +418,20 @@ def use_bludgeon(targeted_enemy, using_card, entity):
 def use_brutality(using_card, entity):
     '''At the start of your turn, lose 1 HP and draw 1 card.'''
     _ = using_card
-    ei.apply_effect(entity, 'Brutality', 1)
+    ei.apply_effect(entity, entity, 'Brutality', 1)
 
 def use_corruption(using_card, entity):
     '''Skills cost 0. Whenever you play a Skill, Exhaust it.'''
     _ = using_card
-    ei.apply_effect(entity, 'Corruption')
+    ei.apply_effect(entity, entity, "Corruption")
 
 def use_demonform(using_card, entity):
     '''At the start of your turn, gain 2(3) Strength'''
-    ei.apply_effect(entity, 'Demon Form', using_card['Demon Form'])
+    ei.apply_effect(entity, entity, "Demon Form", using_card['Demon Form'])
 
 def use_doubletap(using_card, entity):
     '''This turn, your next (2) Attack(s) is(are) played twice.'''
-    ei.apply_effect(entity, 'Double Tap', using_card['Charges'])
+    ei.apply_effect(entity, entity, "Double Tap", using_card['Charges'])
 
 def use_exhume(using_card, entity):
     '''Put a card from your exhaust pile into your hand. Exhaust.'''
