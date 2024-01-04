@@ -6,7 +6,7 @@ run = "python main.py"
 entrypoint = "main.py"
 
 [nix]
-channel = "unstable"
+channel = "stable-23_05"
 
 [deployment]
 run = ["sh", "-c", "python main.py"]
