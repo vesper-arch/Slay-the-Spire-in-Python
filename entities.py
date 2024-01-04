@@ -446,6 +446,7 @@ class Player:
                 target.health -= dmg
                 ansiprint(f"You dealt {dmg} damage(<light-blue>{target.block} Blocked</light-blue>) to {target.name}")
                 ansiprint(f"Affected by: \n{dmg_affected_by.rstrip(' | ') if dmg_affected_by else 'Nothing'}")
+                target.block = 0
                 if target.buffs['Curl Up'] > 0:
                     target.blocking(target.buffs['Curl Up'])
                     target.buffs['Curl Up'] = 0
@@ -459,7 +460,6 @@ class Player:
                     target.die()
                 if 'Reaper' in card['Name']:
                     self.health_actions(dmg, 'Heal')
-                target.block = 0
 
     def gain_gold(self, gold, dialogue=True):
         if relics['Ectoplasm'] not in self.relics:
