@@ -9,14 +9,8 @@ readme = "README.md"
 slay = "game:main"
 
 [tool.poetry.dependencies]
-python = ">=3.10.0,<3.11"
+python = ">=3.11.0,<4.0"
 ansimarkup = "^2.1.0"
-entities = "^1.0.0"
-events = "^0.5"
-items = "^0.6.5"
-pysaml2 = "^7.4.2"
-rapid-router = "^5.15.10"
-helper = "^2.5.0"
 pytest = "^7.4.3"
 
 [tool.poetry.group.dev.dependencies]
