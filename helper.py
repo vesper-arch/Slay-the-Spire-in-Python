@@ -578,7 +578,7 @@ class EffectInterface():
                 ansiprint(f"{user.name} applied {f'{amount} ' if effect_name not in self.NON_STACKING_EFFECTS else ''}<{color}>{effect_name}</{color}> to {target.name}.")
             if 'Champion Belt' in current_relic_pool and 'Player' in str(user):
                 self.apply_effect(target, 'Weak', 1, user)
-            if 'Enemy' in str(user):
+            if str(user) == 'Enemy' and hasattr(target, 'fresh_effects'):
                 target.fresh_effects.append(effect_name)
 
     def tick_effects(self, subject):
