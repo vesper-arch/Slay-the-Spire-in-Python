@@ -31,7 +31,7 @@ class TestApplyEffects():
     buffs = ei.init_effects("player buffs")
     player = entities.create_player()
     for buff in buffs:
-      ei.apply_effect(player, buff, random.randint(1, 5))
+      ei.apply_effect(player, None, buff, random.randint(1, 5))
     # No easy asserts possible
     for tick in range(random.randint(2, 7)):
       print(f"Tick: {tick+1}")
@@ -41,18 +41,19 @@ class TestApplyEffects():
     buffs = ei.init_effects("enemy buffs")
     for buff in buffs:
       enemy = enemy_catalog.SneakyGremlin()
-      ei.apply_effect(enemy, buff, 5)
+      ei.apply_effect(enemy, enemy, buff, 5)
     # No easy asserts possible
 
   def test_player_debuffs(self, ei):
     debuffs = ei.init_effects("player debuffs")
+    test_player = entities.create_player()
     for debuff in debuffs:
-      ei.apply_effect(entities.create_player(), debuff, 5)
+      ei.apply_effect(test_player, test_player, debuff, 5)
     # No easy asserts possible
 
   def test_enemy_debuffs(self, ei):
     debuffs = ei.init_effects("enemy debuffs")
     for debuff in debuffs:
       enemy = enemy_catalog.SneakyGremlin()
-      ei.apply_effect(enemy, debuff, 5)
+      ei.apply_effect(enemy, enemy, debuff, 5)
     # No easy asserts possible
