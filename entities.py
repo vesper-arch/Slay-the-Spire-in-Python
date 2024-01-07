@@ -977,7 +977,7 @@ class Enemy:
             upper_bound = len(location) - 1 if len(location) > 0 else 1
             insert_index = random.randint(0, upper_bound)
             location.insert(insert_index, status_card)
-        print(f"{player.name} gained {amount} {status_card['Name']}({status_card['Info']}) \nPlaced into {location}")
+        ansiprint(f"{player.name} gained {amount} {status_card['Name']}({status_card['Info']}) \nPlaced into {location.__name__.replace('_', ' ')}")
         sleep(1)
 
     def summon(self, enemy, amount: int, random_enemy: bool):
@@ -990,24 +990,13 @@ class Enemy:
 
     def start_turn(self):
         ansiprint(f"<underline><bold>{self.name}</bold></underline>:")
-        if self.buffs["Barricade"] is False:
-            self.block = 0
-        else:
-            if self.active_turns > 1 and self.block > 0:
-                ansiprint(f"{self.name}'s Block was not removed because of <light-cyan>Barricade</light-cyan")
-        if self.buffs['Ritual'] > 0:
-            ansiprint("From <buff>Ritual</buff>: ", end='')
-            ei.apply_effect(self, 'Strength', self.buffs['Ritual'])
-        if self.debuffs["Vulnerable"] > 0:
-            self.debuffs["Vulnerable"] -= 1
-            ansiprint("<light-cyan>-1 Vulnerable</light-cyan>")
-            if self.debuffs["Vulnerable"] == 0:
-                print("Vulnerable wears off.")
-        if self.debuffs['Weak'] > 0:
-            self.debuffs['Weak'] -= 1
-            ansiprint("<light-cyan>-1 Weak</light-cyan>")
-            if self.debuffs['Weak'] == 0:
-                print("Weak wears off")
+        if "Block" not in self.intent: # Checks the last move used to see if the enemy Blocked last turn
+            if self.buffs["Barricade"] is False:
+                self.block = 0
+            else:
+                if self.active_turns > 1 and self.block > 0:
+                    ansiprint(f"{self.name}'s Block was not removed because of <light-cyan>Barricade</light-cyan")
+        ei.tick_effects(self)
         print()
         self.set_intent()
 

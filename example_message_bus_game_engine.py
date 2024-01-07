@@ -222,7 +222,7 @@ class Combat():
 
 def main():
   # Create the universe
-  bus = MessageBus(debug=False)   # Switch debug to True to see all the messages being sent
+  bus = MessageBus(debug=True)   # Switch debug to True to see all the messages being sent
   card1 = StrikeCard()
   card2 = StrikeCard()
   strength = Buff_Strength(duration=1)        # Change the duration to see it expire or not

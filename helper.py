@@ -578,24 +578,24 @@ class EffectInterface():
                 ansiprint(f"{user.name} applied {f'{amount} ' if effect_name not in self.NON_STACKING_EFFECTS else ''}<{color}>{effect_name}</{color}> to {target.name}.")
             if 'Champion Belt' in current_relic_pool and 'Player' in str(user):
                 self.apply_effect(target, 'Weak', 1, user)
-            if 'Enemy' in str(user):
+            if str(target) != 'Enemy':
                 target.fresh_effects.append(effect_name)
 
     def tick_effects(self, subject):
         for buff in subject.buffs:
-            if buff in self.REMOVE_ON_TURN and subject.buffs.get(buff, 0) > 0 and buff not in subject.fresh_effects:
+            if buff in self.REMOVE_ON_TURN and subject.buffs.get(buff, 0) > 0 and buff not in getattr(subject, 'fresh_effects', []):
                 subject.buffs[buff] = 0
                 ansiprint(f'<buff>{buff}</buff> wears off.')
-            elif buff in self.DURATION_EFFECTS and subject.buffs.get(buff, 0) > 0 and buff not in subject.fresh_effects:
+            elif buff in self.DURATION_EFFECTS and subject.buffs.get(buff, 0) > 0 and buff not in getattr(subject, 'fresh_effects', []):
                 subject.buffs[buff] -= 1
                 if subject.buffs[buff] == 0:
                     ansiprint(f"<buff>{buff}</buff> wears off.")
         for debuff in subject.debuffs:
-            if debuff in self.REMOVE_ON_TURN and subject.debuffs.get(debuff, 0) > 0 and debuff not in subject.fresh_effects:
+            if debuff in self.REMOVE_ON_TURN and subject.debuffs.get(debuff, 0) > 0 and debuff not in getattr(subject, 'fresh_effects', []):
                 subject.debuffs[debuff] = 0
                 ansiprint(f'<debuff>{debuff}</debuff> wears off.')
                 continue
-            if debuff in self.DURATION_EFFECTS and subject.debuffs.get(debuff, 0) > 0 and debuff not in subject.fresh_effects:
+            if debuff in self.DURATION_EFFECTS and subject.debuffs.get(debuff, 0) > 0 and debuff not in getattr(subject, 'fresh_effects', []):
                 subject.debuffs[debuff] -= 1
                 if subject.debuffs[debuff] == 0:
                     ansiprint(f"<debuff>{debuff}</debuff> wears off.")
