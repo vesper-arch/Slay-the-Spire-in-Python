@@ -807,10 +807,9 @@ class Enemy:
                 self.remove_effect(effect_name, effect_type)
             elif action == 'Status':
                 assert len(parameters) >= 3, f"Status action requires 3 parameters: given {parameters}"
-                locations = {'draw pile': player.draw_pile, 'discard pile': player.discard_pile}
                 status_name = parameters[0]
                 amount = parameters[1]
-                location = locations[parameters[2].lower()]
+                location = parameters[2].lower()
                 self.status(status_name, amount, location)
             elif action == 'Block':
                 block = parameters[0]
@@ -971,13 +970,15 @@ class Enemy:
         ansiprint(f"{target.name} gained {block} <blue>Block</blue>")
         sleep(1)
 
-    def status(self, status_card_name: str, amount: int, location: list):
+    def status(self, status_card_name: str, amount: int, location: str):
+        locations = {'draw pile': player.draw_pile, 'discard pile': player.discard_pile, 'hand': player.hand}
+        pile = locations[location]
         for _ in range(amount):
             status_card = deepcopy(cards[status_card_name])
             upper_bound = len(location) - 1 if len(location) > 0 else 1
             insert_index = random.randint(0, upper_bound)
-            location.insert(insert_index, status_card)
-        ansiprint(f"{player.name} gained {amount} {status_card['Name']}({status_card['Info']}) \nPlaced into {location.__name__.replace('_', ' ')}")
+            pile.insert(insert_index, status_card)
+        ansiprint(f"{player.name} gained {amount} {status_card['Name']}({status_card['Info']}) \nPlaced into {location}")
         sleep(1)
 
     def summon(self, enemy, amount: int, random_enemy: bool):
