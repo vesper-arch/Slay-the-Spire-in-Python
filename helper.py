@@ -41,10 +41,13 @@ class Displayer():
             pile = random.sample(pile, len(pile))
         counter = 1
         for card in pile:
+            if card.get('Energy', float('inf')) == 'player.energy':
+                playable_special_case = entity.energy
+            else:
+                playable_special_case = card.get('Energy', float('inf'))
             keywords = {'Upgraded': card.get('Upgraded', False), 'Upgradable': not card.get('Upgraded') and (card['Name'] == 'Burn 'or card['Type'] not in ('Curse', 'Status')),
                           'Removable': card.get('Removable', True), 'Skill': card['Type'] == 'Skill', 'Attack': card['Type'] == 'Attack', 'Power': card['Type'] == 'Power',
-                          'Playable': card.get('Energy', float('inf')) <= entity.energy}
-            assert condition in keywords, f"The passed condition('{condition}') is not a valid condition."
+                          'Playable': playable_special_case <= entity.energy}
             changed_energy = 'light-red' if not card.get('Changed Energy') else 'green'
             info_stripped = strip_tags(card['Info'])    # can't nest markup tags
             if keywords.get(condition, True):
