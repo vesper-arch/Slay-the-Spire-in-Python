@@ -13,5 +13,6 @@ def test_view_piles_on_all_cards(monkeypatch):
     # m.setattr(entities, 'sleep', lambda x: None)
 
     for condition in all_conditions:
+      print(f"===== Condition: {condition} ======")
       helper.view.view_piles(pile=all_cards, entity=entity, end=False, condition=condition)
 
