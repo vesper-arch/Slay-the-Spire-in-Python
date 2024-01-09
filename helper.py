@@ -41,17 +41,21 @@ class Displayer():
             pile = random.sample(pile, len(pile))
         counter = 1
         for card in pile:
+            if card.get('Energy', float('inf')) == 'player.energy':
+                playable_special_case = entity.energy
+            else:
+                playable_special_case = card.get('Energy', float('inf'))
             keywords = {'Upgraded': card.get('Upgraded', False), 'Upgradable': not card.get('Upgraded') and (card['Name'] == 'Burn 'or card['Type'] not in ('Curse', 'Status')),
                           'Removable': card.get('Removable', True), 'Skill': card['Type'] == 'Skill', 'Attack': card['Type'] == 'Attack', 'Power': card['Type'] == 'Power',
-                          'Playable': card.get('Energy', float('inf')) <= entity.energy}
-            assert condition in keywords, f"The passed condition('{condition}') is not a valid condition."
+                          'Playable': playable_special_case <= entity.energy}
             changed_energy = 'light-red' if not card.get('Changed Energy') else 'green'
+            info_stripped = strip_tags(card['Info'])    # can't nest markup tags
             if keywords.get(condition, True):
-                ansiprint(f"{counter}: <{card['Rarity'].lower()}>{card['Name']}</{card['Rarity'].lower()}> | <{card['Type'].lower()}>{card['Type']}</{card['Type'].lower()}> | <{changed_energy}>{card.get('Energy', 'Unplayable')}{' Energy' if card.get('Energy') is not None else ''}</{changed_energy}> | <yellow>{card['Info']}</yellow>".replace('Σ', '').replace('꫱', ''))
+                ansiprint(f"{counter}: <{card['Rarity'].lower()}>{card['Name']}</{card['Rarity'].lower()}> | <{card['Type'].lower()}>{card['Type']}</{card['Type'].lower()}> | <{changed_energy}>{card.get('Energy', 'Unplayable')}{' Energy' if card.get('Energy') is not None else ''}</{changed_energy}> | <yellow>{info_stripped}</yellow>".replace('Σ', '').replace('꫱', ''))
                 counter += 1
                 sleep(0.05)
             else:
-                ansiprint(f"{counter}: <light-black>{card['Name']} | {card['Type']} | {card.get('Energy', 'Unplayable')}{' Energy' if card.get('Energy') else ''} | {card['Info']}</light-black>".replace('Σ', '').replace('꫱', ''))
+                ansiprint(f"{counter}: <light-black>{card['Name']} | {card['Type']} | {card.get('Energy', 'Unplayable')}{' Energy' if card.get('Energy') else ''} | {info_stripped}</light-black>".replace('Σ', '').replace('꫱', ''))
                 counter += 1
                 sleep(0.05)
         if end:
@@ -620,3 +624,7 @@ class EffectInterface():
 ei = EffectInterface()
 gen = Generators()
 view = Displayer()
+
+def strip_tags(string: str) -> str:
+    '''Removes all tags from a string'''
+    return re.sub('<[^<]+?>', '', string)
