@@ -703,7 +703,7 @@ cards = {
 
     'Body Slam': {'Name': 'Body Slam', 'Energy': 1, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal damage equal to your <keyword>Block</keyword>(Σ0)', 'Effects+': {'Energy': 0}, 'Function': use_bodyslam},
 
-    'Clash': {'Name': 'Clash', 'Damage': 14, 'Energy': 0, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Can only be played is every card in your hand is an <keyword>Attack<kkeyword>. Deal Σkeywordage.', 
+    'Clash': {'Name': 'Clash', 'Damage': 14, 'Energy': 0, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Can only be played is every card in your hand is an <keyword>Attack</keyword>. Deal Σ18 damage.',
               'Effects+': {'Damage': 18, 'Info': 'Can only be played if every card in your hand is an <keyword>Attack</keyword>. Deal Σ18 damage.'}, 'Function': use_clash},
 
     'Cleave': {'Name': 'Cleave', 'Damage': 8, 'Target': 'Any', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ8 damage to ALL enemies', 'Effects+': {'Damage': 11, 'Info': 'Deal Σ11 damage to ALL enemies.'}, 'Function': use_cleave},
@@ -892,7 +892,7 @@ cards = {
     'Injury': {'Name': 'Injury', 'Playable': False, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable.</keyword>'},
     'Necronomicurse': {'Name': 'Necronomicurse', 'Playable': False, 'Exhaustable': False, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable.</keyword> There is no escape from this <fg 141>Curse</fg 141>.'},
     'Normality': {'Name': 'Normality', 'Playable': False, 'Cards Limit': 3, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable.</keyword> You cannot play more than 3 cards this turn.'},
-    'Pain': {'Name': 'Pain', 'Playable': False, 'Damage': 1, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable</yellow>. While in hand, lose 1 HP when other cards are played.'},
+    'Pain': {'Name': 'Pain', 'Playable': False, 'Damage': 1, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable</keyword>. While in hand, lose 1 HP when other cards are played.'},
     'Parasite': {'Name': 'Parasite', 'Playable': False, 'Max Hp Loss': 3, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable.</keyword> If transformed or removed from your deck, lose 3 Max HP.'},
     'Pride': {'Name': 'Pride', 'Innate': True, 'Exhaust': True, 'Energy': 1, 'Rarity': 'Special', 'Type': 'Curse', 'Info': '<keyword>Innate.</keyword> At the end of your turn, put a copy of this card on top of your draw pile. <keyword>Exhaust.</keyword>'},
     'Shame': {'Name': 'Shame', 'Playable': False, 'Frail': 1, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable.</keyword> At the end of your turn, gain 1 <red>Frail</red>.'},
