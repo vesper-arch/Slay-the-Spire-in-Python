@@ -895,7 +895,7 @@ cards = {
     'Injury': {'Name': 'Injury', 'Playable': False, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable.</keyword>'},
     'Necronomicurse': {'Name': 'Necronomicurse', 'Playable': False, 'Exhaustable': False, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable.</keyword> There is no escape from this <fg 141>Curse</fg 141>.'},
     'Normality': {'Name': 'Normality', 'Playable': False, 'Cards Limit': 3, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable.</keyword> You cannot play more than 3 cards this turn.'},
-    'Pain': {'Name': 'Pain', 'Playable': False, 'Damage': 1, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable</yellow>. While in hand, lose 1 HP when other cards are played.'},
+    'Pain': {'Name': 'Pain', 'Playable': False, 'Damage': 1, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable</keyword>. While in hand, lose 1 HP when other cards are played.'},
     'Parasite': {'Name': 'Parasite', 'Playable': False, 'Max Hp Loss': 3, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable.</keyword> If transformed or removed from your deck, lose 3 Max HP.'},
     'Pride': {'Name': 'Pride', 'Innate': True, 'Exhaust': True, 'Energy': 1, 'Rarity': 'Special', 'Type': 'Curse', 'Info': '<keyword>Innate.</keyword> At the end of your turn, put a copy of this card on top of your draw pile. <keyword>Exhaust.</keyword>'},
     'Shame': {'Name': 'Shame', 'Playable': False, 'Frail': 1, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable.</keyword> At the end of your turn, gain 1 <red>Frail</red>.'},
