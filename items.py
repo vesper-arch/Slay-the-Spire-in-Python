@@ -7,6 +7,9 @@ from helper import view, ei
 
 
 def modify_energy_cost(amount: int, modify_type: str, card: dict):
+    if card.get("Energy") is None:
+        ansiprint("<red>This card is not playable and therefore its energy cannot be changed.</red>")
+        return
     if (modify_type == 'Set' and amount != card['Energy']) or (modify_type == 'Adjust' and amount != 0):
         card['Changed Energy'] = True
     if modify_type == 'Set':
@@ -63,7 +66,7 @@ def use_cleave(enemies, using_card, entity):
 
 def use_perfectedstrike(targeted_enemy, using_card, entity):
     '''Deal 6 damage. Deals 2(3) additional damage for ALL your cards containing "Strike"'''
-    total_damage = using_card['Damage'] + (len([card for card in entity.deck if 'strike' in card.get('Name')]) * using_card['Damage Per "Strike"'])
+    total_damage = 6 + (len([card for card in entity.deck if 'strike' in card.get('Name')]) * using_card['Damage Per "Strike"'])
     print()
     entity.attack(total_damage, targeted_enemy, using_card)
 
@@ -78,18 +81,18 @@ def use_armaments(using_card, entity):
     entity.blocking(5, False)
     if using_card.get('Upgraded'):
         for index, card in enumerate(entity.hand):
-            entity.card_actions(card, index, 'Upgrade', entity.hand)
+            card = entity.card_actions(card, 'Upgrade')
             sleep(0.3)
     else:
         while True:
-            view.view_piles(entity.hand, entity, False, 'not card.get("Upgraded") and (card.get("Name") == "Burn" or card.get("Type") not in ("Status", "Curse"))')
+            view.view_piles(entity.hand, entity, False, 'Upgradeable')
             option = view.list_input("Choose a card to upgrade > ", entity.hand)
-            if entity.hand[option].get('Upgraded') or (entity.hand[option].get('Name') != "Burn" and card.get('Type') in ('Status', 'Curse')):
+            if entity.hand[option].get('Upgraded') or (entity.hand[option].get('Name') != "Burn" and entity.hand[option].get('Type') in ('Status', 'Curse')):
                 ansiprint('That card is either already upgraded, a status, or a curse.')
                 sleep(1.5)
                 view.clear()
                 continue
-            entity.card_actions(entity.hand[option], option, 'Upgrade', entity.hand)
+            entity.hand[option] = entity.card_actions(entity.hand[option], 'Upgrade')
             break
 
 def use_clothesline(targeted_enemy, using_card, entity):
@@ -204,7 +207,7 @@ def use_bloodforblood(targeted_enemy, using_card, entity):
 
 def use_bloodletting(using_card, entity):
     '''Lose 2 HP. Gain 2(3) Energy.'''
-    entity.take_sourceless_damage(2)
+    entity.take_sourceless_dmg(2)
     entity.energy += using_card['Energy Gain']
     ansiprint(f"You gained {using_card['Energy Gain']} <keyword>Energy</keyword>.")
 
@@ -213,12 +216,12 @@ def use_burningpact(using_card, entity):
     while True:
         view.view_piles(entity.hand, entity)
         option = view.list_input('Choose a card to <keyword>Exhaust</keyword> > ', entity.hand)
-        if not option:
+        if option is None:
             ansiprint('<red>The card you entered is invalid.</red>')
             sleep(1)
             view.clear()
             continue
-        entity.move_card(using_card, entity.exhaust_pile, entity.hand, False)
+        entity.move_card(entity.hand[option], entity.exhaust_pile, entity.hand, False)
         ansiprint(f"{entity.hand[option]['Name']} was <keyword>Exhausted</keyword>")
         break
     entity.draw_cards(True, using_card['Cards'])
@@ -253,7 +256,7 @@ def use_dualwield(using_card, entity):
     while True:
         view.view_piles(entity.hand, entity, False, 'card.get("Type") in ("Attack", "Power")')
         option = view.list_input(f"Choose a card to make {'a copy' if not using_card.get('Upgraded') else '2 copies'} of > ", entity.hand)
-        if not option or entity.hand[option]['Type'] not in ('Attack', 'Power'):
+        if option is None or entity.hand[option]['Type'] not in ('Attack', 'Power'):
             ansiprint('<red>The card you entered is either not an Attack or Power or it\'s invalid.</red>')
             sleep(1.5)
             view.clear()
@@ -291,13 +294,13 @@ def use_ghostlyarmor(using_card, entity):
 
 def use_hemokinesis(targeted_enemy, using_card, entity):
     '''Lose 2 HP. Deal 15(20) damage.'''
-    entity.take_sourceless_damage(2)
+    entity.take_sourceless_dmg(2)
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
 
 def use_infernalblade(using_card, entity):
     '''Add a random Attack into your hand. It costs 0 this turn. Exhaust.'''
     _ = using_card
-    valid_cards = [card for card in cards if card.get('Type') == 'Attack' and card.get('Class') == entity.player_class]
+    valid_cards = [card for card in cards.values() if card.get('Type') == 'Attack' and card.get('Class') == entity.player_class]
     entity.hand.append(modify_energy_cost(0, 'Set', deepcopy(random.choice(valid_cards))))
 
 def use_inflame(using_card, entity):
@@ -355,7 +358,7 @@ def use_secondwind(using_card, entity):
     for card in entity.hand:
         if card.get('Type') != 'Attack':
             cards_exhausted += 1
-            entity.move_card(card, entity.hand, entity.exhaust_pile, False)
+            entity.move_card(card, entity.exhaust_pile, entity.hand, False)
             ansiprint(f"{card['Name']} was <keyword>Exhausted</keyword>.")
             sleep(0.5)
     entity.blocking(using_card['Block Per Card'] * cards_exhausted)
@@ -475,7 +478,7 @@ def use_impervious(using_card, entity):
 
 def use_juggernaut(using_card, entity):
     '''Whenever you gain Block, deal 5(7) damage to a random enemy.'''
-    ei.apply_effect(entity, 'Juggernaut', using_card['Juggernaut'])
+    ei.apply_effect(entity, entity, 'Juggernaut', using_card['Juggernaut'])
 
 def use_limitbreak(using_card, entity):
     '''Double your Strength. Exhaust.'''
@@ -703,7 +706,7 @@ cards = {
 
     'Body Slam': {'Name': 'Body Slam', 'Energy': 1, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal damage equal to your <keyword>Block</keyword>(Σ0)', 'Effects+': {'Energy': 0}, 'Function': use_bodyslam},
 
-    'Clash': {'Name': 'Clash', 'Damage': 14, 'Energy': 0, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Can only be played is every card in your hand is an <keyword>Attack<kkeyword>. Deal Σkeywordage.', 
+    'Clash': {'Name': 'Clash', 'Damage': 14, 'Energy': 0, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Can only be played is every card in your hand is an <keyword>Attack<kkeyword>. Deal Σ14 damage.', 
               'Effects+': {'Damage': 18, 'Info': 'Can only be played if every card in your hand is an <keyword>Attack</keyword>. Deal Σ18 damage.'}, 'Function': use_clash},
 
     'Cleave': {'Name': 'Cleave', 'Damage': 8, 'Target': 'Any', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ8 damage to ALL enemies', 'Effects+': {'Damage': 11, 'Info': 'Deal Σ11 damage to ALL enemies.'}, 'Function': use_cleave},
@@ -713,7 +716,7 @@ cards = {
     'Flex': {'Name': 'Flex', 'Strength': 2, 'Energy': 0, 'Target': 'Yourself', 'Rarity': 'Common', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Gain 2 <buff>Strength</buff>. At the end of your turn, lose 2 <buff>Strength</buff>', 
              'Effects+': {'Strength': 4, 'Info': 'Gain 4 <buff>Strength</buff>. At the end of your turn, lose 4 <buff>Strength</buff>.'}, 'Function': use_flex},
 
-    'Havoc': {'Name': 'Havoc', 'Energy': 1, 'Target': 'Yourself', 'Rarity': 'Common', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Play the top card of your draw pile and <keyword>Exhaust</keyword> it.', 'Effects+': {'Energy': 0}, 'Function': use_havoc},
+    'Havoc': {'Name': 'Havoc', 'Energy': 1, 'Target': 'Area', 'Rarity': 'Common', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Play the top card of your draw pile and <keyword>Exhaust</keyword> it.', 'Effects+': {'Energy': 0}, 'Function': use_havoc},
 
     'Headbutt': {'Name': 'Headbutt', 'Damage': 9, 'Energy': 1, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ9 damage. Place a card from your discard pile on top of your draw pile.', 
                  'Effects+': {'Damage': 12, 'Info': 'Deal Σ12 damage. Place a card from your discard pile on top of your draw pile.'}, 'Function': use_headbutt},
@@ -756,9 +759,9 @@ cards = {
 
     'Burning Pact': {'Name': 'Burning Pact', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Cards': 2, 'Energy': 1, 'Info': '<keyword>Exhaust</keyword> 1 card. Draw 2 cards.', 'Effects+': {'Cards': 3, 'Info': '<keyword>Exhaust</keyword> 1 card. Draw 3 cards.'}, 'Function': use_burningpact},
 
-    'Carnage': {'Name': 'Carnage', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Attack', 'Ethereal': True, 'Damage': 20, 'Energy': 2, 'Info': '<keyword>Ethereal.</keyword> Deal Σ20 damage.', 'Effects+': {'Damage': 28, 'Info': '<keyword>Ethereal.</keyword> Deal Σ28 damage.'}, 'Function': use_carnage},
+    'Carnage': {'Name': 'Carnage', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Target': 'Single', 'Type': 'Attack', 'Ethereal': True, 'Damage': 20, 'Energy': 2, 'Info': '<keyword>Ethereal.</keyword> Deal Σ20 damage.', 'Effects+': {'Damage': 28, 'Info': '<keyword>Ethereal.</keyword> Deal Σ28 damage.'}, 'Function': use_carnage},
 
-    'Combust': {'Name': 'Combust', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Power', 'Combust': 5, 'Energy': 1, 'Info': 'At the end of your turn, lose 1 HP and deal 5 damage to ALL enemies.', 'Effects+': {'Combust': 7, 'Info': 'At the end of your turn, lose 1 HP and deal 7 damage to ALL enemies'}, 'Function': use_combust},
+    'Combust': {'Name': 'Combust', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Target': 'Yourself', 'Type': 'Power', 'Combust': 5, 'Energy': 1, 'Info': 'At the end of your turn, lose 1 HP and deal 5 damage to ALL enemies.', 'Effects+': {'Combust': 7, 'Info': 'At the end of your turn, lose 1 HP and deal 7 damage to ALL enemies'}, 'Function': use_combust},
 
     'Dark Embrace': {'Name': 'Dark Embrace', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Power', 'Energy': 2, 'Info': 'Whenever a card is <keyword>Exhausted</keyword>, draw 1 card.', 'Effects+': {'Energy': 1}, 'Function': use_darkembrace},
 
@@ -848,7 +851,7 @@ cards = {
 
     'Corruption': {'Name': 'Corruption', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Power', 'Target': 'Yourself', 'Energy': 3, 'Info': '<keyword>Skills</keyword> cost 0. Whenever you play a <keyword>Skill</keyword>, <keyword>Exhaust</keyword> it.', 'Effects+': {'Energy': 2}, 'Function': use_corruption},
 
-    'Demon Form': {'Name': 'Demon Form', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Power', 'Target': 'Yourself', 'Strength': 2, 'Energy': 3, 'Info': 'At the start of your turn, gain 2 <buff>Strength</buff>.', 'Effects+': {'Strength': 3, 'Info': 'At the start of your turn, gain 3 <buff>Strength</buff>.'}, 'Function': use_demonform},
+    'Demon Form': {'Name': 'Demon Form', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Power', 'Target': 'Yourself', 'Demon Form': 2, 'Energy': 3, 'Info': 'At the start of your turn, gain 2 <buff>Strength</buff>.', 'Effects+': {'Demon Form': 3, 'Info': 'At the start of your turn, gain 3 <buff>Strength</buff>.'}, 'Function': use_demonform},
 
     'Double Tap': {'Name': 'Double Tap', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Skill', 'Target': 'Yourself', 'Charges': 1, 'Energy': 1, 'Info': 'This turn, your next <keyword>Attack</keyword> is played twice.', 'Effects+': {'Charges': 2, 'Info': 'This turn, your next 2 <keyword>Attacks</keyword> are played twice'}, 'Function': use_doubletap},
 

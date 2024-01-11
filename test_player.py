@@ -29,7 +29,7 @@ def test_all_attack_cards_with_all_relics(monkeypatch):
 
     # Create boss
     boss = enemy_catalog.SlimeBoss()
-    helper.active_enemies = [boss]
+    helper.active_enemies.append(boss)
 
     # Patch some side effects
     with monkeypatch.context() as m:
@@ -37,7 +37,7 @@ def test_all_attack_cards_with_all_relics(monkeypatch):
         # m.setattr(game, 'sleep', lambda x: None)
         # m.setattr(helper, 'sleep', lambda x: None)
         # m.setattr(entities, 'sleep', lambda x: None)
-        entities.view.clear = replacement_clear_screen
+        helper.view.clear = replacement_clear_screen
 
         # Let 'er rip!
         for idx, card in enumerate(player.draw_pile):

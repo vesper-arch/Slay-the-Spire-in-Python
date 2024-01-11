@@ -113,15 +113,17 @@ class Player:
         Uses a card
         Wow!
         """
+        if card['Type'] in ('Status', 'Curse') and card['Name'] not in ('Slimed', 'Pride'):
+            ansiprint("<red>This card is not playable. This message shouldn't appear outside of tests.</red>")
+            return
         if card.get('Target') == 'Single':
             card['Function'](target, card, self)
         elif card.get('Target') in ('Area', 'Random'):
             card['Function'](active_enemies, card, self)
         elif card.get('Target') == 'Yourself':
             card['Function'](card, self)
-        else:
-            ansiprint("<red>Card does not have a 'Target' key</red>")
-            sys.exit(1)
+        elif not card.get('Target') and (card['Name'] not in ('Slimed', 'Pride') and card['Type'] not in ("Status", "Curse")):
+            raise KeyError(f"{card['Name']} does not have a 'Target' key.")
         if card.get('Type') == 'Attack' and relics['Pen Nib'] in self.relics:
             self.pen_nib_attacks += 1
         if card.get('Type') == 'Attack' and relics['Nunchaku'] in self.relics:
@@ -139,7 +141,6 @@ class Player:
             sleep(1.5)
             view.clear()
             self.use_card(card, target, True, pile)
-        # Medical Kit allows Status cards to played
         if card.get('Type') == 'Status' and relics['Medical Kit'] in player.relics:
             exhaust = True
         elif card.get('Type') == 'Curse' and relics['Blue Candle'] in player.relics:
@@ -226,7 +227,7 @@ class Player:
             self.kunai_attacks += 1
             if self.kunai_attacks == 3:
                 ansiprint("<bold>Kunai</bold> activated: ", end='')
-                ei.apply_effect(self, 'Dexterity', 1)
+                ei.apply_effect(self, self, 'Dexterity', 1)
                 self.kunai_attacks = 0
         if relics['Ornamental Fan'] in self.relics and card.get('Type') == 'Attack':
             self.ornament_fan_attacks += 1
@@ -248,7 +249,7 @@ class Player:
             self.shuriken_attacks += 1
             if self.shuriken_attacks == 3:
                 ansiprint('<bold>Shuriken</bold> activated: ', end='')
-                ei.apply_effect(self, 'Strength', 1)
+                ei.apply_effect(self, self, 'Strength', 1)
         if relics['Ink Bottle'] in self.relics:
             self.inked_cards += 1
             if self.inked_cards == 10:
@@ -257,9 +258,9 @@ class Player:
                 self.inked_cards = 0
         if relics['Duality'] in self.relics and card.get('Type') == 'Attack':
             ansiprint('<bold>Duality</bold> activated: ', end='')
-            ei.apply_effect(self, 'Dexterity', 1)
+            ei.apply_effect(self, self, 'Dexterity', 1)
         if relics['Bird-Faced Urn'] in self.relics and card.get('Type') == 'Power':
-            ansiprint('<bold>Bird-Faced Urn<bold> activated: ', end='')
+            ansiprint('<bold>Bird-Faced Urn</bold> activated: ', end='')
             self.health_actions(2, 'Heal')
 
     def draw_cards(self, middle_of_turn: bool, draw_cards: int = 0):
@@ -383,7 +384,7 @@ class Player:
 
     def move_card(self, card, move_to, from_location, cost_energy, shuffle=False):
         if cost_energy is True:
-            self.energy -= card['Energy']
+            self.energy -= card['Energy'] if isinstance(card['Energy'], int) else 0
         from_location.remove(card)
         if shuffle is True:
             move_to.insert(random.randint(0, len(move_to) - 1), card)
@@ -392,7 +393,7 @@ class Player:
         if self.buffs["Dark Embrace"] > 0 and move_to == self.exhaust_pile:
             self.draw_cards(True, 1)
         if relics['Dead Branch'] in self.relics and move_to == self.exhaust_pile:
-            self.hand.append(deepcopy(random.choice([card for card in cards if card.get('Upgraded') is not True and card.get('Class') == self.player_class])))
+            self.hand.append(deepcopy(random.choice([card for card in cards.values() if card.get('Upgraded') is not True and card.get('Class') == self.player_class])))
         if relics["Charon's Ashes"] in self.relics and move_to == self.exhaust_pile:
             for enemy in active_enemies:
                 self.attack(3, enemy)
@@ -429,37 +430,37 @@ class Player:
             if target.buffs['Intangible'] > 0:
                 dmg = 1
                 dmg_affected_by = "<buff>Intangible</buff>(ALL damage reduced to 1)"
-        if not ignore_block:
-            if dmg <= target.block:
-                target.block -= dmg
-                dmg = 0
-                ansiprint("<blue>Blocked</blue>")
-            elif dmg > target.block:
-                dmg -= target.block
-                dmg = max(0, dmg)
-                if self.buffs['Envenom'] > 0:
-                    target.debuffs['Poison'] += 1
-                    ansiprint(f"<light-cyan>Envenom</light-cyan> applied {self.buffs['Envenom']} <red>Poison</red>.")
-                if dmg <= 4 and relics['The Boot'] in self.relics and card.get('Type') == 'Attack':
-                    dmg = 5
-                    dmg_affected_by += "<bold>The Boot</bold>(dmg increased to 5) | "
-                target.health -= dmg
-                ansiprint(f"You dealt {dmg} damage(<light-blue>{target.block} Blocked</light-blue>) to {target.name}")
-                ansiprint(f"Affected by: \n{dmg_affected_by.rstrip(' | ') if dmg_affected_by else 'Nothing'}")
-                target.block = 0
-                if target.buffs['Curl Up'] > 0:
-                    target.blocking(target.buffs['Curl Up'])
-                    target.buffs['Curl Up'] = 0
-                    ansiprint("<buff>Curl Up</buff> wears off.")
-                if target.buffs.get('Split'):
-                    if target.name == 'Spike Slime (L)':
-                        target.next_move, target.intent = [("Split", "Split")], "<yellow>Unknown</yellow>"
-                if dmg_affected_by.count(" | ") > 0:
-                    sleep(math.log(dmg_affected_by.count(" | "), 12) + 0.2)
-                if target.health <= 0:
-                    target.die()
-                if 'Reaper' in card['Name']:
-                    self.health_actions(dmg, 'Heal')
+            if not ignore_block:
+                if dmg <= target.block:
+                    target.block -= dmg
+                    dmg = 0
+                    ansiprint("<blue>Blocked</blue>")
+                elif dmg > target.block:
+                    dmg -= target.block
+                    dmg = max(0, dmg)
+                    if self.buffs['Envenom'] > 0:
+                        target.debuffs['Poison'] += 1
+                        ansiprint(f"<light-cyan>Envenom</light-cyan> applied {self.buffs['Envenom']} <red>Poison</red>.")
+                    if dmg <= 4 and relics['The Boot'] in self.relics and card.get('Type') == 'Attack':
+                        dmg = 5
+                        dmg_affected_by += "<bold>The Boot</bold>(dmg increased to 5) | "
+                    target.health -= dmg
+                    ansiprint(f"You dealt {dmg} damage(<light-blue>{target.block} Blocked</light-blue>) to {target.name}")
+                    ansiprint(f"Affected by: \n{dmg_affected_by.rstrip(' | ') if dmg_affected_by else 'Nothing'}")
+                    target.block = 0
+                    if target.buffs['Curl Up'] > 0:
+                        target.blocking(target.buffs['Curl Up'])
+                        target.buffs['Curl Up'] = 0
+                        ansiprint("<buff>Curl Up</buff> wears off.")
+                    if target.buffs.get('Split'):
+                        if target.name == 'Spike Slime (L)':
+                            target.next_move, target.intent = [("Split", "Split")], "<yellow>Unknown</yellow>"
+                    if dmg_affected_by.count(" | ") > 0:
+                        sleep(math.log(dmg_affected_by.count(" | "), 12) + 0.2)
+                    if target.health <= 0:
+                        target.die()
+                    if 'Reaper' in card['Name']:
+                        self.health_actions(dmg, 'Heal')
 
     def gain_gold(self, gold, dialogue=True):
         if relics['Ectoplasm'] not in self.relics:
@@ -550,7 +551,7 @@ class Player:
             self.blocking(self.buffs["Plated Armor"], False)
         if self.buffs["Ritual"] > 0:
             print("Ritual: ", end='')
-            ei.apply_effect(self, 'Strength', self.buffs['Ritual'])
+            ei.apply_effect(self, self, 'Strength', self.buffs['Ritual'])
         if self.buffs["Combust"] > 0:
             self.take_sourceless_dmg(self.combusts_played)
             for enemy in active_enemies:
@@ -584,11 +585,11 @@ class Player:
         if relics['Brimstone'] in self.relics:
             ansiprint("From <bold>Brimstone</bold>:")
             for enemy in active_enemies:
-                ei.apply_effect(enemy, 'Strength', 1)
-            ei.apply_effect(self, 'Strength', 2)
+                ei.apply_effect(enemy, self, 'Strength', 1)
+            ei.apply_effect(self, self, 'Strength', 2)
         if self.buffs['Demon Form'] > 0:
             ansiprint("From <buff>Demon Form</buff>: ", end='')
-            ei.apply_effect(self, 'Strength', self.buffs['Demon Form'])
+            ei.apply_effect(self, self, 'Strength', self.buffs['Demon Form'])
         if relics['Warped Tongs'] in self.relics:
             ansiprint("From <bold>Warped Tongs</bold>:")
             chosen_card = random.randint(0, len(self.hand) - 1)
@@ -643,19 +644,19 @@ class Player:
 
     def start_of_combat_relics(self, combat_type):
         if relics['Snecko Eye'] in self.relics:
-            ei.apply_effect(self, 'Confused')
+            ei.apply_effect(self, self, 'Confused')
         if relics["Slaver's Collar"] in self.relics and combat_type in ('Boss', 'Elite'):
             self.max_energy += 1
         if relics['Du-Vu Doll'] in self.relics:
             num_curses = len([card for card in self.deck if card.get('Type') == 'Curse'])
             if num_curses > 0:
                 ansiprint('From <bold>Du-Vu Doll</bold>: ', end='')
-                ei.apply_effect(self, 'Strength', num_curses)
+                ei.apply_effect(self, self, 'Strength', num_curses)
         if relics['Pantograph'] in self.relics and combat_type == 'Boss':
             ansiprint('From <bold>Pantograph</bold>: ', end='')
             self.health_actions(25, 'Heal')
         if relics['Fossilized Helix'] in self.relics:
-            ei.apply_effect(self, 'Buffer', 1)
+            ei.apply_effect(self, self, 'Buffer', 1)
         if relics['Thread and Needle'] in self.relics:
             self.buff("Plated Armor", 4, False)
         if relics['Akabeko'] in self.relics:
@@ -682,7 +683,7 @@ class Player:
             self.buff('Focus', 1, False)
         if relics["Philosopher's Stone"] in self.relics:
             for enemy in active_enemies:
-                ei.apply_effect(enemy, 'Strength', 1)
+                ei.apply_effect(enemy, self, 'Strength', 1)
 
     def die(self):
         view.clear()
@@ -800,7 +801,7 @@ class Enemy:
             elif action == 'Debuff':
                 debuff_name = parameters[0]
                 amount = parameters[1] if len(parameters) > 1 else 1
-                ei.apply_effect(player, self, debuff_name, amount)
+                ei.apply_effect(self, self, debuff_name, amount)
             elif action == 'Remove Effect':
                 effect_name = parameters[0]
                 effect_type = parameters[1]
@@ -1004,7 +1005,7 @@ class Enemy:
     def end_of_turn_effects(self):
         if self.buffs['Ritual'] > 0:
             ansiprint('<light-cyan>Ritual</light-cyan>: ', end='')
-            ei.apply_effect(self, 'Strength', self.buffs['Ritual'])
+            ei.apply_effect(self, self, 'Strength', self.buffs['Ritual'])
         if self.buffs['Metallicize'] > 0:
             ansiprint('<light-cyan>Metallicize</light-cyan>: ', end='')
             self.blocking(self.buffs['Metallicize'])
@@ -1016,7 +1017,7 @@ class Enemy:
             self.health = min(self.health + self.buffs['regen'], self.max_health)
         if self.buffs['Strength Up'] > 0:
             ansiprint('<light-cyan>Strength Up</light-cyan>: ', end='')
-            ei.apply_effect(self, 'Strength', self.buffs['Strength Up'])
+            ei.apply_effect(self, self, 'Strength', self.buffs['Strength Up'])
 
 
 def create_player():

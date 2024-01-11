@@ -546,8 +546,9 @@ class EffectInterface():
                 initialized_effects[buff] = False
         return initialized_effects
 
-    def apply_effect(self, target, user, effect_name: str,  amount=0) -> None:
+    def apply_effect(self, target, user, effect_name: str,  amount=0, recursion_tag=False) -> None:
         assert effect_name in self.ALL_EFFECTS, f"{effect_name} is not a valid debuff or buff."
+        champion_belt_activated = False
         current_relic_pool = [relic.get('Name') for relic in user.relics] if getattr(user, 'player_class', 'placehold') in str(user) else []
         color = 'debuff' if amount < 0 or (effect_name in self.ENEMY_DEBUFFS or effect_name in self.PLAYER_DEBUFFS) else 'buff'
         if str(user) == 'Player' and effect_name in ('Weak', 'Frail'):
@@ -580,8 +581,8 @@ class EffectInterface():
                 ansiprint(f"You applied {f'{amount} ' if effect_name not in self.NON_STACKING_EFFECTS else ''}<{color}>{effect_name}</{color}> to {target.name}")
             elif str(user) == str(target) and user != target:
                 ansiprint(f"{user.name} applied {f'{amount} ' if effect_name not in self.NON_STACKING_EFFECTS else ''}<{color}>{effect_name}</{color}> to {target.name}.")
-            if 'Champion Belt' in current_relic_pool and 'Player' in str(user):
-                self.apply_effect(target, 'Weak', 1, user)
+            if 'Champion Belt' in current_relic_pool and 'Player' in str(user) and not recursion_tag:
+                self.apply_effect(target, user, 'Weak', 1, True)
             if str(user) == 'Enemy' and hasattr(target, 'fresh_effects'):
                 target.fresh_effects.append(effect_name)
 
