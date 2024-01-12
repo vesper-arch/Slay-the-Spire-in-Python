@@ -14,9 +14,9 @@ def patched_input(*args, **kwargs):
     '''Patch for input() so that anytime we get asked a question, we just pick the first option'''
     return "1"
 
-def stats(player):
-    '''Print out player stats'''
+def stats(player, enemy):
     ansiprint(f"<yellow>Player has {player.health} health, {player.block} block, {player.energy} energy, {len(player.hand)} cards in hand, {len(player.draw_pile)} cards in draw pile, {len(player.discard_pile)} cards in discard pile, {len(player.exhaust_pile)} cards in exhaust pile</yellow>")
+    ansiprint(f"<red>Enemy has {enemy.health} health, {enemy.block} block</red>")
 
 def test_all_attack_cards_with_all_relics(monkeypatch):
     '''A kind of crazy test that will load up a player with all cards and all
@@ -47,7 +47,7 @@ def test_all_attack_cards_with_all_relics(monkeypatch):
 
         # Let 'er rip!
         for idx, card in enumerate(player.draw_pile):
-          stats(player)
+          stats(player, boss)
           print(f"Playing card {idx} of {len(player.draw_pile)} - {card['Name']}")
           player.use_card(card=card, target=boss, exhaust=True, pile=player.draw_pile)
 
