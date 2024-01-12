@@ -839,7 +839,7 @@ cards = {
 
     # Ignore Spot Weakness because intent doesn't exist yet
 
-    'Uppercut': {'Name': 'Uppercut', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Attack', 'Target': 'Single', 'Weak/Vulnerable': 1, 'Energy': 2, 'Info': 'Deal Σ13 damage. Apply 1 <debuff>Weak</debuff>. Apply 1 <debuff>Vulnerable</debuff>.',
+    'Uppercut': {'Name': 'Uppercut', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Attack', 'Target': 'Single', 'Damage': 13, 'Weak/Vulnerable': 1, 'Energy': 2, 'Info': 'Deal Σ13 damage. Apply 1 <debuff>Weak</debuff>. Apply 1 <debuff>Vulnerable</debuff>.',
                  'Effects+': {'Weak/Vulnerable': 2, 'Info': 'Deal Σ13 damage. Apply 2 <debuff>Weak</debuff>. Apply 2 <debuff>Vulnerable</debuff>.'}, 'Function': use_uppercut},
 
     'Whirlwind': {'Name': 'Whirlwind', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Attack', 'Target': 'Area', 'Damage': 5, 'Energy': 'player.energy', 'Info': 'Deal Σ5 damage X times.', 'Effects+': {'Damage': 8, 'Info': 'Deal Σ8 damage X times.'}, 'Function': use_whirlwind},
