@@ -117,12 +117,12 @@ def use_headbutt(targeted_enemy, using_card, entity):
     while True:
         view.view_piles(entity.discard_pile, entity)
         choice = view.list_input('What card do you want to put on top of your draw pile? > ', entity.discard_pile)
-        if not choice:
+        if choice is None:
             ansiprint('<red>The card you entered was invalid</red>.')
             sleep(1)
             view.clear()
             continue
-        entity.move_card(card=entity.discard_pile[choice], move_to=entity.draw_pile, from_location=entity.discard_pile, shuffle=False)
+        entity.move_card(card=entity.discard_pile[choice], move_to=entity.draw_pile, from_location=entity.discard_pile, cost_energy=False)
         break
 
 def use_shrugitoff(using_card, entity):
