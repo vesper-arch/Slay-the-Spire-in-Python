@@ -804,7 +804,7 @@ cards = {
 
     'Pummel': {'Name': 'Pummel', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Attack', 'Target': 'Single', 'Exhaust': True, 'Times': 4, 'Energy': 1, 'Info': 'Deal Σ2 damage 4 times.', 'Effects+': {'Times': 5, 'Info': 'Deal Σ2 damage 5 times.'}, 'Function': use_pummel},
 
-    'Rage': {'Name': 'Rage', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Single', 'Rage': 3, 'Energy': 0, 'Info': 'Whenever you play an <keyword>Attack</keyword>, gain 3 <keyword>block</keyword>.',
+    'Rage': {'Name': 'Rage', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Rage': 3, 'Energy': 0, 'Info': 'Whenever you play an <keyword>Attack</keyword>, gain 3 <keyword>block</keyword>.',
              'Effects+': {'Rage': 5, 'Info': 'Whenever you play an <keyword>Attack</keyword>, gain 5 <keyword>Block</keyword>.'}, 'Function': use_rage},
 
     'Rampage': {'Name': 'Rampage', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Attack', 'Target': 'Single', 'Damage+': 5, 'Damage': 8, 'Energy': 1, 'Info': "Deal Σ8 damage. Increase this card's damage by 5 this combat.",
