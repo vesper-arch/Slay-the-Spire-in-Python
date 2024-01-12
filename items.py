@@ -461,7 +461,7 @@ def use_fiendfire(targeted_enemy, using_card, entity):
     '''Exhaust all cards in your hand. Deal 7(10) damage for each card Exhausted. Exhaust.'''
     for card in entity.hand:
         if card != using_card:
-            entity.move_card(card, entity.hand, entity.exhaust_pile, False)
+            entity.move_card(card, move_to=entity.exhaust_pile, from_location=entity.hand, cost_energy=False)
             ansiprint(f"{card['Name']} was <keyword>Exhausted</keyword>.")
             entity.attack(using_card['Damage'], targeted_enemy, using_card)
 
