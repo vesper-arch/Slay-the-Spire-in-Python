@@ -254,14 +254,19 @@ def use_dropkick(targeted_enemy, using_card, entity):
 def use_dualwield(using_card, entity):
     '''Create a(2) copy(copies) of an Attack or Power card.'''
     while True:
-        view.view_piles(entity.hand, entity, False, 'card.get("Type") in ("Attack", "Power")')
-        option = view.list_input(f"Choose a card to make {'a copy' if not using_card.get('Upgraded') else '2 copies'} of > ", entity.hand)
+        valid_cards = [(idx, card) for idx, card in enumerate(entity.hand) if card.get('Type') in ('Attack', 'Power')]
+        view_cards = [card[1] for card in valid_cards]
+        view.view_piles(pile=view_cards, entity=entity)
+        option = view.list_input(f"Choose a card to make {'a copy' if not using_card.get('Upgraded') else '2 copies'} of > ", valid_cards)
+        #convert option to index of entity.hand
+        option = valid_cards[option][0]
         if option is None or entity.hand[option]['Type'] not in ('Attack', 'Power'):
             ansiprint('<red>The card you entered is either not an Attack or Power or it\'s invalid.</red>')
             sleep(1.5)
             view.clear()
             continue
         for _ in range(using_card['Copies']):
+            print("You made a copy of", entity.hand[option]['Name'])
             entity.hand.insert(option, deepcopy(entity.hand[option]))
         break
 
