@@ -148,9 +148,9 @@ class Player:
             exhaust = True
         if exhaust is True or card.get('Exhaust') is True:
             ansiprint(f"{card['Name']} was <bold>Exhausted</bold>.")
-            self.move_card(card, self.exhaust_pile, pile, True)
+            self.move_card(card=card, move_to=self.exhaust_pile, from_location=pile, cost_energy=True)
         else:
-            self.move_card(card, self.discard_pile, pile, True)
+            self.move_card(card=card, move_to=self.discard_pile, from_location=pile, cost_energy=True)
         if target.buffs["Sharp Hide"] > 0:
             target.attack(target.buffs["Sharp Hide"], 1)
         sleep(0.5)

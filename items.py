@@ -121,7 +121,7 @@ def use_headbutt(targeted_enemy, using_card, entity):
             sleep(1)
             view.clear()
             continue
-        entity.move_card(entity.discard_pile[choice], entity.discard_pile, entity.draw_pile, True)
+        entity.move_card(card=entity.discard_pile[choice], move_to=entity.draw_pile, from_location=entity.discard_pile, shuffle=False)
         break
 
 def use_shrugitoff(using_card, entity):
@@ -165,10 +165,10 @@ def use_truegrit(using_card, entity):
                 sleep(1)
                 view.clear()
                 continue
-            entity.move_card(entity.deck[option], entity.exhaust_pile, entity.hand, False)
+            entity.move_card(card=entity.deck[option], move_to=entity.exhaust_pile, from_location=entity.hand, cost_energy=False)
             break
     else:
-        entity.move_card(random.choice(entity.hand), entity.exhaust_pile, entity.hand, False)
+        entity.move_card(card=random.choice(entity.hand), move_to=entity.exhaust_pile, from_location=entity.hand, cost_energy=False)
 
 def use_twinstrike(targeted_enemy, using_card, entity):
     '''Deal 5(7) damage twice.'''
@@ -221,7 +221,7 @@ def use_burningpact(using_card, entity):
             sleep(1)
             view.clear()
             continue
-        entity.move_card(entity.hand[option], entity.exhaust_pile, entity.hand, False)
+        entity.move_card(card=entity.hand[option], move_to=entity.exhaust_pile, from_location=entity.hand, cost_energy=False)
         ansiprint(f"{entity.hand[option]['Name']} was <keyword>Exhausted</keyword>")
         break
     entity.draw_cards(True, using_card['Cards'])
@@ -363,7 +363,7 @@ def use_secondwind(using_card, entity):
     for card in entity.hand:
         if card.get('Type') != 'Attack':
             cards_exhausted += 1
-            entity.move_card(card, entity.exhaust_pile, entity.hand, False)
+            entity.move_card(card=card, move_to=entity.exhaust_pile, from_location=entity.hand, cost_energy=False)
             ansiprint(f"{card['Name']} was <keyword>Exhausted</keyword>.")
             sleep(0.5)
     entity.blocking(using_card['Block Per Card'] * cards_exhausted)
@@ -382,7 +382,7 @@ def use_seversoul(targeted_enemy, using_card, entity):
     '''Exhaust all non-Attack cards in your hand. Deal 16(22) damage.'''
     for card in entity.hand:
         if card['Type'] != 'Attack':
-            entity.move_card(card, entity.hand, entity.exhaust_pile, False)
+            entity.move_card(card=card, move_to=entity.exhaust_pile, from_location=entity.hand, cost_energy=False)
             ansiprint(f"{card['Name']} was exhausted.")
             sleep(0.5)
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
@@ -466,7 +466,7 @@ def use_fiendfire(targeted_enemy, using_card, entity):
     '''Exhaust all cards in your hand. Deal 7(10) damage for each card Exhausted. Exhaust.'''
     for card in entity.hand:
         if card != using_card:
-            entity.move_card(card, move_to=entity.exhaust_pile, from_location=entity.hand, cost_energy=False)
+            entity.move_card(card=card, move_to=entity.exhaust_pile, from_location=entity.hand, cost_energy=False)
             ansiprint(f"{card['Name']} was <keyword>Exhausted</keyword>.")
             entity.attack(using_card['Damage'], targeted_enemy, using_card)
 
