@@ -883,7 +883,7 @@ cards = {
 
     'Limit Break': {'Name': 'Limit Break', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Skill', 'Target': 'Yourself', 'Exhaust': True, 'Energy': 1, 'Info': 'Double your <buff>Strength</buff>. <keyword>Exhaust</keyword>.', 'Effects+': {'Exhaust': False}, 'Function': use_limitbreak},
 
-    'Offering': {'Name': 'Offering', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Skill', 'Target': 'Yourself', 'Exhaust': True, 'Cards': 3, 'Info': 'Lose 6 HP. Gain 2 <keyword>Energy</keyword>. Draw 3 cards. <keyword>Exhaust</keyword>.',
+    'Offering': {'Name': 'Offering', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Skill', 'Target': 'Yourself', 'Exhaust': True, 'Cards': 3, 'Energy': 0, 'Info': 'Lose 6 HP. Gain 2 <keyword>Energy</keyword>. Draw 3 cards. <keyword>Exhaust</keyword>.',
                  'Effects+': {'Cards': 5, 'Info': 'Lose 6 HP. Gain 2 <keyword>Exhaust</keyword>. Draw 5 cards. <keyword>Exhaust</keyword>.'}, 'Function': use_offering},
 
     'Reaper': {'Name': 'Reaper', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Attack', 'Target': 'Area', 'Exhaust': True, 'Damage': 4, 'Energy': 2, 'Info': 'Deal 4 damage to ALL enemies. Heal HP equal to unblocked damage. <keyword>Exhaust</keyword>.',
