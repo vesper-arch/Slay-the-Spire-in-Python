@@ -456,10 +456,11 @@ def use_exhume(using_card, entity):
         del entity.exhaust_pile[option]
         break
 
-def use_feed(enemies, targeted_enemy, using_card, entity):
+def use_feed(targeted_enemy, using_card, entity):
     '''Deal 10(12) damage. If Fatal, raise your Max HP by 3(4). Exhaust.'''
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
-    if targeted_enemy not in enemies and not targeted_enemy.buffs['Minion']:
+    if targeted_enemy.health <= 0 and not targeted_enemy.buffs['Minion']:
+        ansiprint(f"FATALITY! You gained {using_card['Max HP']} <keyword>Max HP</keyword>.")
         entity.health_actions(using_card['Max HP'], 'Max Health')
 
 def use_fiendfire(targeted_enemy, using_card, entity):
