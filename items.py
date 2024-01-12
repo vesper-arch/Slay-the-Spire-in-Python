@@ -103,7 +103,8 @@ def use_clothesline(targeted_enemy, using_card, entity):
 def use_havoc(enemies, using_card, entity):
     '''Play the top card of your draw pile and Exhaust it.'''
     _ = using_card
-    entity.use_card(entity.draw_pile[-1], random.choice(enemies), True, entity.draw_pile)
+    if len(entity.draw_pile) > 0:
+        entity.use_card(entity.draw_pile[-1], random.choice(enemies), True, entity.draw_pile)
 
 def use_flex(using_card, entity):
     '''Gain 2(4) Strength. At the end of your turn, lose 2(4) Strength'''
