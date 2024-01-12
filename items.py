@@ -39,7 +39,7 @@ def use_defend(using_card, entity):
 
 def use_bodyslam(targeted_enemy, using_card, entity):
     '''Deals damage equal to your Block. Exhaust.(Don't Exhaust)'''
-    entity.attack(using_card['Damage'], targeted_enemy, entity)
+    entity.attack(dmg=entity.block, target=targeted_enemy, card=using_card)
 
 
 def use_clash(targeted_enemy, using_card, entity):
