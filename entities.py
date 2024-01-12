@@ -886,7 +886,10 @@ class Enemy:
         if relics['Gremlin Horn'] in player.relics:
             player.energy += 1
             player.draw_cards(True, 1)
-        active_enemies.remove(self)
+        try:
+            active_enemies.remove(self)
+        except ValueError:
+            raise Exception(f"{self.name} is not in the active enemies list.")
 
     def debuff_and_buff_check(self):
         """
