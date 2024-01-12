@@ -793,7 +793,7 @@ cards = {
     'Ghostly Armor': {'Name': 'Ghostly Armor', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Ethereal': True, 'Block': 10, 'Energy': 1, 'Info': '<keyword>Ethereal.</keyword> Gain ꫱10 <keyword>Block</keyword>.',
                       'Effects+': {'Block': 13, 'Info': '<keyword>Ethereal.</keyword> Gain ꫱13 <keyword>Block</keyword>.'}, 'Function': use_ghostlyarmor},
 
-    'Hemokinesis': {'Name': 'Hemokinesis', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Attack', 'Target': 'Single', 'Damage': 15, 'Energy': 1, 'Info': 'Lose 2 HP. Deal Σ15 damage.', 'Effects': {'Damage': 20, 'Info': 'Lose 2 HP. Deal Σ20 damage.'}, 'Function': use_hemokinesis},
+    'Hemokinesis': {'Name': 'Hemokinesis', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Attack', 'Target': 'Single', 'Damage': 15, 'Energy': 1, 'Info': 'Lose 2 HP. Deal Σ15 damage.', 'Effects+': {'Damage': 20, 'Info': 'Lose 2 HP. Deal Σ20 damage.'}, 'Function': use_hemokinesis},
 
     'Infernal Blade': {'Name': 'Infernal Blade', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Energy': 1, 'Info': 'Add a random <keyword>Attack</keyword> into your hand. It costs 0 this turn. <keyword>Exhaust.</keyword>', 'Effects+': {'Energy': 0}, 'Function': use_infernalblade},
 
