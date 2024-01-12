@@ -452,7 +452,7 @@ def use_exhume(using_card, entity):
             sleep(1.5)
             view.clear()
             continue
-        entity.hand.append(entity.exhaust_pile)
+        entity.hand.append(entity.exhaust_pile[option])
         del entity.exhaust_pile[option]
         break
 
