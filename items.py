@@ -768,7 +768,7 @@ cards = {
 
     'Combust': {'Name': 'Combust', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Target': 'Yourself', 'Type': 'Power', 'Combust': 5, 'Energy': 1, 'Info': 'At the end of your turn, lose 1 HP and deal 5 damage to ALL enemies.', 'Effects+': {'Combust': 7, 'Info': 'At the end of your turn, lose 1 HP and deal 7 damage to ALL enemies'}, 'Function': use_combust},
 
-    'Dark Embrace': {'Name': 'Dark Embrace', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Power', 'Energy': 2, 'Info': 'Whenever a card is <keyword>Exhausted</keyword>, draw 1 card.', 'Effects+': {'Energy': 1}, 'Function': use_darkembrace},
+    'Dark Embrace': {'Name': 'Dark Embrace', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Target': 'Yourself', 'Type': 'Power', 'Energy': 2, 'Info': 'Whenever a card is <keyword>Exhausted</keyword>, draw 1 card.', 'Effects+': {'Energy': 1}, 'Function': use_darkembrace},
 
     'Disarm': {'Name': 'Disarm', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Single', 'Exhaust': True, 'Strength Loss': 2, 'Energy': 1, 'Info': 'Enemy loses 2 <buff>Strength</buff>. <keyword>Exhaust.</keyword>',
                'Effects+': {'Strength Loss': 3, 'Info': 'Enemy loses 3 <buff>Strength</buff>. <keyword>Exhaust</keyword>.'}, 'Function': use_disarm},
