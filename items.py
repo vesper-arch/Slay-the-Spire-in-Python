@@ -442,7 +442,7 @@ def use_exhume(using_card, entity):
     while True:
         view.view_piles(entity.exhaust_pile, entity)
         option = view.list_input("Choose a card to return to your hand > ", entity.exhaust_pile)
-        if not option:
+        if option is None:
             ansiprint('<red>The card you entered is invalid</red>')
             sleep(1.5)
             view.clear()

@@ -18,6 +18,7 @@ def test_all_attack_cards_with_all_relics(monkeypatch):
     relics and play them all against a boss. Sensitive to combat initialization details
     because that logic is not isolated from enemy creation.
     '''
+    entities.random.seed(123)
     all_cards = [card for card in entities.cards.values()]
 
     # Create uberplayer
