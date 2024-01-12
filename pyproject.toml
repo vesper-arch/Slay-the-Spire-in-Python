@@ -16,6 +16,7 @@ pytest = "^7.4.3"
 [tool.poetry.group.dev.dependencies]
 pytest-watch = "^4.2.0"
 pytest-only = "^2.0.0"
+pytest-cov = "^4.1.0"
 
 [tool.pytest.ini_options]
 pythonpath = "/workspaces/Slay-The-Spire-in-Python"
