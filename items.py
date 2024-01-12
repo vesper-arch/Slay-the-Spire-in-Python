@@ -488,7 +488,7 @@ def use_impervious(using_card, entity):
 
 def use_juggernaut(using_card, entity):
     '''Whenever you gain Block, deal 5(7) damage to a random enemy.'''
-    ei.apply_effect(entity, entity, 'Juggernaut', using_card['Juggernaut'])
+    ei.apply_effect(target=entity, user=entity, effect_name='Juggernaut', amount=using_card['Dmg On Block'])
 
 def use_limitbreak(using_card, entity):
     '''Double your Strength. Exhaust.'''
