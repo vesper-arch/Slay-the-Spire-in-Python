@@ -886,7 +886,7 @@ cards = {
     'Offering': {'Name': 'Offering', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Skill', 'Target': 'Yourself', 'Exhaust': True, 'Cards': 3, 'Info': 'Lose 6 HP. Gain 2 <keyword>Energy</keyword>. Draw 3 cards. <keyword>Exhaust</keyword>.',
                  'Effects+': {'Cards': 5, 'Info': 'Lose 6 HP. Gain 2 <keyword>Exhaust</keyword>. Draw 5 cards. <keyword>Exhaust</keyword>.'}, 'Function': use_offering},
 
-    'Reaper': {'Name': 'Reaper', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Attack', 'Target': 'Area', 'Exhaust': True, 'Damage': 4, 'Info': 'Deal 4 damage to ALL enemies. Heal HP equal to unblocked damage. <keyword>Exhaust</keyword>.',
+    'Reaper': {'Name': 'Reaper', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Attack', 'Target': 'Area', 'Exhaust': True, 'Damage': 4, 'Energy': 2, 'Info': 'Deal 4 damage to ALL enemies. Heal HP equal to unblocked damage. <keyword>Exhaust</keyword>.',
                'Effects+': {'Damage': 5, 'Info': 'Deal 5 damage to ALL enemies. Heal HP equal to unblocked damage. <keyword>Exhaust</keyword>.'}, 'Function': use_reaper},
     # Status cards
     'Slimed': {'Name': 'Slimed', 'Energy': 1, 'Target': 'Nothing', 'Rarity': 'Common', 'Type': 'Status', 'Info': '<keyword>Exhaust</keyword>'},
