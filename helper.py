@@ -413,7 +413,7 @@ class EffectInterface():
             "Combust": "At the end of your turn, lose 1 HP for each <bold>Combust</bold> played and deal X damage to ALL enemies",
             "Corruption": "Skills cost 0. Whenever you play a Skill, <bold>Exhaust</bold> it",
             "Creative AI": "At the start of your turn, add X random <power>Power</power cards into your hand",
-            "Dark Embrace": "Whenever a card is <bold>Exhausted</bold>, gain X <bold>Block</bold>",
+            "Dark Embrace": "Whenever a card is <bold>Exhausted</bold>, draw 1 card.",
             "Demon Form": "At the start of your turn, gain X <bold>Strength</bold>",
             "Deva": "At the start of your turn, gain X <bold>Energy</bold> N times and increase X by 1",
             "Devotion": "At the start of your turn, gain X <bold>Mantra</bold>",

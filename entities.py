@@ -391,9 +391,12 @@ class Player:
         else:
             move_to.append(card)
         if self.buffs["Dark Embrace"] > 0 and move_to == self.exhaust_pile:
+            ansiprint("<bold>Dark Embrace</bold> allows you to draw 1 card to your hand.")
             self.draw_cards(True, 1)
         if relics['Dead Branch'] in self.relics and move_to == self.exhaust_pile:
-            self.hand.append(deepcopy(random.choice([card for card in cards.values() if card.get('Upgraded') is not True and card.get('Class') == self.player_class])))
+            random_card = deepcopy(random.choice([card for card in cards.values() if card.get('Upgraded') is not True and card.get('Class') == self.player_class]))
+            ansiprint(f"<bold>Dead Branch</bold> allows you to draw a <bold>{random_card['Name']}</bold> card to your hand.")
+            self.hand.append(random_card)
         if relics["Charon's Ashes"] in self.relics and move_to == self.exhaust_pile:
             for enemy in active_enemies:
                 self.attack(3, enemy)
