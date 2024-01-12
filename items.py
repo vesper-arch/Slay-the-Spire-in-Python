@@ -194,7 +194,10 @@ def use_warcry(using_card, entity):
 def use_wildstrike(targeted_enemy, using_card, entity):
     '''Deal 12(17) damage. Shuffle a Wound into your draw pile.'''
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
-    entity.draw_pile.insert(random.randint(0, len(entity.draw_pile) - 1), deepcopy(cards['Wound']))
+    if len(entity.draw_pile) > 0:
+        entity.draw_pile.insert(random.randint(0, len(entity.draw_pile) - 1), deepcopy(cards['Wound']))
+    else:
+        entity.draw_pile.append(deepcopy(cards['Wound']))
     ansiprint("A <status>Wound</status> was shuffled into your draw pile.")
 
 def use_battletrance(using_card, entity):
