@@ -140,17 +140,18 @@ class Player:
             self.buffs['Double Tap'] -= 1
             sleep(1.5)
             view.clear()
-            self.use_card(card, target, True, pile)
+            self.use_card(card=card, target=target, exhaust=True, pile=None)
         if card.get('Type') == 'Status' and relics['Medical Kit'] in player.relics:
             exhaust = True
         elif card.get('Type') == 'Curse' and relics['Blue Candle'] in player.relics:
             self.take_sourceless_dmg(1)
             exhaust = True
-        if exhaust is True or card.get('Exhaust') is True:
-            ansiprint(f"{card['Name']} was <bold>Exhausted</bold>.")
-            self.move_card(card=card, move_to=self.exhaust_pile, from_location=pile, cost_energy=True)
-        else:
-            self.move_card(card=card, move_to=self.discard_pile, from_location=pile, cost_energy=True)
+        if pile is not None:
+            if exhaust is True or card.get('Exhaust') is True:
+                ansiprint(f"{card['Name']} was <bold>Exhausted</bold>.")
+                self.move_card(card=card, move_to=self.exhaust_pile, from_location=pile, cost_energy=True)
+            else:
+                self.move_card(card=card, move_to=self.discard_pile, from_location=pile, cost_energy=True)
         if target.buffs["Sharp Hide"] > 0:
             target.attack(target.buffs["Sharp Hide"], 1)
         sleep(0.5)
