@@ -87,6 +87,11 @@ def use_armaments(using_card, entity):
         while True:
             view.view_piles(entity.hand, entity, False, 'Upgradeable')
             option = view.list_input("Choose a card to upgrade > ", entity.hand)
+            if option is None:
+                ansiprint('<red>The card you entered is invalid</red>')
+                sleep(1.5)
+                view.clear()
+                continue
             if entity.hand[option].get('Upgraded') or (entity.hand[option].get('Name') != "Burn" and entity.hand[option].get('Type') in ('Status', 'Curse')):
                 ansiprint('That card is either already upgraded, a status, or a curse.')
                 sleep(1.5)
