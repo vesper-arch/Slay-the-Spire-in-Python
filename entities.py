@@ -407,6 +407,9 @@ class Player:
 
     def attack(self, dmg,  target: 'Enemy', card=None, ignore_block=False):
         dmg_affected_by: str = ''
+        # Check if already dead and skip if so
+        if target.health <= 0:
+            return
         if card is not None and card.get('Type') not in ('Status', 'Curse'):
             dmg = dmg + self.buffs['Strength'] * card.get("Strength Multi", 1) + self.buffs['Vigor']
             if relics['Strike Dummy'] in self.relics and 'strike' in card.get('Name').lower():
