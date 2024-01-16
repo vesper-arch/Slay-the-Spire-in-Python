@@ -8,15 +8,16 @@ from items import relics, potions, cards, activate_sacred_bark
 from helper import active_enemies, combat_turn, potion_dropchance, view, gen, ei
 from enemy_catalog import create_act1_normal_encounters, create_act1_elites, create_act1_boss
 from entities import player
+from definitions import CombatTier
 
 cards['Whirlwind']['Energy'] = player.energy
 
-def combat(tier, current_map) -> None:
+def combat(tier: CombatTier, current_map) -> None:
     """There's too much to say here."""
     global combat_turn
     # Spawns enemies and shuffles the player's deck into their draw pile.
     boss_name = start_combat(tier)
-    if relics['Preserved Insect'] in player.relics and tier == 'Elite':
+    if relics['Preserved Insect'] in player.relics and tier == CombatTier.ELITE:
         for enemy in active_enemies:
             enemy.health -= round(enemy.health * 0.25)
         ansiprint('<bold>Preserved Insect</bold> <blue>activated</blue>.')
@@ -157,7 +158,7 @@ def rest_site():
             player.health_actions(heal_amount, "Heal")
             if relics['Dream Catcher'] in player.relics:
                 ansiprint('<bold><italic>Dreaming...</italic></bold>')
-                gen.card_rewards('Normal', True, player, cards)
+                gen.card_rewards(CombatTier.NORMAL, True, player, cards)
             break
         if action == 'smith':
             if relics['Fusion Hammer'] in player.relics:
@@ -203,14 +204,18 @@ def rest_site():
         sleep(1.5)
         view.clear()
 
-def start_combat(combat_tier):
+def start_combat(combat_tier: CombatTier):
     player.in_combat = True
     # Shuffles the player's deck into their draw pile
     player.draw_pile = random.sample(player.deck, len(player.deck))
     act1_normal_encounters  = create_act1_normal_encounters()
     act1_elites = create_act1_elites()
     act1_boss = create_act1_boss()
-    encounter_types = {'Normal': act1_normal_encounters, 'Elite': act1_elites, 'Boss': act1_boss}
+    encounter_types = {
+        CombatTier.NORMAL: act1_normal_encounters,
+        CombatTier.ELITE: act1_elites,
+        CombatTier.BOSS: act1_boss
+    }
     encounter_enemies = encounter_types[combat_tier][0]
     for enemy in encounter_enemies:
         active_enemies.append(enemy)
@@ -218,7 +223,7 @@ def start_combat(combat_tier):
     return act1_boss[0].name
 
 def unknown() -> None:
-    # CHances
+    # Chances
     normal_combat: float = 0.1
     treasure_room: float = 0.02
     merchant: float = 0.03
@@ -237,7 +242,7 @@ def unknown() -> None:
         normal_combat = 0.1
         treasure_room += 0.02
         merchant += 0.03
-        combat('Normal')
+        combat(CombatTier.NORMAL)
     else:
         ansiprint(player)
         chosen_event = choose_event()
@@ -280,11 +285,11 @@ def play_card(card):
 def create_game_map():
     encounter_weights = [0.45, 0.24, 0.19, 0.12]
     # Assigning names so they can be used as keys in a dictionary for the view.piles function
-    normal_combat = lambda map: combat("Normal", map)
+    normal_combat = lambda map: combat(CombatTier.NORMAL, map)
     normal_combat.__name__ = 'normal_combat'
-    elite_combat = lambda map: combat('Elite', map)
+    elite_combat = lambda map: combat(CombatTier.ELITE, map)
     elite_combat.__name__ = 'elite_combat'
-    boss_combat = lambda map: combat("Boss", map)
+    boss_combat = lambda map: combat(CombatTier.BOSS, map)
     boss_combat.__name__ = 'boss_combat'
     possible_encounters = [normal_combat, unknown, elite_combat, rest_site]
     game_map = [normal_combat] + random.choices(possible_encounters, weights=encounter_weights, k=13) + [boss_combat]

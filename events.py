@@ -6,6 +6,7 @@ from ansi_tags import ansiprint
 from items import cards, potions, relics
 from entities import player
 from helper import gen, view
+from definitions import CombatTier
 
 
 def event_Neow():
@@ -29,7 +30,7 @@ def event_BonfireSpirits():
     while True:
         ansiprint("<bold>Bonfire Spirits</bold>")
         ansiprint("""You happen upon a group of what looks like <magenta>purple fire spirits</magenta> dancing around a large bonfire.
-    
+
 The spirits toss small bones and fragments unto the fire, which brilliantly erupts each time. As you approach, the spirits all turn to you, expectantly...""")
         sleep(0.8)
         ansiprint("<bold>[Offer]</bold> Recieve a reward based on the offer.")
@@ -48,7 +49,7 @@ The spirits toss small bones and fragments unto the fire, which brilliantly erup
             break
         if player.deck[offering].get("Rarity") in ('Common', 'Basic'):
             ansiprint("""<italic>The flames grow slightly brighter.</italic>
-                                            
+
 The spirits continue dancing. You feel slightly warmer from their presense..\n""")
             player.health_actions(5, "Heal")
             sleep(1.5)
@@ -56,13 +57,13 @@ The spirits continue dancing. You feel slightly warmer from their presense..\n""
             break
         if player.deck[offering].get("Rarity") == "Uncommon":
             ansiprint("""<italic>The flames erupt, growing significantly stronger!</italic>
-                                        
+
 The spirits dance around you exitedly, filling you with a sense of warmth.\n""")
             player.health_actions(player.max_health, "Heal")
             break
         if player.deck[offering].get("Rarity") == "Rare":
             ansiprint("""<italic>The flames burst, nearly knocking you off your feet, as the fire doubles in strength.</italic>
-                             
+
 The spirits dance around you excitedly before merging into your form, filling you with warmth and strength\n""")
             player.health_actions(10, "Max Health")
             player.health_actions(player.max_health, "Heal")
@@ -139,7 +140,7 @@ def event_GoldenShrine():
         if option == 'desecrate':
             player.gain_gold(275, False)
             ansiprint("""Each time you strike the shrine, <yellow>gold</yellow> pours forth again and again!
-                      
+
 As you pocket the riches, something <red>weighs heavily on you.</red>""")
             player.deck.append(cards["Regret"])
             ansiprint(f"{player.name} gained <curse>Regret</curse>")
@@ -161,7 +162,7 @@ def event_Lab():
     print()
     sleep(1)
     print("""You find yourself in a room filled with racks of test tubes, beakers, flasks, forceps, pinch clamps, stirring rods, tongs, goggles, funnels, pipets, cylinders, condensers, and even a rare spiral tube of glass.
-          
+
 Why do you know the name of all these tools? It doesn't matter, you take a look around.""")
     ansiprint("<bold>[Search]</bold> <green>Obtain 3 random potions</green>")
     input('Press enter > ')
@@ -187,7 +188,7 @@ def event_OminousForge():
 
 Taking the relic, you can't shake a sudden feeling of <red>sharp pain</red> as you exit the hut. Maybe you disturbed some sort of spirit?''')
             gen.claim_relics(False, player, 1, relics, [relics['Warped Tongs']])
-            gen.card_rewards('Normal', False, player, cards, [cards['Pain']])
+            gen.card_rewards(CombatTier.NORMAL, False, player, cards, [cards['Pain']])
             break
     input('Press enter to continue > ')
     sleep(1)
@@ -273,7 +274,7 @@ def event_WeMeetAgain():
         ansiprint('<bold>We Meet Again!</bold>')
         sleep(0.8)
         ansiprint(""""We meet again!"
-                  
+
 A cheery disheveled fellow approaches you gleefully. You do not know this man.
 
 "It's me, <yellow>Ranwid!</yellow> Have any goods for me today? The usual? A fella like me can't make it alone, you know?
@@ -294,7 +295,7 @@ You eye him suspiciously and consider your options...""")
                 print(f"You lost {remove_potion.get('Name')}")
                 player.potions.remove(remove_potion)
                 ansiprint("""<bold>Ranwid</bold>: "Exquisite! Was feeling parched."
-                          
+
 <light-blue>Glup glup glup</light-blue>
 
 He downs the potion in one go and lets out a satisfied burp.""")
@@ -327,7 +328,7 @@ He downs the potion in one go and lets out a satisfied burp.""")
             break
         if option == 'attack':
             ansiprint('''<bold>Ranwid</bold>: "Aaaaagghh!! What a jerk you are sometimes!"
-                  
+
 He runs away.''')
             break
         ansiprint("<red>Valid inputs: ['give potion', 'give gold', 'give card', 'attack']</red>")
@@ -343,7 +344,7 @@ def event_TheWomanInBlue():
         ansiprint('<bold>The Woman in Blue</bold>')
         sleep(0.8)
         ansiprint("""From the darkness, an arm pulls you into a small shop. As your eyes adjust, you see a pale woman in sharp clothes gesturing towards a wall of potions.
-              
+
 <bold>Pale Woman</bold>: 'Buy a potion. <italic>Now!</italic>' she states.""")
         print()
         sleep(0.8)
@@ -363,7 +364,7 @@ def event_TheWomanInBlue():
             sleep(1.5)
             view.clear()
     ansiprint('''<bold>Pale Woman</bold>: "Good, now leave."
-                      
+
 You exit the shop cautiously.''')
     input('Press enter to leave > ')
     sleep(1.5)
@@ -378,11 +379,11 @@ def event_FaceTrader():
         sleep(0.8)
         ansiprint('''You walk by an eerie statue holding several masks...
 Something behind you softly whispers, "Stop."
-                  
+
 You swerve around to face the statue which is now facing you!
-                  
+
 On closer inspection, it's not a statue but a statuesque, gaunt man. Is he even breathing?
-                  
+
 <bold>Eerie Man</bold>: "Face. Let me touch? Maybe trade?"''')
         sleep(0.8)
         ansiprint(f'<bold>[Touch]</bold> <green>Gain 75 gold</green>. <red>Lose {math.floor(player.max_health * 0.1)} HP</red> \n<bold>[Trade]</bold> <green>50% Good Face</green> <red>50% Bad Face</red> \n<bold>[Leave]</bold> Nothing happens.')
@@ -391,29 +392,29 @@ On closer inspection, it's not a statue but a statuesque, gaunt man. Is he even 
             player.gain_gold(75)
             player.take_sourceless_dmg(math.floor(player.max_health * 0.1))
             ansiprint('''<bold>Eerie Man</bold>: "Compensation. Compensation."
-                      
+
 Mechanically, he cranes out a neat stack of <yellow>gold</yellow> and places it into your pouch.
-                      
+
 <bold>Eerie Man</bold>: "What a nice face. Nice face."
-                      
+
 While he touches your face, you begin to feel your life drain out of it!
-                      
+
 During this, his mask falls off and shatters. Screaming, he quickly covers his face with all six arms dropping even more masks! Amidst all the screaming and shattering, you escape.
-                      
+
 His face was completely blank.''')
             break
         if option == 'trade':
             gen.claim_relics(False, player, 1, relics, [random.choice(face_relics)], False)
             sleep(0.8)
             ansiprint('''<bold>Eerie Man</bold>: "For me? <italic>FOR ME?</italic> Oh yes.. Yes. Yes.. mmm..."
-                      
+
 You see one of his arms flicker, <red>and your face is in its hand</red>! Your face has been swapped.
-                      
+
 <bold>Eerie Man</bold>: "Nice face. Nice face."''')
             break
         if option == 'leave':
             ansiprint('''<bold>Eerie Man</bold>: "Stop. Stop. Stop. Stop. Stop."
-                      
+
 This was probably the right call.''')
             break
         ansiprint('<red>Valid inputs: ["trade", "touch", "leave"]</red>')
@@ -464,7 +465,7 @@ def event_TheCleric():
         ansiprint('<bold>The Cleric</bold>')
         sleep(0.7)
         ansiprint('''A strange blue humanoid with a golden helm approaches you with a huge smile.
-                  
+
 "Hello friend! I am <light-blue>Cleric</light-blue>! Are you interested in my services!?" the creature shouts, loudly.''')
         sleep(0.5)
         ansiprint(f'<bold>[Heal]</bold> <red>Lose 35 Gold</red>. <green>Heal {math.floor(player.max_health * 0.25)} HP</green> \n<bold>[Purify]</bold> <red>Lose 50 Gold</red>. Remove a card from your deck. \n<bold>[Leave]</bold> Nothing happens.')
@@ -490,9 +491,9 @@ def event_TheCleric():
             view.view_piles(player.deck, player, False, 'Removable')
             option = view.list_input(player, "What card would you like to remove? > ", player.deck, lambda card: card.get("Removable") is False, message_when_invalid="That card is not removable.")
             ansiprint('''A cold blue flame envelops your body and dissipates.
-                      
+
 The creature grins.
-                      
+
 <bold>Cleric</bold>: "Cleric talented. Have a good day!"''')
             player.deck[option] = player.card_actions(player.deck[option], "Remove", cards)
             break
@@ -511,7 +512,7 @@ def event_GoldenIdol():
         ansiprint("<bold>Golden Idol</bold>")
         sleep(0.8)
         ansiprint("""You come across an inconspicuous pedastal with a <yellow>shining gold idol</yellow> sitting peacefully atop. It looks incredibly valuable.
-                  
+
 You're sure you don't see any traps nearby.\n""")
         ansiprint("<bold>[Take]</bold> <green>Obtain <bold>Golden Idol</bold>.</green> <red>Trigger a trap</red> \n<bold>[Leave]</bold> Nothing happens")
         option = input('> ').lower()
@@ -522,13 +523,13 @@ You're sure you don't see any traps nearby.\n""")
         if option == 'take':
             gen.claim_relics(False, player, 1, relics, [relics['Golden Idol']], False)
             ansiprint("""As you grab the idol and stow it away, a giant boulder smashes through the ceiling into the ground next to you.
-                      
+
 You realize that the floor is slanted downwards as the boulder starts to roll towards you.""")
             ansiprint(f"<bold>[Outrun]</bold> <red>Become <bold>Cursed</bold></red> - <keyword>Injury</keyword> \n<bold>[Smash]</bold> <red>Take {math.floor(player.max_health * 0.25)} damage</red> \n<bold>[Hide]</bold> <red>Lose {math.floor(player.max_health * 0.08)} Max HP</red>")
             option = input('> ').lower()
             if option == 'outrun':
                 ansiprint("""<italic>RUUUUUUUUUUUUUUUN!</italic>
-                        
+
 You barely leap into a side passageway as the boulder rushes by. Unfortunatly, it feels like you sprained something.""")
                 gen.card_rewards("Normal", False, player, cards, [cards['Injury']])
                 break
@@ -539,12 +540,12 @@ You barely leap into a side passageway as the boulder rushes by. Unfortunatly, i
             if option == 'hide':
                 player.health_actions(-math.floor(player.max_health * 0.08), "Max Health")
                 ansiprint('''<italic>SQUISH!</italic>
-                          
+
 The boulder flattens you a little as it passes by, but otherwise you can get out of here.''')
                 break
         if option == 'leave':
             ansiprint('''If there was ever an obvious trap, this would be it.
-                      
+
 You decide not to interfere with objects placed on pedastals.''')
             break
     input('Press enter to leave > ')

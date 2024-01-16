@@ -7,6 +7,7 @@ from copy import deepcopy
 from ansi_tags import ansiprint
 from items import relics, cards, modify_energy_cost, activate_sacred_bark
 from helper import active_enemies, combat_turn, view, gen, ei
+from definitions import CombatTier
 
 class Player:
     """
@@ -199,7 +200,7 @@ class Player:
                     view.clear()
                     continue
         elif relic['Name'] == 'Calling Bell':
-            gen.card_rewards('Normal', False, self, None, [cards['Call of the Bell']])
+            gen.card_rewards(CombatTier.NORMAL, False, self, None, [cards['Call of the Bell']])
             for _ in range(3):
                 gen.claim_relics(True, self, 3)
         elif relic['Name'] == 'Empty Cage':
@@ -647,14 +648,14 @@ class Player:
     def start_of_combat_relics(self, combat_type):
         if relics['Snecko Eye'] in self.relics:
             ei.apply_effect(self, self, 'Confused')
-        if relics["Slaver's Collar"] in self.relics and combat_type in ('Boss', 'Elite'):
+        if relics["Slaver's Collar"] in self.relics and combat_type in (CombatTier.BOSS, CombatTier.ELITE):
             self.max_energy += 1
         if relics['Du-Vu Doll'] in self.relics:
             num_curses = len([card for card in self.deck if card.get('Type') == 'Curse'])
             if num_curses > 0:
                 ansiprint('From <bold>Du-Vu Doll</bold>: ', end='')
                 ei.apply_effect(self, self, 'Strength', num_curses)
-        if relics['Pantograph'] in self.relics and combat_type == 'Boss':
+        if relics['Pantograph'] in self.relics and combat_type == CombatTier.BOSS:
             ansiprint('From <bold>Pantograph</bold>: ', end='')
             self.health_actions(25, 'Heal')
         if relics['Fossilized Helix'] in self.relics:
@@ -694,7 +695,7 @@ class Player:
         sys.exit()
 
     def end_of_combat_effects(self, combat_type):
-        if relics["Slaver's Collar"] in self.relics and combat_type in ('Boss', 'Elite'):
+        if relics["Slaver's Collar"] in self.relics and combat_type in (CombatTier.BOSS, CombatTier.ELITE):
             self.max_energy -= 1
         if relics['Meat on the Bone'] in self.relics and self.health <= math.floor(self.max_health * 0.5):
             ansiprint("<bold>Meat on the Bone</bold> activated.")
