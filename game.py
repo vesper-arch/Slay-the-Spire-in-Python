@@ -1,3 +1,4 @@
+from functools import partial
 from time import sleep
 import math
 import random
@@ -8,7 +9,8 @@ from items import relics, potions, cards, activate_sacred_bark
 from helper import active_enemies, combat_turn, potion_dropchance, view, gen, ei
 from enemy_catalog import create_act1_normal_encounters, create_act1_elites, create_act1_boss
 from entities import player
-from definitions import CombatTier
+from definitions import CombatTier, EncounterType
+import game_map
 
 cards['Whirlwind']['Energy'] = player.energy
 
@@ -282,35 +284,28 @@ def play_card(card):
         player.use_card(card, active_enemies[target], False, player.hand)
         break
 
-def create_game_map():
-    encounter_weights = [0.45, 0.24, 0.19, 0.12]
-    # Assigning names so they can be used as keys in a dictionary for the view.piles function
-    normal_combat = lambda map: combat(CombatTier.NORMAL, map)
-    normal_combat.__name__ = 'normal_combat'
-    elite_combat = lambda map: combat(CombatTier.ELITE, map)
-    elite_combat.__name__ = 'elite_combat'
-    boss_combat = lambda map: combat(CombatTier.BOSS, map)
-    boss_combat.__name__ = 'boss_combat'
-    possible_encounters = [normal_combat, unknown, elite_combat, rest_site]
-    game_map = [normal_combat] + random.choices(possible_encounters, weights=encounter_weights, k=13) + [boss_combat]
-    for i, encounter in enumerate(game_map[0:5]):
-        # Checks the first 6 floors for rest sites or elite combats
-        if encounter in (elite_combat, rest_site):
-            mod_encounters = possible_encounters[:possible_encounters.index(encounter)] + possible_encounters[possible_encounters.index(encounter) + 1:]
-            mod_weights = encounter_weights[:possible_encounters.index(encounter)] + encounter_weights[possible_encounters.index(encounter) + 1:]
-            game_map[i] = random.choices(mod_encounters, weights=mod_weights)[0]
-    for i in range(len(possible_encounters) - 1):
-        if (game_map[i] == game_map[i + 1]) and (game_map[i] in (rest_site, elite_combat) and game_map[i+1] in (rest_site, elite_combat)):
-            mod_encounters = possible_encounters[:possible_encounters.index(game_map[i + 1])] + possible_encounters[possible_encounters.index(game_map[i + 1]) + 1:]
-            mod_weights = encounter_weights[:possible_encounters.index(encounter)] + encounter_weights[possible_encounters.index(encounter) + 1:]
-            game_map[i + 1] = random.choices(mod_encounters, weights=mod_weights)
-    return game_map
+def play(encounter: EncounterType):
+    if encounter.type == EncounterType.START:
+        pass
+    elif encounter.type == EncounterType.REST_SITE:
+        return rest_site()
+    elif encounter.type == EncounterType.UNKNOWN:
+        return unknown()
+    elif encounter.type == EncounterType.BOSS:
+        return combat(CombatTier.BOSS, gm)
+    elif encounter.type == EncounterType.ELITE:
+        return combat(CombatTier.ELITE, gm)
+    elif encounter.type == EncounterType.NORMAL:
+        return combat(CombatTier.NORMAL, gm)
+    else:
+        raise game_map.MapError(f"Encounter type {encounter} is not valid.")
 
 def main(seed=None):
     if seed is not None:
         random.seed(seed)
-    game_map = create_game_map()
-    for encounter in game_map:
-        if encounter.__name__ in ('normal_combat', 'elite_combat', 'boss_combat'):
-            encounter(game_map)
-            player.floors += 1
+    gm = game_map.create_first_map()
+    gm.pretty_print()
+    for encounter in gm:
+        gm.pretty_print()
+        play(encounter)
+        player.floors += 1
