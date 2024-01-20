@@ -112,13 +112,29 @@ class Displayer():
             ansiprint(str(entity))
         print()
 
-    def list_input(self, input_string: str, array: list) -> int | None:
-        try:
-            ansiprint(input_string, end='')
-            option = int(input()) - 1
-            array[option] = array[option] # Checks that the number is in range but doesn't really do anything
-        except (ValueError, IndexError):
-            return None
+    def list_input(self, input_string: str, choices: list, conditions: tuple[str]=None) -> int | None:
+        if conditions is None:
+            conditions = ()
+        conditions.append("Valid") # Default condition that is always considered.
+        while True:
+            try:
+                ansiprint(input_string, end='')
+                option = int(input()) - 1
+                parameters: dict = {"Valid": option in range(0, len(choices)), "Upgradeable": choices[option].get("Upgraded") is False and choices[option].get("Effects+"),
+                                    "Removable": choices[option].get("Removable") is False, "Upgraded": choices[option].get("Upgraded") is True}
+                if not all((parameters[condition] for condition in conditions)):
+                    rules_broken = (condition.lower() for condition in conditions if parameters[condition] is False)
+                    list_of_rules_broken = ", ".join(rules_broken)
+                    ansiprint("\u001b[1A\u001b[1000D<red>The choice you selected is not " + list_of_rules_broken[:list_of_rules_broken.rindex(", ") + 2] + "or " + list_of_rules_broken[list_of_rules_broken.rindex(", ") + 2:] + "</red>", end='')
+                    sleep(1.5)
+                    print("\u001b[2K")
+                    continue
+            except ValueError:
+                ansiprint("\u001b[1A\u001b[1000D<red>You have to enter a whole number.</red>")
+                sleep(1)
+                print("\u001b[2K")
+                continue
+            break
         return option
 
     def display_actual_damage(self, string: str, target, entity, card=None) -> tuple[str, str]:

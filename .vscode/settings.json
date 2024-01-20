@@ -8,5 +8,5 @@
     "editor.lineHeight": 23,
     "editor.cursorBlinking": "solid",
     "editor.cursorSmoothCaretAnimation": "on",
-    "editor.fontFamily": "Fira Code, monospace"
+    "editor.fontFamily": "Consolas, monospace"
 }
