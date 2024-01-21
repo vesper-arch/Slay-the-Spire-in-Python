@@ -284,7 +284,7 @@ def play_card(card):
         player.use_card(card, active_enemies[target], False, player.hand)
         break
 
-def play(encounter: EncounterType):
+def play(encounter: EncounterType, gm: game_map.GameMap):
     if encounter.type == EncounterType.START:
         pass
     elif encounter.type == EncounterType.REST_SITE:
@@ -307,5 +307,5 @@ def main(seed=None):
     gm.pretty_print()
     for encounter in gm:
         gm.pretty_print()
-        play(encounter)
+        play(encounter, gm)
         player.floors += 1
