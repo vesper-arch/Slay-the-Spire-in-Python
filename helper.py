@@ -20,7 +20,7 @@ class Displayer():
         counter = 1
         for card in pile:
             if not card.get("Upgraded") and (card['Type'] not in ("Status", "Curse") or card['Name'] == 'Burn'):
-                upgraded_energy = f' <green>-></green> <green>{card["Effects+"].get("Energy")}<green>' if card['Effects+'].get('Energy', card['Energy']) != card['Energy'] else ''
+                upgraded_energy = f' <green>-></green> <green>{card["Effects+"].get("Energy")}</green>' if card['Effects+'].get('Energy', card['Energy']) != card['Energy'] else ''
                 upgraded_info = f' <green>-></green> <yellow>{card["Effects+"].get("Info")}</yellow>' if card['Effects+'].get('Info', card['Info']) != card['Info'] else ''
                 ansiprint(f"{counter}: <{card['Type'].lower()}>{card['Name']}</{card['Type'].lower()}> | <light-red>{card.get('Energy', 'Unplayable')} Energy{upgraded_energy}</light-red> | <yellow>{card['Info']}</yellow>{upgraded_info}".replace('Σ', '').replace('Ω', ''))
             else:
