@@ -94,7 +94,7 @@ class Displayer():
         ansiprint("<bold>Relics: </bold>")
         self.view_relics(entity)
         ansiprint("<bold>Hand: </bold>")
-        self.view_piles(entity.hand, entity, False, "Playable")
+        self.view_piles(entity.hand, entity, False, lambda card: (card.get("Energy", float('inf')) if card.get("Energy", float('inf')) != -1 else entity.energy) <= entity.energy)
         if combat is True:
             counter = 1
             ansiprint("\n<bold>Enemies:</bold>")
@@ -121,9 +121,9 @@ class Displayer():
                     print("\u001b[2K")
                     continue
             except (IndexError, ValueError):
-                ansiprint(f"\u001b[1A\u001b[1000D<red>You have to enter a whole number between 1 and {len(choices)}.</red>")
+                ansiprint(f"\u001b[1A\u001b[100D<red>You have to enter a whole number between 1 and {len(choices)}.</red>", end='')
                 sleep(1)
-                print("\u001b[2K")
+                print("\u001b[2K\u001b[100D", end='')
                 continue
             break
         return option
@@ -343,7 +343,7 @@ class Generators():
         while True:
             if choice:
                 view.view_piles(rewards, entity)
-                chosen_reward = view.list_input('What card do you want? > ', rewards)
+                chosen_reward = view.list_input(entity, 'What card do you want? > ', rewards)
                 if (entity.upgrade_attacks or entity.upgrade_skills or entity.upgrade_powers) and rewards[chosen_reward]['Type'] in ['Attack', 'Skill', 'Power']:
                     entity.card_actions(rewards[chosen_reward], 'Upgrade')
                 for relic in entity.relics:

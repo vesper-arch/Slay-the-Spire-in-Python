@@ -253,20 +253,29 @@ def play_potion():
     input('Press enter to leave > ')
 
 def play_card(card):
-    # Prevents the player from using a card that they don't have enough energy for.
-    energy_cost = card.get("Energy", float('inf')) if card.get("Energy", float('inf')) != -1 else player.energy
-    if energy_cost > player.energy:
-        ansiprint("<red>You don't have enough energy to use this card.</red>")
-        sleep(1.5)
-        view.clear()
-        return
-    if card.get("Target") == 'Single' and len(active_enemies) > 1:
-        target = view.list_input("What enemy do you want to use it on? > ", active_enemies)
-    elif len(active_enemies) == 1:
-        target = 0
-    else:
-        target = 0
-    player.use_card(card, active_enemies[target], False, player.hand)
+    while True:
+        # Prevents the player from using a card that they don't have enough energy for.
+        energy_cost = card.get("Energy", float('inf')) if card.get("Energy", float('inf')) != -1 else player.energy
+        if energy_cost > player.energy:
+            ansiprint("<red>You don't have enough energy to use this card.</red>")
+            sleep(1.5)
+            view.clear()
+            return
+        if card.get("Target") == 'Single' and len(active_enemies) > 1:
+            try:
+                target = int(input("Choose an enemy to target > ")) - 1
+                _ = active_enemies[target]
+            except (IndexError, ValueError):
+                ansiprint(f"\u001b[1A\u001b[100D<red>You have to enter a number between 1 and {len(active_enemies)}</red>", end='')
+                sleep(1)
+                print("\u001b[2K\u001b[100D", end='')
+                continue
+        elif len(active_enemies) == 1:
+            target = 0
+        else:
+            target = 0
+        player.use_card(card, active_enemies[target], False, player.hand)
+        break
 
 
 def main(seed=None):
