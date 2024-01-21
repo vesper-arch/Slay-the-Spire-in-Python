@@ -86,7 +86,7 @@ def use_armaments(using_card, entity):
     else:
         while True:
             view.view_piles(entity.hand, entity, False, 'Upgradeable')
-            option = view.list_input("Choose a card to upgrade > ", entity.hand)
+            option = view.list_input("Choose a card to upgrade > ", entity.hand, lambda: not card.get("Upgraded") and (card['Type'] not in ("Status", "Curse") or card['Name'] == 'Burn'), True, "That card is not upgradeable.")
             if option is None:
                 ansiprint('<red>The card you entered is invalid</red>')
                 sleep(1.5)
@@ -165,12 +165,7 @@ def use_truegrit(using_card, entity):
     if using_card.get('Upgraded'):
         while True:
             view.view_piles(entity.hand, entity)
-            option = view.list_input('Choose a card to Exhaust', entity.hand)
-            if not option:
-                ansiprint('<red>The card you entered is invalid</red>')
-                sleep(1)
-                view.clear()
-                continue
+            option = view.list_input('Choose a card to Exhaust.', entity.hand)
             entity.move_card(card=entity.deck[option], move_to=entity.exhaust_pile, from_location=entity.hand, cost_energy=False)
             break
     else:
@@ -187,11 +182,6 @@ def use_warcry(using_card, entity):
     while True:
         view.view_piles(entity.hand, entity)
         option = view.list_input('Choose a card to put on top of your draw pile.', entity.hand)
-        if not option:
-            ansiprint('<red>The card you entered is invalid</red>')
-            sleep(1)
-            view.clear()
-            continue
         entity.draw_pile.append(entity.hand[option])
         del entity.hand[option]
         break
@@ -225,11 +215,6 @@ def use_burningpact(using_card, entity):
     while True:
         view.view_piles(entity.hand, entity)
         option = view.list_input('Choose a card to <keyword>Exhaust</keyword> > ', entity.hand)
-        if option is None:
-            ansiprint('<red>The card you entered is invalid.</red>')
-            sleep(1)
-            view.clear()
-            continue
         entity.move_card(card=entity.hand[option], move_to=entity.exhaust_pile, from_location=entity.hand, cost_energy=False)
         ansiprint(f"{entity.hand[option]['Name']} was <keyword>Exhausted</keyword>")
         break
@@ -266,14 +251,9 @@ def use_dualwield(using_card, entity):
         valid_cards = [(idx, card) for idx, card in enumerate(entity.hand) if card.get('Type') in ('Attack', 'Power')]
         view_cards = [card[1] for card in valid_cards]
         view.view_piles(pile=view_cards, entity=entity)
-        option = view.list_input(f"Choose a card to make {'a copy' if not using_card.get('Upgraded') else '2 copies'} of > ", valid_cards)
+        option = view.list_input(entity, f"Choose a card to make {'a copy' if not using_card.get('Upgraded') else '2 copies'} of > ", valid_cards, lambda card: card['Type'] in ("Power", "Attack"), message_when_invalid="That card is not a <keyword>Power</keyword> or an <keyword>Attack</keyword>.")
         #convert option to index of entity.hand
         option = valid_cards[option][0]
-        if option is None or entity.hand[option]['Type'] not in ('Attack', 'Power'):
-            ansiprint('<red>The card you entered is either not an Attack or Power or it\'s invalid.</red>')
-            sleep(1.5)
-            view.clear()
-            continue
         for _ in range(using_card['Copies']):
             print("You made a copy of", entity.hand[option]['Name'])
             entity.hand.insert(option, deepcopy(entity.hand[option]))

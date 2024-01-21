@@ -130,8 +130,8 @@ def rest_site():
         relic_actions = {'Girya': ('lift', "<bold>[Lift]</bold> <green>Gain 1 <light-cyan>Strength</light-cyan></green>"),
             'Peace Pipe': ('toke', "<bold>[Toke]</bold> <green>Remove a card from your deck</green>"),
             'Shovel': ('dig', "<bold>[Dig]</bold> <green>Obtain a relic</green>")}
-        for relic, (action, message) in relic_actions.items():
-            if relics[relic] in player.relics:
+        for relic_name, (action, message) in relic_actions.items():
+            if relics[relic_name] in player.relics:
                 valid_inputs.append(action)
                 ansiprint(message, end='')
         action = input('> ').lower()
@@ -163,14 +163,7 @@ def rest_site():
                 sleep(1.5)
                 view.clear()
                 continue
-            view.upgrade_preview(player.deck)
-            upgrade_card = view.list_input('What card do you want to upgrade?', player.deck)
-            if not upgrade_card or player.deck[upgrade_card].get('Upgraded') or player.deck[upgrade_card]['Name'] == 'Curse':
-                ansiprint('That card is either already upgraded, a <keyword>Curse</keyword>, or does not exist')
-                sleep(1.5)
-                view.clear()
-                continue
-            # Upgrades the selected card
+            upgrade_card = view.list_input(player, 'What card do you want to upgrade?', player.deck, lambda card: not card.get("Upgraded") and (card['Type'] not in ("Status", "Curse") or card['Name'] == 'Burn'), True, "That card is not upgradeable.")
             player.deck[upgrade_card] = player.card_actions(player.deck[upgrade_card], 'Upgrade', cards)
             break
         if action == 'lift':
@@ -185,13 +178,7 @@ def rest_site():
             view.clear()
             continue
         if action == 'toke':
-            view.view_piles(player.deck, player, False, 'card.get("Removable") is not False')
-            option = view.list_input('What card would you like to remove? > ', player.deck)
-            if not option or not player.deck['Option']['Removable']:
-                ansiprint('The card you selected is either invalid or not removable')
-                sleep(1.5)
-                view.clear()
-                continue
+            option = view.list_input(player, 'What card would you like to remove? > ', player.deck, lambda card: card.get("Removable") is False, message_when_invalid="That card is not removable.")
             player.deck[option] = player.card_actions(player.deck[option], 'Remove', cards)
             break
         if action == 'dig':
@@ -272,9 +259,6 @@ def play_card(card):
         return
     if card.get("Target") == 'Single' and len(active_enemies) > 1:
         target = view.list_input("What enemy do you want to use it on? > ", active_enemies)
-        if target is None:
-            view.clear()
-            return
     elif len(active_enemies) == 1:
         target = 0
     else:

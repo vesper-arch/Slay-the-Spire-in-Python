@@ -5,6 +5,7 @@ from time import sleep
 from os import system
 from copy import deepcopy
 from ansi_tags import ansiprint
+from typing import Callable
 
 active_enemies = []
 combat_turn = 1
@@ -28,7 +29,7 @@ class Displayer():
             sleep(0.05)
 
 
-    def view_piles(self, pile: list[dict], entity, end=False, condition=""):
+    def view_piles(self, pile: list[dict], entity, end=False, validator: Callable=lambda: True):
         """Prints a numbered list of all the cards in a certain pile."""
         current_relics = [relic.get('Name') for relic in entity.relics]
         if len(pile) == 0:
@@ -41,15 +42,8 @@ class Displayer():
             pile = random.sample(pile, len(pile))
         counter = 1
         for card in pile:
-            if card.get('Energy', float('inf')) == 'player.energy':
-                playable_special_case = entity.energy
-            else:
-                playable_special_case = card.get('Energy', float('inf'))
-            keywords = {'Upgraded': card.get('Upgraded', False), 'Upgradable': not card.get('Upgraded') and (card['Name'] == 'Burn 'or card['Type'] not in ('Curse', 'Status')),
-                          'Removable': card.get('Removable', True), 'Skill': card['Type'] == 'Skill', 'Attack': card['Type'] == 'Attack', 'Power': card['Type'] == 'Power',
-                          'Playable': playable_special_case <= entity.energy}
             changed_energy = 'light-red' if not card.get('Changed Energy') else 'green'
-            if keywords.get(condition, True):
+            if validator(card):
                 ansiprint(f"{counter}: <{card['Rarity'].lower()}>{card['Name']}</{card['Rarity'].lower()}> | <{card['Type'].lower()}>{card['Type']}</{card['Type'].lower()}> | <{changed_energy}>{card.get('Energy', 'Unplayable')}{' Energy' if card.get('Energy') is not None else ''}</{changed_energy}> | <yellow>{card['Info']}</yellow>".replace('Σ', '').replace('꫱', ''))
                 counter += 1
                 sleep(0.05)
@@ -112,25 +106,22 @@ class Displayer():
             ansiprint(str(entity))
         print()
 
-    def list_input(self, input_string: str, choices: list, conditions: tuple[str]=None) -> int | None:
-        if conditions is None:
-            conditions = ()
-        conditions.append("Valid") # Default condition that is always considered.
+    def list_input(self, entity, input_string: str, choices: list, validator: Callable=lambda placehold: bool(placehold), upgrade_print=True, message_when_invalid: str=None) -> int | None:
         while True:
             try:
-                ansiprint(input_string, end='')
+                if not upgrade_print:
+                    self.view_piles(choices, entity, False, validator)
+                else:
+                    self.upgrade_preview(choices)
+                ansiprint(input_string + " > ", end='')
                 option = int(input()) - 1
-                parameters: dict = {"Valid": option in range(0, len(choices)), "Upgradeable": choices[option].get("Upgraded") is False and choices[option].get("Effects+"),
-                                    "Removable": choices[option].get("Removable") is False, "Upgraded": choices[option].get("Upgraded") is True}
-                if not all((parameters[condition] for condition in conditions)):
-                    rules_broken = (condition.lower() for condition in conditions if parameters[condition] is False)
-                    list_of_rules_broken = ", ".join(rules_broken)
-                    ansiprint("\u001b[1A\u001b[1000D<red>The choice you selected is not " + list_of_rules_broken[:list_of_rules_broken.rindex(", ") + 2] + "or " + list_of_rules_broken[list_of_rules_broken.rindex(", ") + 2:] + "</red>", end='')
+                if not validator(choices[option]):
+                    ansiprint(f"\u001b[1A\u001b[1000D<red>{message_when_invalid}</red>", end='')
                     sleep(1.5)
                     print("\u001b[2K")
                     continue
-            except ValueError:
-                ansiprint("\u001b[1A\u001b[1000D<red>You have to enter a whole number.</red>")
+            except (IndexError, ValueError):
+                ansiprint(f"\u001b[1A\u001b[1000D<red>You have to enter a whole number between 1 and {len(choices)}.</red>")
                 sleep(1)
                 print("\u001b[2K")
                 continue
