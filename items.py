@@ -85,8 +85,7 @@ def use_armaments(using_card, entity):
             sleep(0.3)
     else:
         while True:
-            view.view_piles(entity.hand, entity, False, 'Upgradeable')
-            option = view.list_input("Choose a card to upgrade > ", entity.hand, lambda: not card.get("Upgraded") and (card['Type'] not in ("Status", "Curse") or card['Name'] == 'Burn'), True, "That card is not upgradeable.")
+            option = view.list_input(entity, "Choose a card to upgrade > ", entity.hand, lambda card: not card.get("Upgraded") and (card['Type'] not in ("Status", "Curse") or card['Name'] == 'Burn'), True, "That card is not upgradeable.")
             if option is None:
                 ansiprint('<red>The card you entered is invalid</red>')
                 sleep(1.5)
@@ -121,7 +120,7 @@ def use_headbutt(targeted_enemy, using_card, entity):
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
     while True:
         view.view_piles(entity.discard_pile, entity)
-        choice = view.list_input('What card do you want to put on top of your draw pile? > ', entity.discard_pile)
+        choice = view.list_input(entity, 'What card do you want to put on top of your draw pile? > ', entity.discard_pile)
         if choice is None:
             ansiprint('<red>The card you entered was invalid</red>.')
             sleep(1)
@@ -165,7 +164,7 @@ def use_truegrit(using_card, entity):
     if using_card.get('Upgraded'):
         while True:
             view.view_piles(entity.hand, entity)
-            option = view.list_input('Choose a card to Exhaust.', entity.hand)
+            option = view.list_input(entity, 'Choose a card to Exhaust.', entity.hand)
             entity.move_card(card=entity.deck[option], move_to=entity.exhaust_pile, from_location=entity.hand, cost_energy=False)
             break
     else:
@@ -181,7 +180,7 @@ def use_warcry(using_card, entity):
     entity.draw_cards(True, using_card['Cards'])
     while True:
         view.view_piles(entity.hand, entity)
-        option = view.list_input('Choose a card to put on top of your draw pile.', entity.hand)
+        option = view.list_input(entity, 'Choose a card to put on top of your draw pile.', entity.hand)
         entity.draw_pile.append(entity.hand[option])
         del entity.hand[option]
         break
@@ -213,8 +212,7 @@ def use_bloodletting(using_card, entity):
 def use_burningpact(using_card, entity):
     '''Exhaust one card. Draw 1(2) cards.'''
     while True:
-        view.view_piles(entity.hand, entity)
-        option = view.list_input('Choose a card to <keyword>Exhaust</keyword> > ', entity.hand)
+        option = view.list_input(entity, 'Choose a card to <keyword>Exhaust</keyword> > ', entity.hand)
         entity.move_card(card=entity.hand[option], move_to=entity.exhaust_pile, from_location=entity.hand, cost_energy=False)
         ansiprint(f"{entity.hand[option]['Name']} was <keyword>Exhausted</keyword>")
         break
@@ -250,8 +248,7 @@ def use_dualwield(using_card, entity):
     while True:
         valid_cards = [(idx, card) for idx, card in enumerate(entity.hand) if card.get('Type') in ('Attack', 'Power')]
         view_cards = [card[1] for card in valid_cards]
-        view.view_piles(pile=view_cards, entity=entity)
-        option = view.list_input(entity, f"Choose a card to make {'a copy' if not using_card.get('Upgraded') else '2 copies'} of > ", valid_cards, lambda card: card['Type'] in ("Power", "Attack"), message_when_invalid="That card is not a <keyword>Power</keyword> or an <keyword>Attack</keyword>.")
+        option = view.list_input(entity, f"Choose a card to make {'a copy' if not using_card.get('Upgraded') else '2 copies'} of > ", view_cards, lambda card: card['Type'] in ("Power", "Attack"), message_when_invalid="That card is not a <keyword>Power</keyword> or an <keyword>Attack</keyword>.")
         #convert option to index of entity.hand
         option = valid_cards[option][0]
         for _ in range(using_card['Copies']):
@@ -435,7 +432,7 @@ def use_exhume(using_card, entity):
     _ = using_card
     while True:
         view.view_piles(entity.exhaust_pile, entity)
-        option = view.list_input("Choose a card to return to your hand > ", entity.exhaust_pile)
+        option = view.list_input(entity, "Choose a card to return to your hand > ", entity.exhaust_pile)
         if option is None:
             ansiprint('<red>The card you entered is invalid</red>')
             sleep(1.5)
@@ -690,14 +687,14 @@ cards = {
     # Ironclad cards
     'Strike': {'Name': 'Strike', 'Damage': 6, 'Energy': 1, 'Rarity': 'Basic', 'Target': 'Single', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ6 damage.', 'Effects+': {'Damage': 9, 'Info': 'Deal Σ9 damage.'}, 'Function': use_strike},
 
-    'Defend': {'Name': 'Defend', 'Block': 5, 'Energy': 1, 'Target': 'Yourself', 'Rarity': 'Basic', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Gain ꫱5 <keyword>Block</keyword>.', 'Effects+': {'Block': 8, 'Info': 'Gain ꫱8 <keyword>Block</keyword>'}, 'Function': use_defend},
+    'Defend': {'Name': 'Defend', 'Block': 5, 'Energy': 1, 'Target': 'Yourself', 'Rarity': 'Basic', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Gain Ω5 <keyword>Block</keyword>.', 'Effects+': {'Block': 8, 'Info': 'Gain Ω8 <keyword>Block</keyword>'}, 'Function': use_defend},
 
     'Bash': {'Name': 'Bash', 'Damage': 8, 'Vulnerable': 2, 'Energy': 2, 'Target': 'Single', 'Rarity': 'Basic', 'Class': 'Ironclad', 'Type': 'Attack', 'Info': 'Deal Σ8 damage. Apply 2 <debuff>Vulnerable</debuff>', 'Effects+': {'Damage': 10, 'Vulnerable': 3, 'Info': 'Deal Σ10 damage. Apply 3 <debuff>Vulnerable</debuff>'}, 'Function': use_bash},
 
     'Anger': {'Name': 'Anger', 'Damage': 6, 'Energy': 0,  'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ6 damage. Add a copy of this card to your discard pile.', 'Effects+': {'Damage': 8, 'Info': 'Deal Σ8 damage. Add a copy of this card to your discard pile.'}, 'Function': use_anger},
 
-    'Armaments': {'Name': 'Armaments', 'Target': 'Yourself', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Gain ꫱5 <keyword>Block</keyword>. <keyword>Upgrade</keyword> a card in your hand for the rest of combat.',
-                  'Effects+': {'Info': 'Gain ꫱5 <keyword>Block</keyword>. <keyword>Upgrade</keyword> ALL cards in your hand for the rest of combat.'}, 'Function': use_armaments},
+    'Armaments': {'Name': 'Armaments', 'Target': 'Yourself', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Gain Ω5 <keyword>Block</keyword>. <keyword>Upgrade</keyword> a card in your hand for the rest of combat.',
+                  'Effects+': {'Info': 'Gain Ω5 <keyword>Block</keyword>. <keyword>Upgrade</keyword> ALL cards in your hand for the rest of combat.'}, 'Function': use_armaments},
 
     'Body Slam': {'Name': 'Body Slam', 'Energy': 1, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal damage equal to your <keyword>Block</keyword>(Σ0)', 'Effects+': {'Energy': 0}, 'Function': use_bodyslam},
 
@@ -719,22 +716,22 @@ cards = {
     'Heavy Blade': {'Name': 'Heavy Blade', 'Damage': 14, 'Strength Multi': 3, 'Energy': 2, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ14 damage. <buff>Strength</buff> affects this card 3 times.',
                     'Effects+': {'Damage': 18, 'Strength Multi': 5, 'Info': 'Deal Σ14 damage. <buff>Strength</buff> affects this card 3 times.'}, 'Function': use_heavyblade},
 
-    'Iron Wave': {'Name': 'Iron Wave', 'Damage': 5, 'Block': 5, 'Energy': 1, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Gain ꫱5 <keyword>Block</keyword>. Deal Σ5 damage.', 'Effects+': {'Damage': 7, 'Block': 7, 'Info': 'Gain ꫱7 <keyword>Block</keyword>. Deal Σ7 damage.'}, 'Function': use_ironwave},
+    'Iron Wave': {'Name': 'Iron Wave', 'Damage': 5, 'Block': 5, 'Energy': 1, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Gain Ω5 <keyword>Block</keyword>. Deal Σ5 damage.', 'Effects+': {'Damage': 7, 'Block': 7, 'Info': 'Gain Ω7 <keyword>Block</keyword>. Deal Σ7 damage.'}, 'Function': use_ironwave},
 
     'Perfected Strike': {'Name': 'Perfected Strike', 'Damage Per "Strike"': 2, 'Energy': 2, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ6 damage. Deals 2 additional damage for ALL your cards containing <italic>"Strike"</italic>.',
                          'Effects+': {'Damage Per "Strike"': 3, 'Info': 'Deal Σ6 damage. Deals 3 additional damage for ALL your cards containing <italic>"Strike"</italic>.'}, 'Function': use_perfectedstrike},
 
     'Pommel Strike': {'Name': 'Pommel Strike', 'Damage': 9, 'Cards': 1, 'Energy': 1, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ9 damage. Draw 1 card.', 'Effects+': {'Damage': 10, 'Cards': 2, 'Info': 'Deal Σ10 damage. Draw 2 cards.'}, 'Function': use_pommelstrike},
 
-    'Shrug it Off': {'Name': 'Shrug it Off', 'Block': 8, 'Cards': 1, 'Energy': 1, 'Rarity': 'Common', 'Target': 'Yourself', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Gain ꫱8 <keyword>Block</keyword>. Draw 1 card.', 'Effects+': {'Block': 11, 'Info': 'Gain ꫱11 <keyword>Block</keyword>. Draw 1 card.'}, 'Function': use_shrugitoff},
+    'Shrug it Off': {'Name': 'Shrug it Off', 'Block': 8, 'Cards': 1, 'Energy': 1, 'Rarity': 'Common', 'Target': 'Yourself', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Gain Ω8 <keyword>Block</keyword>. Draw 1 card.', 'Effects+': {'Block': 11, 'Info': 'Gain Ω11 <keyword>Block</keyword>. Draw 1 card.'}, 'Function': use_shrugitoff},
 
     'Sword Boomerang': {'Name': 'Sword Boomerang', 'Times': 3, 'Target': 'Random', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ3 damage to a random enemy 3 times.', 'Effects+': {'Times': 4, 'Info': 'Deal Σ3 damage to a random enemy 4 times.'}, 'Function': use_swordboomerang},
 
     'Thunderclap': {'Name': 'Thunderclap', 'Damage': 4, 'Target': 'Any', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ4 damage and apply 1 <debuff>Vulnerable</debuff> to ALL enemies.',
                     'Effects+': {'Damage': 7, 'Info': 'Deal Σ7 damage and apply 1 <debuff>Vulnerable</debuff> to ALL enemies.'}, 'Function': use_thunderclap},
 
-    'True Grit': {'Name': 'True Grit', 'Class': 'Ironclad', 'Rarity': 'Common', 'Target': 'Yourself', 'Type': 'Skill', 'Block': 7, 'Energy': 1, 'Info': 'Gain ꫱7 <keyword>Block</keyword>. <keyword>Exhaust</keyword> a random card in your hand.',
-                  'Effects+': {'Block': 9, 'Info': 'Gain ꫱9 <keyword>Block</keyword>. <keyword>Exhaust</keyword> a card in your hand.'}, 'Function': use_truegrit},
+    'True Grit': {'Name': 'True Grit', 'Class': 'Ironclad', 'Rarity': 'Common', 'Target': 'Yourself', 'Type': 'Skill', 'Block': 7, 'Energy': 1, 'Info': 'Gain Ω7 <keyword>Block</keyword>. <keyword>Exhaust</keyword> a random card in your hand.',
+                  'Effects+': {'Block': 9, 'Info': 'Gain Ω9 <keyword>Block</keyword>. <keyword>Exhaust</keyword> a card in your hand.'}, 'Function': use_truegrit},
 
     'Twin Strike': {'Name': 'Twin Strike', 'Class': 'Ironclad', 'Rarity': 'Common', 'Type': 'Attack', 'Target': 'Single', 'Damage': 5, 'Energy': 1, 'Info': 'Deal Σ5 damage twice.', 'Effects+': {'Damage': 7, 'Info': 'Deal Σ7 damage twice.'}, 'Function': use_twinstrike},
 
@@ -776,11 +773,11 @@ cards = {
     'Fire Breathing': {'Name': 'Fire Breathing', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Power', 'Target': 'Yourself', 'Fire Breathing': 6, 'Energy': 1, 'Info': 'Whenever you draw a <status>Status</status> or <keyword>Curse</keyword>, deal 6 damage to ALL enemies.',
                        'Effects+': {'Fire Breathing': 10, 'Info': 'Whenever you draw a <status>Status</status> or <keyword>Curse</keyword> card, deal 10 damage to ALL enemies.'}, 'Function': use_firebreathing},
 
-    'Flame Barrier': {'Name': 'Flame Barrier', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Block': 12, 'Energy': 2, 'Info': "Gain ꫱12 <keyword>Block</keyword>. Whenever you're attacked this turn, deal 4 damage back.",
-                      'Effects+': {'Block': 16, 'Info': "Gain ꫱16 <keyword>Block</keyword>. Whenever you're attacked this turn, deal 4 damage back."}, 'Function': use_flamebarrier},
+    'Flame Barrier': {'Name': 'Flame Barrier', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Block': 12, 'Energy': 2, 'Info': "Gain Ω12 <keyword>Block</keyword>. Whenever you're attacked this turn, deal 4 damage back.",
+                      'Effects+': {'Block': 16, 'Info': "Gain Ω16 <keyword>Block</keyword>. Whenever you're attacked this turn, deal 4 damage back."}, 'Function': use_flamebarrier},
 
-    'Ghostly Armor': {'Name': 'Ghostly Armor', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Ethereal': True, 'Block': 10, 'Energy': 1, 'Info': '<keyword>Ethereal.</keyword> Gain ꫱10 <keyword>Block</keyword>.',
-                      'Effects+': {'Block': 13, 'Info': '<keyword>Ethereal.</keyword> Gain ꫱13 <keyword>Block</keyword>.'}, 'Function': use_ghostlyarmor},
+    'Ghostly Armor': {'Name': 'Ghostly Armor', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Ethereal': True, 'Block': 10, 'Energy': 1, 'Info': '<keyword>Ethereal.</keyword> Gain Ω10 <keyword>Block</keyword>.',
+                      'Effects+': {'Block': 13, 'Info': '<keyword>Ethereal.</keyword> Gain Ω13 <keyword>Block</keyword>.'}, 'Function': use_ghostlyarmor},
 
     'Hemokinesis': {'Name': 'Hemokinesis', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Attack', 'Target': 'Single', 'Damage': 15, 'Energy': 1, 'Info': 'Lose 2 HP. Deal Σ15 damage.', 'Effects+': {'Damage': 20, 'Info': 'Lose 2 HP. Deal Σ20 damage.'}, 'Function': use_hemokinesis},
 
@@ -794,8 +791,8 @@ cards = {
     'Metallicize': {'Name': 'Metallicize', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Power', 'Target': 'Yourself', 'Metallicize': 3, 'Energy': 1, 'Info': 'At the end of your turn, gain 3 <keyword>Block</keyword>.',
                     'Effects+': {'Metallicize': 4, 'Info': 'At the end of your turn, gain 4 <keyword>Block</keyword>.'}, 'Function': use_metallicize},
 
-    'Power Through': {'Name': 'Power Through', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Block': 15, 'Energy': 1, 'Info': 'Add 2 <status>Wounds</status> to your hand. Gain ꫱15 <keyword>Block</keyword>.',
-                      'Effects+': {'Block': 20, 'Info': 'Add 2 <status>Wounds</status> to your hand. Gain ꫱20 <keyword>Block</keyword>'}, 'Function': use_powerthrough},
+    'Power Through': {'Name': 'Power Through', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Block': 15, 'Energy': 1, 'Info': 'Add 2 <status>Wounds</status> to your hand. Gain Ω15 <keyword>Block</keyword>.',
+                      'Effects+': {'Block': 20, 'Info': 'Add 2 <status>Wounds</status> to your hand. Gain Ω20 <keyword>Block</keyword>'}, 'Function': use_powerthrough},
 
     'Pummel': {'Name': 'Pummel', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Attack', 'Target': 'Single', 'Exhaust': True, 'Times': 4, 'Energy': 1, 'Info': 'Deal Σ2 damage 4 times.', 'Effects+': {'Times': 5, 'Info': 'Deal Σ2 damage 5 times.'}, 'Function': use_pummel},
 
@@ -818,8 +815,8 @@ cards = {
 
     'Seeing Red': {'Name': 'Seeing Red', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Exhaust': True, 'Energy': 1, 'Info': 'Gain 2 <keyword>Energy</keyword>. <keyword>Exhaust</keyword>.', 'Effects+': {'Energy': 0}, 'Function': use_seeingred},
 
-    'Sentinel': {'Name': 'Sentinel', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Block': 5, 'Energy Gain': 2, 'Energy': 1, 'Info': 'Gain ꫱5 <keyword>Block</keyword>. If this card is <keyword>Exhausted</keyword>, gain 2 <keyword>Energy</keyword>',
-                 'Effects+': {'Block': 8, 'Energy Gain': 3, 'Info': 'Gain ꫱8 <keyword>Block</keyword>. If this card is <keyword>Exhausted</keyword>, gain 3 <keyword>Energy</keyword>.'}, 'Function': use_sentinel},
+    'Sentinel': {'Name': 'Sentinel', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Block': 5, 'Energy Gain': 2, 'Energy': 1, 'Info': 'Gain Ω5 <keyword>Block</keyword>. If this card is <keyword>Exhausted</keyword>, gain 2 <keyword>Energy</keyword>',
+                 'Effects+': {'Block': 8, 'Energy Gain': 3, 'Info': 'Gain Ω8 <keyword>Block</keyword>. If this card is <keyword>Exhausted</keyword>, gain 3 <keyword>Energy</keyword>.'}, 'Function': use_sentinel},
 
     'Sever Soul': {'Name': 'Sever Soul', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Attack', 'Target': 'Single', 'Damage': 16, 'Energy': 2, 'Info': '<keyword>Exhaust</keyword> all non-<keyword>Attack</keyword> cards in your hand. Deal Σ16 damage.',
                    'Effects+': {'Damage': 22, 'Info': '<keyword>Exhaust</keyword> all non-<keyword>Attack</keyword> cards in your hand. Deal Σ22 damage.'}, 'Function': use_seversoul},
@@ -832,7 +829,7 @@ cards = {
     'Uppercut': {'Name': 'Uppercut', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Attack', 'Target': 'Single', 'Damage': 13, 'Weak/Vulnerable': 1, 'Energy': 2, 'Info': 'Deal Σ13 damage. Apply 1 <debuff>Weak</debuff>. Apply 1 <debuff>Vulnerable</debuff>.',
                  'Effects+': {'Weak/Vulnerable': 2, 'Info': 'Deal Σ13 damage. Apply 2 <debuff>Weak</debuff>. Apply 2 <debuff>Vulnerable</debuff>.'}, 'Function': use_uppercut},
 
-    'Whirlwind': {'Name': 'Whirlwind', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Attack', 'Target': 'Area', 'Damage': 5, 'Energy': 'player.energy', 'Info': 'Deal Σ5 damage X times.', 'Effects+': {'Damage': 8, 'Info': 'Deal Σ8 damage X times.'}, 'Function': use_whirlwind},
+    'Whirlwind': {'Name': 'Whirlwind', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Attack', 'Target': 'Area', 'Damage': 5, 'Energy': -1, 'Info': 'Deal Σ5 damage X times.', 'Effects+': {'Damage': 8, 'Info': 'Deal Σ8 damage X times.'}, 'Function': use_whirlwind},
 
     # Rare Cards
     'Barricade': {'Name': 'Barricade', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Power', 'Target': 'Yourself', 'Energy': 3, 'Info': '<keyword>Block</keyword> is not removed at the start of your turn.', 'Effects+': {'Energy': 2}, 'Function': use_barricade},
@@ -861,7 +858,7 @@ cards = {
     'Immolate': {'Name': 'Immolate', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Attack', 'Target': 'Area', 'Damage': 21, 'Energy': 2, 'Info': 'Deal Σ21 damage to ALL enemies. Add a <status>Burn</status> to your discard pile',
                  'Effects+': {'Damage': 28, 'Info': 'Deal Σ28 damage to ALL enemies. Add a <status>Burn</status> to your discard pile.'}, 'Function': use_immolate},
 
-    'Impervious': {'Name': 'Impervious', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Skill', 'Target': 'Yourself', 'Block': 30, 'Energy': 2, 'Info': 'Gain ꫱30 <keyword>Block</keyword>.', 'Effects+': {'Block': 40, 'Info': 'Gain ꫱40 <keyword>Block</keyword>.'}, 'Function': use_impervious},
+    'Impervious': {'Name': 'Impervious', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Skill', 'Target': 'Yourself', 'Block': 30, 'Energy': 2, 'Info': 'Gain Ω30 <keyword>Block</keyword>.', 'Effects+': {'Block': 40, 'Info': 'Gain Ω40 <keyword>Block</keyword>.'}, 'Function': use_impervious},
 
     'Juggernaut': {'Name': 'Juggernaut', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Power', 'Target': 'Yourself', 'Dmg On Block': 5, 'Energy': 2, 'Info': 'Whenever you gain <keyword>Block</keyword>, deal 5 damage to a random enemy.',
                    'Effects+': {'Dmg On Block': 7, 'Info': 'Whenever you gain <keyword>Block</keyword>, deal 7 damage to a random enemy.'}, 'Function': use_juggernaut},

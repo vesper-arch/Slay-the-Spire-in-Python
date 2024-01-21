@@ -19,17 +19,17 @@ class Displayer():
         """Print all of the cards in a given pile with their upgraded stats shown"""
         counter = 1
         for card in pile:
-            upgraded_energy = f' <green>-></green> <green>{card["Effects+"].get("Energy")}<green>' if card['Effects+'].get('Energy', card['Energy']) != card['Energy'] else ''
-            upgraded_info = f' <green>-></green> <yellow>{card["Effects+"].get("Info")}</yellow>' if card['Effects+'].get('Info', card['Info']) != card['Info'] else ''
-            if not card.get("Upgraded"):
-                ansiprint(f"{counter}: <{card['Type'].lower()}>{card['Name']}</{card['Type'].lower()}> | <light-red>{card.get('Energy', 'Unplayable')} Energy{upgraded_energy}</light-red> | <yellow>{card['Info']}</yellow>{upgraded_info}".replace('Σ', '').replace('꫱', ''))
+            if not card.get("Upgraded") and (card['Type'] not in ("Status", "Curse") or card['Name'] == 'Burn'):
+                upgraded_energy = f' <green>-></green> <green>{card["Effects+"].get("Energy")}<green>' if card['Effects+'].get('Energy', card['Energy']) != card['Energy'] else ''
+                upgraded_info = f' <green>-></green> <yellow>{card["Effects+"].get("Info")}</yellow>' if card['Effects+'].get('Info', card['Info']) != card['Info'] else ''
+                ansiprint(f"{counter}: <{card['Type'].lower()}>{card['Name']}</{card['Type'].lower()}> | <light-red>{card.get('Energy', 'Unplayable')} Energy{upgraded_energy}</light-red> | <yellow>{card['Info']}</yellow>{upgraded_info}".replace('Σ', '').replace('Ω', ''))
             else:
-                ansiprint(f"{counter}: <light-black>{card['Name']} | {card['Type']} | {card.get('Energy', 'Unplayable')}{' Energy' if card.get('Energy') else ''} | {card['Info']}</light-black>".replace('Σ', '').replace('꫱', ''))
+                ansiprint(f"{counter}: <light-black>{card['Name']} | {card['Type']} | {card.get('Energy', 'Unplayable')}{' Energy' if card.get('Energy') else ''} | {card['Info']}</light-black>".replace('Σ', '').replace('Ω', ''))
             counter += 1
             sleep(0.05)
 
 
-    def view_piles(self, pile: list[dict], entity, end=False, validator: Callable=lambda: True):
+    def view_piles(self, pile: list[dict], entity, end=False, validator: Callable=lambda placehold: bool(placehold)):
         """Prints a numbered list of all the cards in a certain pile."""
         current_relics = [relic.get('Name') for relic in entity.relics]
         if len(pile) == 0:
@@ -44,11 +44,11 @@ class Displayer():
         for card in pile:
             changed_energy = 'light-red' if not card.get('Changed Energy') else 'green'
             if validator(card):
-                ansiprint(f"{counter}: <{card['Rarity'].lower()}>{card['Name']}</{card['Rarity'].lower()}> | <{card['Type'].lower()}>{card['Type']}</{card['Type'].lower()}> | <{changed_energy}>{card.get('Energy', 'Unplayable')}{' Energy' if card.get('Energy') is not None else ''}</{changed_energy}> | <yellow>{card['Info']}</yellow>".replace('Σ', '').replace('꫱', ''))
+                ansiprint(f"{counter}: <{card['Rarity'].lower()}>{card['Name']}</{card['Rarity'].lower()}> | <{card['Type'].lower()}>{card['Type']}</{card['Type'].lower()}> | <{changed_energy}>{card.get('Energy', 'Unplayable')}{' Energy' if card.get('Energy') is not None else ''}</{changed_energy}> | <yellow>{card['Info']}</yellow>".replace('Σ', '').replace('Ω', ''))
                 counter += 1
                 sleep(0.05)
             else:
-                ansiprint(f"{counter}: <light-black>{card['Name']} | {card['Type']} | {card.get('Energy', 'Unplayable')}{' Energy' if card.get('Energy') else ''} | {card['Info']}</light-black>".replace('Σ', '').replace('꫱', ''))
+                ansiprint(f"{counter}: <light-black>{card['Name']} | {card['Type']} | {card.get('Energy', 'Unplayable')}{' Energy' if card.get('Energy') else ''} | {card['Info']}</light-black>".replace('Σ', '').replace('Ω', ''))
                 counter += 1
                 sleep(0.05)
         if end:
@@ -160,11 +160,11 @@ class Displayer():
         return string, affected_by
 
     def display_actual_block(self, string: str, entity) -> tuple[str, str]:
-        match = re.search(r"꫱(\d+)", string)
+        match = re.search(r"Ω(\d+)", string)
         affected_by = ''
         if match:
             original_damage = match.group()
-            block_value = int(original_damage.replace('꫱', ''))
+            block_value = int(original_damage.replace('Ω', ''))
             if entity.buffs["Dexterity"] != 0:
                 block_value += entity.buffs['Dexterity']
                 affected_by += f"{'<light-cyan>' if entity.buffs['Dexterity'] > 0 else '<red>'}Dexterity{'</light-cyan>' if entity.buffs['Dexterity'] > 0 else '<red>'}({'+' if entity.buffs['Dexterity'] > 0 else '-'}{abs(entity.buffs['Dexterity'])} block)"

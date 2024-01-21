@@ -9,6 +9,8 @@ from helper import active_enemies, combat_turn, potion_dropchance, view, gen, ei
 from enemy_catalog import create_act1_normal_encounters, create_act1_elites, create_act1_boss
 from entities import player
 
+cards['Whirlwind']['Energy'] = player.energy
+
 def combat(tier, current_map) -> None:
     """There's too much to say here."""
     global combat_turn
@@ -252,7 +254,8 @@ def play_potion():
 
 def play_card(card):
     # Prevents the player from using a card that they don't have enough energy for.
-    if card.get("Energy", float('inf')) > player.energy:
+    energy_cost = card.get("Energy", float('inf')) if card.get("Energy", float('inf')) != -1 else player.energy
+    if energy_cost > player.energy:
         ansiprint("<red>You don't have enough energy to use this card.</red>")
         sleep(1.5)
         view.clear()
