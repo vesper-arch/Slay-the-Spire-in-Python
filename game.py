@@ -306,6 +306,6 @@ def main(seed=None):
     gm = game_map.create_first_map()
     gm.pretty_print()
     for encounter in gm:
-        gm.pretty_print()
         play(encounter, gm)
         player.floors += 1
+        gm.pretty_print()
