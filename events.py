@@ -34,9 +34,7 @@ The spirits toss small bones and fragments unto the fire, which brilliantly erup
         sleep(0.8)
         ansiprint("<bold>[Offer]</bold> Recieve a reward based on the offer.")
         input('Press enter > ')
-        view.view_piles(player.deck, player)
-        offering = view.list_input("What card do you want to offer? > ", player.deck)
-
+        offering = view.list_input(player, "What card do you want to offer? > ", player.deck, lambda card: card.get("Removable") is False, message_when_invalid="The card you chose is not removable.")
         ansiprint("<bold>You toss an offering into the bonfire</bold>")
         if player.deck[offering].get("Rarity") == "Curse":
             ansiprint("However, the spirits aren't happy that you offered a <italic><magenta>Curse...</magenta></italic> The card fizzles a meek black smoke. You recieve a... <italic><magenta>something</italic></magenta> in return.")
@@ -107,8 +105,7 @@ def event_Duplicator():
         ansiprint("<bold>[Pray]</bold> <green>Duplicate a card in your deck</green> \n<bold>[Leave]</bold> Nothing happens")
         option = input('> ').lower()
         if option == 'pray':
-            view.view_piles(player.deck, player)
-            duplicate = view.list_input("What card do you want to duplicate? > ", player.deck)
+            duplicate = view.list_input(player, "What card do you want to duplicate? > ", player.deck)
             player.deck.append(player.deck[duplicate])
             print("You kneel respectfully. A ghastly mirror image appears from the shrine and collides into you.")
             sleep(1.5)
@@ -182,13 +179,7 @@ def event_OminousForge():
         ansiprint("<bold>[Forge]</bold> <green>Upgrade a Card</green> \n<bold>[Rummage]</bold> <green>Obtain Warped Tongs.</green> <red>Become <keyword>Cursed | Pain</keyword></red> \n<bold>[Leave]</bold> Nothing happens")
         option = input('> ').lower()
         if option == 'forge':
-            view.view_piles(player.deck, player, False, 'Upgradable')
-            option = view.list_input("What card do you want to upgrade? > ", player.deck)
-            if player.deck[option].get("Upgraded") is True:
-                print("That card is already Upgraded")
-                sleep(1)
-                view.clear()
-                continue
+            option = view.list_input(player, "What card do you want to upgrade? > ", player.deck, lambda card: not card.get("Upgraded") and (card['Name'] == "Burn" or card['Type'] not in ("Status", "Curse")), message_when_invalid="That card is not upgradeable.")
             player.deck[option] = player.card_actions(player.deck[option], "Upgrade", cards)
             break
         if option == 'rummage':
@@ -213,12 +204,7 @@ def event_Purifier():
         option = input('')
         if option == 'pray':
             view.view_piles(player.deck, player, False, 'Removable')
-            remove_card = view.list_input('What card do you want to remove?', player.deck)
-            if player.deck[remove_card].get('Removable') is False:
-                print(f'{player.deck[remove_card]} cannot be removed from your deck.')
-                sleep(1.5)
-                view.clear()
-                continue
+            remove_card = view.list_input(player, 'What card do you want to remove?', player.deck, lambda card: card.get("Removable") is False, message_when_invalid="That card is not removable.")
             player.deck[remove_card] = player.card_actions(player.deck[remove_card], 'Remove', cards)
             print('As you kneel in reverence, you feel a weight lifted off your shoulders.')
             break
@@ -243,12 +229,7 @@ def event_Transmogrifier():
         option = input('> ').lower()
         if option == 'pray':
             view.view_piles(player.deck, player, False, 'Removable')
-            transform_card = view.list_input('What card would you like to transform?', player.deck)
-            if player.deck[transform_card].get('Removable') is False:
-                print(f'{player.deck[transform_card]} cannot be transformed.')
-                sleep(1.5)
-                view.clear()
-                continue
+            transform_card = view.list_input(player, 'What card would you like to transform?', player.deck, lambda card: card.get("Removable") is False, message_when_invalid="That card is not transformable.")
             player.deck[transform_card] = player.card_actions(player.deck[transform_card], 'Transform', cards)
             print('As the power of the shrine flows through you, your mind feels altered.')
             break
@@ -273,17 +254,7 @@ def event_UpgradeShrine():
         option = input('> ').lower()
         if option == 'pray':
             view.upgrade_preview(player.deck)
-            upgrade_card = view.list_input('What card do you want to upgrade?', player.deck)
-            if player.deck[upgrade_card].get('Upgraded'):
-                print(f'<light-red>{player.deck[upgrade_card]} is already upgraded.</light-red>')
-                sleep(1.5)
-                view.clear()
-                continue
-            if player.deck[upgrade_card].get('Type') == 'Curse':
-                print(f'<light-red>{player.deck[upgrade_card]} is a Curse.</light-red>')
-                sleep(1.5)
-                view.clear()
-                continue
+            upgrade_card = view.list_input(player, 'What card do you want to upgrade?', player.deck, lambda card: not card.get("Upgraded") and (card['Type'] not in ("Status", "Curse") or card['Name'] == 'Burn'), message_when_invalid="That card is not upgradeable.")
             player.deck[upgrade_card] = player.card_actions(player.deck[upgrade_card], 'Upgrade', cards)
             break
         if option == 'leave':
@@ -517,12 +488,7 @@ def event_TheCleric():
             player.gold -= 50
             ansiprint("You spent 50 <yellow>Gold</yellow>.")
             view.view_piles(player.deck, player, False, 'Removable')
-            option = view.list_input("What card would you like to remove? > ", player.deck)
-            if player.deck[option].get("Removable", True) is False:
-                print(f"{player.deck[option].get('Name')} cannot be removed from your deck.")
-                sleep(1.5)
-                view.clear()
-                continue
+            option = view.list_input(player, "What card would you like to remove? > ", player.deck, lambda card: card.get("Removable") is False, message_when_invalid="That card is not removable.")
             ansiprint('''A cold blue flame envelops your body and dissipates.
                       
 The creature grins.

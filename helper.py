@@ -5,6 +5,7 @@ from time import sleep
 from os import system
 from copy import deepcopy
 from ansi_tags import ansiprint
+from typing import Callable
 
 active_enemies = []
 combat_turn = 1
@@ -18,17 +19,17 @@ class Displayer():
         """Print all of the cards in a given pile with their upgraded stats shown"""
         counter = 1
         for card in pile:
-            upgraded_energy = f' <green>-></green> <green>{card["Effects+"].get("Energy")}<green>' if card['Effects+'].get('Energy', card['Energy']) != card['Energy'] else ''
-            upgraded_info = f' <green>-></green> <yellow>{card["Effects+"].get("Info")}</yellow>' if card['Effects+'].get('Info', card['Info']) != card['Info'] else ''
-            if not card.get("Upgraded"):
-                ansiprint(f"{counter}: <{card['Type'].lower()}>{card['Name']}</{card['Type'].lower()}> | <light-red>{card.get('Energy', 'Unplayable')} Energy{upgraded_energy}</light-red> | <yellow>{card['Info']}</yellow>{upgraded_info}".replace('Σ', '').replace('꫱', ''))
+            if not card.get("Upgraded") and (card['Type'] not in ("Status", "Curse") or card['Name'] == 'Burn'):
+                upgraded_energy = f' <green>-></green> <green>{card["Effects+"].get("Energy")}<green>' if card['Effects+'].get('Energy', card['Energy']) != card['Energy'] else ''
+                upgraded_info = f' <green>-></green> <yellow>{card["Effects+"].get("Info")}</yellow>' if card['Effects+'].get('Info', card['Info']) != card['Info'] else ''
+                ansiprint(f"{counter}: <{card['Type'].lower()}>{card['Name']}</{card['Type'].lower()}> | <light-red>{card.get('Energy', 'Unplayable')} Energy{upgraded_energy}</light-red> | <yellow>{card['Info']}</yellow>{upgraded_info}".replace('Σ', '').replace('Ω', ''))
             else:
-                ansiprint(f"{counter}: <light-black>{card['Name']} | {card['Type']} | {card.get('Energy', 'Unplayable')}{' Energy' if card.get('Energy') else ''} | {card['Info']}</light-black>".replace('Σ', '').replace('꫱', ''))
+                ansiprint(f"{counter}: <light-black>{card['Name']} | {card['Type']} | {card.get('Energy', 'Unplayable')}{' Energy' if card.get('Energy') else ''} | {card['Info']}</light-black>".replace('Σ', '').replace('Ω', ''))
             counter += 1
             sleep(0.05)
 
 
-    def view_piles(self, pile: list[dict], entity, end=False, condition=""):
+    def view_piles(self, pile: list[dict], entity, end=False, validator: Callable=lambda placehold: bool(placehold)):
         """Prints a numbered list of all the cards in a certain pile."""
         current_relics = [relic.get('Name') for relic in entity.relics]
         if len(pile) == 0:
@@ -41,20 +42,13 @@ class Displayer():
             pile = random.sample(pile, len(pile))
         counter = 1
         for card in pile:
-            if card.get('Energy', float('inf')) == 'player.energy':
-                playable_special_case = entity.energy
-            else:
-                playable_special_case = card.get('Energy', float('inf'))
-            keywords = {'Upgraded': card.get('Upgraded', False), 'Upgradable': not card.get('Upgraded') and (card['Name'] == 'Burn 'or card['Type'] not in ('Curse', 'Status')),
-                          'Removable': card.get('Removable', True), 'Skill': card['Type'] == 'Skill', 'Attack': card['Type'] == 'Attack', 'Power': card['Type'] == 'Power',
-                          'Playable': playable_special_case <= entity.energy}
             changed_energy = 'light-red' if not card.get('Changed Energy') else 'green'
-            if keywords.get(condition, True):
-                ansiprint(f"{counter}: <{card['Rarity'].lower()}>{card['Name']}</{card['Rarity'].lower()}> | <{card['Type'].lower()}>{card['Type']}</{card['Type'].lower()}> | <{changed_energy}>{card.get('Energy', 'Unplayable')}{' Energy' if card.get('Energy') is not None else ''}</{changed_energy}> | <yellow>{card['Info']}</yellow>".replace('Σ', '').replace('꫱', ''))
+            if validator(card):
+                ansiprint(f"{counter}: <{card['Rarity'].lower()}>{card['Name']}</{card['Rarity'].lower()}> | <{card['Type'].lower()}>{card['Type']}</{card['Type'].lower()}> | <{changed_energy}>{card.get('Energy', 'Unplayable')}{' Energy' if card.get('Energy') is not None else ''}</{changed_energy}> | <yellow>{card['Info']}</yellow>".replace('Σ', '').replace('Ω', ''))
                 counter += 1
                 sleep(0.05)
             else:
-                ansiprint(f"{counter}: <light-black>{card['Name']} | {card['Type']} | {card.get('Energy', 'Unplayable')}{' Energy' if card.get('Energy') else ''} | {card['Info']}</light-black>".replace('Σ', '').replace('꫱', ''))
+                ansiprint(f"{counter}: <light-black>{card['Name']} | {card['Type']} | {card.get('Energy', 'Unplayable')}{' Energy' if card.get('Energy') else ''} | {card['Info']}</light-black>".replace('Σ', '').replace('Ω', ''))
                 counter += 1
                 sleep(0.05)
         if end:
@@ -100,7 +94,7 @@ class Displayer():
         ansiprint("<bold>Relics: </bold>")
         self.view_relics(entity)
         ansiprint("<bold>Hand: </bold>")
-        self.view_piles(entity.hand, entity, False, "Playable")
+        self.view_piles(entity.hand, entity, False, lambda card: (card.get("Energy", float('inf')) if card.get("Energy", float('inf')) != -1 else entity.energy) <= entity.energy)
         if combat is True:
             counter = 1
             ansiprint("\n<bold>Enemies:</bold>")
@@ -112,13 +106,26 @@ class Displayer():
             ansiprint(str(entity))
         print()
 
-    def list_input(self, input_string: str, array: list) -> int | None:
-        try:
-            ansiprint(input_string, end='')
-            option = int(input()) - 1
-            array[option] = array[option] # Checks that the number is in range but doesn't really do anything
-        except (ValueError, IndexError):
-            return None
+    def list_input(self, entity, input_string: str, choices: list, validator: Callable=lambda placehold: bool(placehold), upgrade_print=True, message_when_invalid: str=None) -> int | None:
+        while True:
+            try:
+                if not upgrade_print:
+                    self.view_piles(choices, entity, False, validator)
+                else:
+                    self.upgrade_preview(choices)
+                ansiprint(input_string + " > ", end='')
+                option = int(input()) - 1
+                if not validator(choices[option]):
+                    ansiprint(f"\u001b[1A\u001b[1000D<red>{message_when_invalid}</red>", end='')
+                    sleep(1.5)
+                    print("\u001b[2K")
+                    continue
+            except (IndexError, ValueError):
+                ansiprint(f"\u001b[1A\u001b[100D<red>You have to enter a whole number between 1 and {len(choices)}.</red>", end='')
+                sleep(1)
+                print("\u001b[2K\u001b[100D", end='')
+                continue
+            break
         return option
 
     def display_actual_damage(self, string: str, target, entity, card=None) -> tuple[str, str]:
@@ -153,11 +160,11 @@ class Displayer():
         return string, affected_by
 
     def display_actual_block(self, string: str, entity) -> tuple[str, str]:
-        match = re.search(r"꫱(\d+)", string)
+        match = re.search(r"Ω(\d+)", string)
         affected_by = ''
         if match:
             original_damage = match.group()
-            block_value = int(original_damage.replace('꫱', ''))
+            block_value = int(original_damage.replace('Ω', ''))
             if entity.buffs["Dexterity"] != 0:
                 block_value += entity.buffs['Dexterity']
                 affected_by += f"{'<light-cyan>' if entity.buffs['Dexterity'] > 0 else '<red>'}Dexterity{'</light-cyan>' if entity.buffs['Dexterity'] > 0 else '<red>'}({'+' if entity.buffs['Dexterity'] > 0 else '-'}{abs(entity.buffs['Dexterity'])} block)"
@@ -336,7 +343,7 @@ class Generators():
         while True:
             if choice:
                 view.view_piles(rewards, entity)
-                chosen_reward = view.list_input('What card do you want? > ', rewards)
+                chosen_reward = view.list_input(entity, 'What card do you want? > ', rewards)
                 if (entity.upgrade_attacks or entity.upgrade_skills or entity.upgrade_powers) and rewards[chosen_reward]['Type'] in ['Attack', 'Skill', 'Power']:
                     entity.card_actions(rewards[chosen_reward], 'Upgrade')
                 for relic in entity.relics:
