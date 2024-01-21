@@ -120,22 +120,22 @@ def create_first_map():
     # Build the map by connecting encounters
     start = Encounter(ET.START)
 
-    a = Encounter(ET.NORMAL, parents=[start])
-    b = Encounter(ET.NORMAL, parents=[start])
-    c = Encounter(ET.NORMAL, parents=[start])
-    d = Encounter(ET.NORMAL, parents=[start])
+    F1a = Encounter(ET.NORMAL, parents=[start])
+    F1b = Encounter(ET.NORMAL, parents=[start])
+    F1c = Encounter(ET.NORMAL, parents=[start])
+    F1d = Encounter(ET.NORMAL, parents=[start])
 
-    ab = Encounter(ET.UNKNOWN, parents=[a, b])
-    cd = Encounter(ET.REST_SITE, parents=[c, d])
+    F2a = Encounter(ET.UNKNOWN, parents=[F1a, F1b])
+    F2b = Encounter(ET.REST_SITE, parents=[F1c, F1d])
 
-    ab_1 = Encounter(ET.ELITE, parents=[ab, cd])
-    cd_1 = Encounter(ET.ELITE, parents=[ab, cd])
+    F3a = Encounter(ET.ELITE, parents=[F2a, F2b])
+    F3b = Encounter(ET.ELITE, parents=[F2a, F2b])
 
-    flare_ab1_1 = Encounter(ET.NORMAL, parents=[ab_1])
-    flare_ab1_2 = Encounter(ET.NORMAL, parents=[ab_1])
-    flare_cd1_1 = Encounter(ET.NORMAL, parents=[cd_1])
-    flare_cd1_2 = Encounter(ET.NORMAL, parents=[cd_1])
+    F4a = Encounter(ET.NORMAL, parents=[F3a])
+    F4b = Encounter(ET.NORMAL, parents=[F3a])
+    F4c = Encounter(ET.NORMAL, parents=[F3b])
+    F4d = Encounter(ET.NORMAL, parents=[F3b])
 
-    boss = Encounter(ET.BOSS, parents=[flare_ab1_1, flare_ab1_2, flare_cd1_1, flare_cd1_2])
+    boss = Encounter(ET.BOSS, parents=[F4a, F4b, F4c, F4d])
 
     return GameMap(start)
