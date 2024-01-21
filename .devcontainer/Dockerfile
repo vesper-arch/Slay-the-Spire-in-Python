@@ -12,4 +12,3 @@ RUN chown -R vscode:vscode /home/vscode/.config && \
     /usr/local/py-utils/bin/poetry completions bash > /etc/bash_completion.d/poetry.bash-completion
 
 
-

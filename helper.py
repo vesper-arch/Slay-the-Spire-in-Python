@@ -6,6 +6,7 @@ from os import system
 from copy import deepcopy
 from ansi_tags import ansiprint
 from typing import Callable
+from definitions import CombatTier
 
 active_enemies = []
 combat_turn = 1
@@ -80,7 +81,7 @@ class Displayer():
         for _ in range(entity.max_potions - len(entity.potions)):
             ansiprint(f"<light-black>{f'{counter}: ' if numbered_list else ''}(Empty)</light-black>")
             counter += 1
-    
+
     def view_map(self, entity, encounters, boss_name):
         display_names = {'normal_combat': "<aggresive>Monster</aggresive>", "elite_combat": "<underline><aggresive>Elite</aggresive></underline>",
                          'boss_combat': f"<bold>\033[38;5;163m{boss_name}\033[38;5;15m</bold>", 'rest_site': "<green>Rest Site</green>", 'unknown': "<yellow>Unknown</yellow>"}
@@ -182,7 +183,7 @@ class Generators():
     def __init__(self):
         pass
 
-    def generate_card_rewards(self, reward_tier: str, amount: int, entity: object, card_pool: dict) -> list[dict]:
+    def generate_card_rewards(self, reward_tier: CombatTier, amount: int, entity: object, card_pool: dict) -> list[dict]:
         """
         Normal combat rewards:
         Rare: 3% | Uncommon: 37% | Common: 60%
@@ -202,11 +203,11 @@ class Generators():
 
         rarities =  [common_cards, uncommon_cards, rare_cards]
         rewards = []
-        if reward_tier == 'Normal':
+        if reward_tier == CombatTier.NORMAL:
             chances = [0.60, 0.37, 0.03]
-        elif reward_tier == 'Elite':
+        elif reward_tier == CombatTier.ELITE:
             chances = [0.5, 0.4, 0.1]
-        elif reward_tier == 'Boss':
+        elif reward_tier == CombatTier.BOSS:
             chances = [0, 0, 1]
         for _ in range(amount):
             chosen_pool = random.choices(rarities, chances, k=1)[0]
