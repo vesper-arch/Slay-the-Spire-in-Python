@@ -44,7 +44,7 @@ def combat(tier: CombatTier, current_map) -> None:
             action = input("> ").lower()
             other_options = {'d': lambda: view.view_piles(player.deck, player), 'a': lambda: view.view_piles(player.draw_pile, player),
                      's': lambda: view.view_piles(player.discard_pile, player), 'x': lambda: view.view_piles(player.exhaust_pile, player),
-                     'p': play_potion, 'f': lambda: ei.full_view(player, active_enemies), 'm': lambda: view.view_map(player, current_map, boss_name)}
+                     'p': play_potion, 'f': lambda: ei.full_view(player, active_enemies), 'm': lambda: view.view_map(current_map)}
             if action.isdigit():
                 option = int(action) - 1
                 if option + 1 in range(len(player.hand) + 1):
