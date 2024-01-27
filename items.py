@@ -80,22 +80,12 @@ def use_armaments(using_card, entity):
     '''Gain 5 Block. Upgrade a(ALL) card(s) in your hand for the rest of combat.'''
     entity.blocking(5, False)
     if using_card.get('Upgraded'):
-        for index, card in enumerate(entity.hand):
+        for card in entity.hand:
             card = entity.card_actions(card, 'Upgrade')
             sleep(0.3)
     else:
         while True:
-            option = view.list_input(entity, "Choose a card to upgrade > ", entity.hand, lambda card: not card.get("Upgraded") and (card['Type'] not in ("Status", "Curse") or card['Name'] == 'Burn'), True, "That card is not upgradeable.")
-            if option is None:
-                ansiprint('<red>The card you entered is invalid</red>')
-                sleep(1.5)
-                view.clear()
-                continue
-            if entity.hand[option].get('Upgraded') or (entity.hand[option].get('Name') != "Burn" and entity.hand[option].get('Type') in ('Status', 'Curse')):
-                ansiprint('That card is either already upgraded, a status, or a curse.')
-                sleep(1.5)
-                view.clear()
-                continue
+            option = view.list_input("Choose a card to upgrade > ", entity.hand, view.upgrade_preview, lambda card: not card.get("Upgraded") and (card['Name'] == "Burn" or card['Type'] not in ("Status", "Curse")), "That card is not upgradeable.")
             entity.hand[option] = entity.card_actions(entity.hand[option], 'Upgrade')
             break
 
@@ -120,12 +110,7 @@ def use_headbutt(targeted_enemy, using_card, entity):
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
     while True:
         view.view_piles(entity.discard_pile, entity)
-        choice = view.list_input(entity, 'What card do you want to put on top of your draw pile? > ', entity.discard_pile)
-        if choice is None:
-            ansiprint('<red>The card you entered was invalid</red>.')
-            sleep(1)
-            view.clear()
-            continue
+        choice = view.list_input('What card do you want to put on top of your draw pile? > ', entity.discard_pile, view.view_piles)
         entity.move_card(card=entity.discard_pile[choice], move_to=entity.draw_pile, from_location=entity.discard_pile, cost_energy=False)
         break
 
@@ -164,7 +149,7 @@ def use_truegrit(using_card, entity):
     if using_card.get('Upgraded'):
         while True:
             view.view_piles(entity.hand, entity)
-            option = view.list_input(entity, 'Choose a card to Exhaust.', entity.hand)
+            option = view.list_input('Choose a card to <keyword>Exhaust</keyword>.', entity.hand, view.view_piles)
             entity.move_card(card=entity.deck[option], move_to=entity.exhaust_pile, from_location=entity.hand, cost_energy=False)
             break
     else:
@@ -180,7 +165,7 @@ def use_warcry(using_card, entity):
     entity.draw_cards(True, using_card['Cards'])
     while True:
         view.view_piles(entity.hand, entity)
-        option = view.list_input(entity, 'Choose a card to put on top of your draw pile.', entity.hand)
+        option = view.list_input('Choose a card to put on top of your draw pile.', entity.hand, view.view_piles)
         entity.draw_pile.append(entity.hand[option])
         del entity.hand[option]
         break
@@ -212,7 +197,7 @@ def use_bloodletting(using_card, entity):
 def use_burningpact(using_card, entity):
     '''Exhaust one card. Draw 1(2) cards.'''
     while True:
-        option = view.list_input(entity, 'Choose a card to <keyword>Exhaust</keyword> > ', entity.hand)
+        option = view.list_input('Choose a card to <keyword>Exhaust</keyword> > ', entity.hand, view.view_piles)
         entity.move_card(card=entity.hand[option], move_to=entity.exhaust_pile, from_location=entity.hand, cost_energy=False)
         ansiprint(f"{entity.hand[option]['Name']} was <keyword>Exhausted</keyword>")
         break
@@ -248,7 +233,7 @@ def use_dualwield(using_card, entity):
     while True:
         valid_cards = [(idx, card) for idx, card in enumerate(entity.hand) if card.get('Type') in ('Attack', 'Power')]
         view_cards = [card[1] for card in valid_cards]
-        option = view.list_input(entity, f"Choose a card to make {'a copy' if not using_card.get('Upgraded') else '2 copies'} of > ", view_cards, lambda card: card['Type'] in ("Power", "Attack"), message_when_invalid="That card is not a <keyword>Power</keyword> or an <keyword>Attack</keyword>.")
+        option = view.list_input(f"Choose a card to make {'a copy' if not using_card.get('Upgraded') else '2 copies'} of > ", view_cards, view.view_piles, lambda card: card['Type'] in ("Power", "Attack"), "That card is not a <keyword>Power</keyword> or an <keyword>Attack</keyword>.")
         #convert option to index of entity.hand
         option = valid_cards[option][0]
         for _ in range(using_card['Copies']):
@@ -432,7 +417,7 @@ def use_exhume(using_card, entity):
     _ = using_card
     while True:
         view.view_piles(entity.exhaust_pile, entity)
-        option = view.list_input(entity, "Choose a card to return to your hand > ", entity.exhaust_pile)
+        option = view.list_input("Choose a card to return to your hand > ", entity.exhaust_pile, view.view_piles)
         if option is None:
             ansiprint('<red>The card you entered is invalid</red>')
             sleep(1.5)
@@ -446,7 +431,7 @@ def use_feed(targeted_enemy, using_card, entity):
     '''Deal 10(12) damage. If Fatal, raise your Max HP by 3(4). Exhaust.'''
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
     if targeted_enemy.health <= 0 and not targeted_enemy.buffs['Minion']:
-        ansiprint(f"FATALITY! You gained {using_card['Max HP']} <keyword>Max HP</keyword>.")
+        ansiprint(f"You gained {using_card['Max HP']} <keyword>Max HP</keyword>.")
         entity.health_actions(using_card['Max HP'], 'Max Health')
 
 def use_fiendfire(targeted_enemy, using_card, entity):

@@ -16,11 +16,11 @@ class Displayer():
     def __init__(self):
         pass
 
-    def upgrade_preview(self, pile):
-        """Print all of the cards in a given pile with their upgraded stats shown"""
+    def upgrade_preview(self, pile, validator: Callable=lambda placehold: bool(placehold)):
+        """Print all of the cards in a given pile with their upgraded stats shown. Upgradeable validation is built-in, the validator function adds restrictions."""
         counter = 1
         for card in pile:
-            if not card.get("Upgraded") and (card['Type'] not in ("Status", "Curse") or card['Name'] == 'Burn'):
+            if not card.get("Upgraded") and (card['Type'] not in ("Status", "Curse") or card['Name'] == 'Burn') and validator(card):
                 upgraded_energy = f' <green>-></green> <green>{card["Effects+"].get("Energy")}</green>' if card['Effects+'].get('Energy', card['Energy']) != card['Energy'] else ''
                 upgraded_info = f' <green>-></green> <yellow>{card["Effects+"].get("Info")}</yellow>' if card['Effects+'].get('Info', card['Info']) != card['Info'] else ''
                 ansiprint(f"{counter}: <{card['Type'].lower()}>{card['Name']}</{card['Type'].lower()}> | <light-red>{card.get('Energy', 'Unplayable')} Energy{upgraded_energy}</light-red> | <yellow>{card['Info']}</yellow>{upgraded_info}".replace('Σ', '').replace('Ω', ''))
@@ -30,17 +30,16 @@ class Displayer():
             sleep(0.05)
 
 
-    def view_piles(self, pile: list[dict], entity, end=False, validator: Callable=lambda placehold: bool(placehold)):
+    def view_piles(self, pile: list[dict], shuffle=False, end=False, validator: Callable=lambda placehold: bool(placehold)):
         """Prints a numbered list of all the cards in a certain pile."""
-        current_relics = [relic.get('Name') for relic in entity.relics]
         if len(pile) == 0:
             ansiprint('<red>This pile is empty</red>.')
             sleep(1.5)
             self.clear()
             return
-        if pile == entity.draw_pile and 'Frozen Eye' not in current_relics:
-            ansiprint('<italic>Cards are not shown in order.</italic>')
+        if shuffle is True:
             pile = random.sample(pile, len(pile))
+            ansiprint("<italic>Cards are not shwon in order.</italic>")
         counter = 1
         for card in pile:
             changed_energy = 'light-red' if not card.get('Changed Energy') else 'green'
@@ -57,28 +56,30 @@ class Displayer():
             sleep(0.5)
             self.clear()
 
-    def view_relics(self, entity, end=False):
+    def view_relics(self, relic_pool, end=False, validator: Callable=lambda placehold: bool(placehold)):
         counter = 1
-        for relic in entity.relics:
-            name_colors = {'Starter': 'starter', 'Common': 'white', 'Uncommon': 'uncommon', 'Rare': 'rare', 'Event': 'event'}
-            ansiprint(f"{counter}: <{name_colors[relic['Rarity']]}>{relic['Name']}</{name_colors[relic['Rarity']]}> | {relic['Class']} | <yellow>{relic['Info']}</yellow> | <dark-blue><italic>{relic['Flavor']}</italic></dark-blue>")
-            counter += 1
-            sleep(0.05)
+        for relic in relic_pool:
+            if validator(relic):
+                name_colors = {'Starter': 'starter', 'Common': 'white', 'Uncommon': 'uncommon', 'Rare': 'rare', 'Event': 'event'}
+                ansiprint(f"{counter}: <{name_colors[relic['Rarity']]}>{relic['Name']}</{name_colors[relic['Rarity']]}> | {relic['Class']} | <yellow>{relic['Info']}</yellow> | <dark-blue><italic>{relic['Flavor']}</italic></dark-blue>")
+                counter += 1
+                sleep(0.05)
         if end:
             input("Press enter to continue > ")
             sleep(1.5)
             self.clear()
 
-    def view_potions(self, entity, numbered_list=True):
+    def view_potions(self, potion_pool, max_potions=3, numbered_list=True, validator: Callable=lambda placehold: bool(placehold)):
         class_colors = {'Ironclad': 'red', 'Silent': 'dark-green', 'Defect': 'true-blue', 'Watcher': 'watcher-purple', 'Any': 'white'}
         rarity_colors = {'Common': 'white', 'Uncommon': 'uncommon', 'Rare': 'rare'}
         counter = 1
-        for potion in entity.potions:
-            chosen_class_color = class_colors[potion['Class']]
-            chosen_rarity_color = rarity_colors[potion['Rarity']]
-            ansiprint(f"{f'{counter}: ' if numbered_list else ''}<{chosen_rarity_color}>{potion['Name']}</{chosen_rarity_color}> | <{chosen_class_color}>{potion['Class']}</{chosen_class_color}> | <yellow>{potion['Info']}</yellow>")
-            counter += 1
-        for _ in range(entity.max_potions - len(entity.potions)):
+        for potion in potion_pool:
+            if validator(potion):
+                chosen_class_color = class_colors[potion['Class']]
+                chosen_rarity_color = rarity_colors[potion['Rarity']]
+                ansiprint(f"{f'{counter}: ' if numbered_list else ''}<{chosen_rarity_color}>{potion['Name']}</{chosen_rarity_color}> | <{chosen_class_color}>{potion['Class']}</{chosen_class_color}> | <yellow>{potion['Info']}</yellow>")
+                counter += 1
+        for _ in range(max_potions - len(potion_pool)):
             ansiprint(f"<light-black>{f'{counter}: ' if numbered_list else ''}(Empty)</light-black>")
             counter += 1
 
@@ -105,13 +106,11 @@ class Displayer():
             ansiprint(str(entity))
         print()
 
-    def list_input(self, entity, input_string: str, choices: list, validator: Callable=lambda placehold: bool(placehold), upgrade_print=True, message_when_invalid: str=None) -> int | None:
+    def list_input(self, input_string: str, choices: list, displayer: Callable, validator: Callable=lambda placehold: bool(placehold), message_when_invalid: str=None) -> int | None:
+        '''Allows the player to choose from a certain list of options. Includes validation.'''
         while True:
             try:
-                if not upgrade_print:
-                    self.view_piles(choices, entity, False, validator)
-                else:
-                    self.upgrade_preview(choices)
+                displayer(choices, validator=validator)
                 ansiprint(input_string + " > ", end='')
                 option = int(input()) - 1
                 if not validator(choices[option]):
@@ -278,7 +277,7 @@ class Generators():
                 ansiprint(f"{counter}: {relic['Name']} | {relic['Class']} | <light-black>{relic['Rarity']}</light-black> | <yellow>{relic['Info']}</yellow> | <blue><italic>{relic['Flavor']}</italic></blue>")
                 counter += 1
                 sleep(0.05)
-            option = view.list_input('What relic do you want? > ', rewards)
+            option = view.list_input('What relic do you want? > ', rewards, view.view_relics)
             if not option:
                 sleep(1.5)
                 view.clear()
@@ -296,14 +295,14 @@ class Generators():
             rewards = self.generate_potion_rewards(potion_amount, entity, potion_pool, chance_based)
         if not choice:
             for i in range(potion_amount):
-                entity.potions.append(rewards[i])
+                potion_pool.append(rewards[i])
                 print(f"{entity.name} obtained {rewards[i]['Name']} | {rewards[i]['Info']}")
                 rewards.remove(rewards[i])
             sleep(1.5)
             view.clear()
         while len(rewards) > 0:
             counter = 1
-            print(f"Potion Bag: ({len(entity.potions)} / {entity.max_potions})")
+            print(f"Potion Bag: ({len(potion_pool)} / {entity.max_potions})")
             view.view_potions(entity, False)
             print()
             print("Potion reward(s):")
@@ -312,26 +311,26 @@ class Generators():
                 ansiprint(f"{counter}: <blue>{potion['Name']}</blue> | <light-black>{potion['Rarity']}</light-black> | <green>{potion['Class']}</green> | <yellow>{potion['Info']}</yellow>")
                 counter += 1
             print()
-            option = view.list_input('What potion you want? >', rewards)
-            if len(entity.potions) == entity.max_potions:
+            option = view.list_input('What potion you want? >', rewards, view.view_potions)
+            if len(potion_pool) == entity.max_potions:
                 ansiprint("<red>Potion bag full!")
                 sleep(1)
                 option = input("Discard a potion?(y|n) > ")
                 if option == 'y':
                     counter = 1
-                    for potion in entity.potions:
+                    for potion in potion_pool:
                         ansiprint(f"{counter}: <light-black>{potion['Rarity']}</light-black> | <green>{potion['Class']}</green> | <blue>{potion['Name']}</blue> | <yellow>{potion['Info']}</yellow>")
                         counter += 1
-                    option = view.list_input('What potion do you want to discard? > ', entity.potions)
-                    print(f"Discarded {entity.potions[option]['Name']}.")
-                    entity.potions.remove(entity.potions[option])
+                    option = view.list_input('What potion do you want to discard? > ', potion_pool, view.view_potions)
+                    print(f"Discarded {potion_pool[option]['Name']}.")
+                    potion_pool.remove(potion_pool[option])
                     sleep(1.5)
                     view.clear()
                 else:
                     sleep(1.5)
                     view.clear()
                 continue
-            entity.potions.append(rewards[option])
+            potion_pool.append(rewards[option])
             rewards.remove(rewards[option])
             sleep(0.2)
             view.clear()
@@ -341,8 +340,7 @@ class Generators():
             rewards = self.generate_card_rewards(tier, entity.card_reward_choices, entity, card_pool)
         while True:
             if choice:
-                view.view_piles(rewards, entity)
-                chosen_reward = view.list_input(entity, 'What card do you want? > ', rewards)
+                chosen_reward = view.list_input('What card do you want? > ', rewards, view.view_piles)
                 if (entity.upgrade_attacks or entity.upgrade_skills or entity.upgrade_powers) and rewards[chosen_reward]['Type'] in ['Attack', 'Skill', 'Power']:
                     entity.card_actions(rewards[chosen_reward], 'Upgrade')
                 for relic in entity.relics:
