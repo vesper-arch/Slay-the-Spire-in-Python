@@ -168,7 +168,7 @@ def rest_site():
                 sleep(1.5)
                 view.clear()
                 continue
-            upgrade_card = view.list_input( 'What card do you want to upgrade?', player.deck, view.view_piles, lambda card: not card.get("Upgraded") and (card['Type'] not in ("Status", "Curse") or card['Name'] == 'Burn'), "That card is not upgradeable.")
+            upgrade_card = view.list_input('What card do you want to upgrade?', player.deck, view.view_piles, lambda card: not card.get("Upgraded") and (card['Type'] not in ("Status", "Curse") or card['Name'] == 'Burn'), "That card is not upgradeable.")
             player.deck[upgrade_card] = player.card_actions(player.deck[upgrade_card], 'Upgrade', cards)
             break
         if action == 'lift':
@@ -265,7 +265,12 @@ def play_card(card):
         energy_cost = card.get("Energy", float('inf')) if card.get("Energy", float('inf')) != -1 else player.energy
         if energy_cost > player.energy:
             ansiprint("<red>You don't have enough energy to use this card.</red>")
-            sleep(1.5)
+            sleep(1)
+            view.clear()
+            return
+        if player.choker_cards_played == 6:
+            ansiprint("You have already played 6 cards this turn!")
+            sleep(1)
             view.clear()
             return
         if card.get("Target") == 'Single' and len(active_enemies) > 1:
