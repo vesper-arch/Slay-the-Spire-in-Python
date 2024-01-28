@@ -5,7 +5,7 @@ from time import sleep
 from ast import literal_eval
 from copy import deepcopy
 from ansi_tags import ansiprint
-from items import relics, cards, modify_energy_cost, activate_sacred_bark
+from items import relics, cards, potions, modify_energy_cost, activate_sacred_bark
 from helper import active_enemies, combat_turn, view, gen, ei
 from definitions import CombatTier
 
@@ -85,6 +85,7 @@ class Player:
         self.girya_charges = 3 # Stores how many times the player can gain Energy from Girya
         self.plays_this_turn = 0 # Counts how many cards the played plays each turn
         self.stone_calender = 0
+        self.choker_cards_played = 0 # Used for the Velvet Choker relic
 
     def __str__(self):
         return f'(<italic>Player</italic>)Ironclad(<red>{self.health} / {self.max_health}</red> | <yellow>{self.gold} Gold</yellow> | Deck: {len(self.deck)})'
@@ -215,6 +216,20 @@ class Player:
                     card = self.card_actions(card, 'Upgrade', cards)
         elif relic['Name'] == 'Sacred Bark':
             activate_sacred_bark()
+        elif relic['Name'] == "Tiny House":
+            gen.claim_potions(False, 1, self, potions)
+            self.gain_gold(50)
+            self.health_actions(5, "Max Health")
+            gen.card_rewards('Normal', True, self, cards)
+            upgrade_card = random.choice((index for index in range(len(self.deck)) if not self.deck[index].get("Upgraded") and (self.deck[index]['Name'] == "Burn" or self.deck[index]['Type'] not in ("Status", "Curse"))))
+            self.deck[upgrade_card] = self.card_actions(self.deck[upgrade_card], "Upgrade")
+        elif relic['Name'] == 'Velvet Choker':
+            self.max_energy += 1
+        elif relic['Name'] == 'Black Blood':
+            burning_blood_index = self.relics.index(relics['Burning Blood']) # Will have to change once other characters are added
+            self.deck[burning_blood_index] = relic
+        elif relic['Name'] == 'Mark of Pain':
+            self.max_energy += 1
         _ = self.gain_gold(300) if relic['Name'] == 'Old Coin' else None
         self.card_reward_choices += 1 if relic['Name'] == 'Question Card' else 0
 
@@ -258,6 +273,8 @@ class Player:
         if relics['Bird-Faced Urn'] in self.relics and card.get('Type') == 'Power':
             ansiprint('<bold>Bird-Faced Urn</bold> activated: ', end='')
             self.health_actions(2, 'Heal')
+        if relics['Velvet Choker'] in self.relics:
+            self.choker_cards_played += 1
 
     def draw_cards(self, middle_of_turn: bool, draw_cards: int = 0):
         '''Draws [draw_cards] cards.'''
@@ -638,6 +655,8 @@ class Player:
             self.starting_strength += 3
             ansiprint("<bold>Red Skull</bold> activated. You now start combat with 3 <light-cyan>Strength</light-cyan>.")
             self.red_skull_active = True
+        if relics['Runic Cube'] and dmg > 0:
+            self.draw_cards(False, 1)
 
     def start_of_combat_relics(self, combat_type):
         if relics['Snecko Eye'] in self.relics:
@@ -681,6 +700,9 @@ class Player:
         if relics["Philosopher's Stone"] in self.relics:
             for enemy in active_enemies:
                 ei.apply_effect(enemy, self, 'Strength', 1)
+        if relics['Mark of Pain'] in self.relics:
+            for _ in range(2):
+                self.hand.append(deepcopy(cards['Wound']))
 
     def die(self):
         view.clear()
@@ -942,6 +964,8 @@ class Enemy:
                 ansiprint(f"{self.name} dealt {dmg}(<light-blue>{player.block} Blocked</light-blue>) damage to you.")
                 player.block = 0
                 player.health -= dmg
+                if relics['Runic Cube'] in player.relics and dmg > 0:
+                    player.draw_cards(True, 1)
             if player.buffs['Flame Barrier'] > 0:
                 if self.block >= dmg:
                     self.block -= dmg
