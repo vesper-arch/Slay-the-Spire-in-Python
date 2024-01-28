@@ -17,9 +17,9 @@ def test_view_piles_on_all_cards(monkeypatch):
 
     for function, condition_name in all_conditions:
       print(f"===== Condition: {condition_name} ======")
-      helper.view.view_piles(pile=all_cards, entity=entity, end=False, validator=function)
+      helper.view.view_piles(pile=all_cards, end=False, validator=function)
 
     # Also test the default condition
     print(f"===== Condition: Default ======")
-    helper.view.view_piles(pile=all_cards, entity=entity, end=False)
+    helper.view.view_piles(pile=all_cards, end=False)
 

@@ -168,7 +168,7 @@ def rest_site():
                 sleep(1.5)
                 view.clear()
                 continue
-            upgrade_card = view.list_input(player, 'What card do you want to upgrade?', player.deck, lambda card: not card.get("Upgraded") and (card['Type'] not in ("Status", "Curse") or card['Name'] == 'Burn'), True, "That card is not upgradeable.")
+            upgrade_card = view.list_input( 'What card do you want to upgrade?', player.deck, view.view_piles, lambda card: not card.get("Upgraded") and (card['Type'] not in ("Status", "Curse") or card['Name'] == 'Burn'), "That card is not upgradeable.")
             player.deck[upgrade_card] = player.card_actions(player.deck[upgrade_card], 'Upgrade', cards)
             break
         if action == 'lift':
@@ -183,7 +183,7 @@ def rest_site():
             view.clear()
             continue
         if action == 'toke':
-            option = view.list_input(player, 'What card would you like to remove? > ', player.deck, lambda card: card.get("Removable") is False, message_when_invalid="That card is not removable.")
+            option = view.list_input('What card would you like to remove? > ', player.deck, view.view_piles, lambda card: card.get("Removable") is False, "That card is not removable.")
             player.deck[option] = player.card_actions(player.deck[option], 'Remove', cards)
             break
         if action == 'dig':
@@ -193,7 +193,7 @@ def rest_site():
         ansiprint("<bold>[View Deck]</bold> or <bold>[Leave]</bold>")
         option = input("> ").lower()
         if option == 'view deck':
-            view.view_piles(player.deck, player)
+            view.view_piles(player.deck)
             input("Press enter to leave > ")
             sleep(0.5)
             view.clear()
@@ -256,8 +256,8 @@ def play_potion():
         return
     if relics['Sacred Bark'] in player.relics:
         activate_sacred_bark()
-    view.view_potions(player)
-    input('Press enter to leave > ')
+    view.view_potions(player.potions, player.max_potions)
+    input('This is currently not implemented. Press enter to leave > ')
 
 def play_card(card):
     while True:

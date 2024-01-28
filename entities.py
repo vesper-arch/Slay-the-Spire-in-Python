@@ -207,13 +207,7 @@ class Player:
             view.view_piles(self.deck, self, False, 'Removable')
             backup_counter = 2 # Used to account for wrong or invalid inputs
             for _ in range(backup_counter):
-                option = view.list_input(player, "Choose a card to remove > ", self.deck, lambda card: card.get("Removable") is False, message_when_invalid="That card is not removable.")
-                if not option or self.deck[option].get('Removable') is False:
-                    ansiprint("<red>The card you entered is either not valid or not removable.</red>")
-                    sleep(1)
-                    view.clear()
-                    backup_counter += 1
-                    continue
+                option = view.list_input("Choose a card to remove > ", self.deck, view.view_piles, lambda card: card.get("Removable") is False, "That card is not removable.")
                 self.deck[option] = self.card_actions(self.deck[option], 'Remove', cards)
         elif relic['Name'] == "Pandora's Box":
             for card in self.deck:
@@ -491,7 +485,7 @@ class Player:
                     ansiprint(f"{counter}: <light-black>{possible_card['Name']} | {possible_card['Type']} | {possible_card['Energy']} Energy | {possible_card['Info']}</light-black>")
                     counter += 1
                     sleep(0.05)
-            option = view.list_input(player, 'What card do you want to bottle? > ', self.deck, lambda card: card['Type'] == card_type, f"That card is not {'an' if card_type == 'Attack' else 'a'} {card_type}.")
+            option = view.list_input('What card do you want to bottle? > ', self.deck, view.view_piles, lambda card: card['Type'] == card_type, f"That card is not {'an' if card_type == 'Attack' else 'a'} {card_type}.")
             bottled_card = self.deck[option].copy()
             bottled_card['Bottled'] = True
             self.deck.insert(option, bottled_card)
