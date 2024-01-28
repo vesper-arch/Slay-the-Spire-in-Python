@@ -4,6 +4,13 @@ I have no idea how to release the game so just fork the repo and run it in a cod
 
 DISCLAIMER: I am not a professional, if you wonder why the code sucks, that's why.
 
+## Missing features(as of current release)
++ Currently you can only play as the ironclad.
++ Potions exist but you can't use them.
++ Most boss relics aren't implemented.
++ Only act 1 is availible.
++ Shops and Merchants don't exist.
+
 
 ## VSCode Dev Environment
 
