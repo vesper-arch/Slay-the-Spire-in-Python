@@ -92,7 +92,7 @@ class Displayer():
     def display_ui(self, entity, enemies, combat=True):
         # Repeats for every card in the entity's hand
         ansiprint("<bold>Relics: </bold>")
-        self.view_relics(entity)
+        self.view_relics(entity.relics)
         ansiprint("<bold>Hand: </bold>")
         self.view_piles(entity.hand, entity, False, lambda card: (card.get("Energy", float('inf')) if card.get("Energy", float('inf')) != -1 else entity.energy) <= entity.energy)
         if combat is True:
