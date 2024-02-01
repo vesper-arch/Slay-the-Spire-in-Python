@@ -1,16 +1,19 @@
 # Slay-The-Spire-in-Python
 A text-based version of Slay the Spire coded in python
-I have no idea how to release the game so fork the repo and run it in a code editor
 
-DISCLAIMER: I am not a professional, if you wonder why the code sucks, that's why.
+DISCLAIMER: I am not a professional, if you wonder why the code kinda sucks, that's why.
 
 ## Missing features(as of current release)
-+ Currently you can only play as the ironclad.
++ Currently you can only play as the Ironclad.
 + Potions exist but you can't use them.
 + Most boss relics aren't implemented.
 + Only Act 1 is available.
 + Shops and Merchants don't exist.
 + Most Curses don't do anything.
++ There is no saving.
+
+### Download:
+The game currently only has a Windows version.
 
 
 ## VSCode Dev Environment
