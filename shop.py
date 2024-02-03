@@ -121,13 +121,3 @@ class Shop():
         else:
           ansiprint(f"{idx+1}: {item.invalid_string()}")
       ansiprint("e: Exit Shop")
-
-    def __str__(self):
-        return f"{self.name} has {self.stock} items in stock"
-
-    def __add__(self, other):
-        new_stock = self.stock + other.stock
-        return Shop(f"{self.name} & {other.name}", new_stock)
-
-    def __len__(self):
-        return self.stock
