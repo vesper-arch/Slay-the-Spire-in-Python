@@ -179,7 +179,7 @@ class FatGremlin(Enemy): # Fatass
         super().__init__([13, 17], 0, "Fat Gremlin")
 
     def set_intent(self):
-        self.next_move, self.intent = [("Smash", "Attack", (4,)), ("Debuff", ("Weak", 1))], "<aggresive>Attack<aggresive> Σ4 / <debuff>Debuff</debuff>"
+        self.next_move, self.intent = [("Smash", "Attack", (4,)), ("Debuff", ("Weak", 1))], "<aggresive>Attack</aggresive> Σ4 / <debuff>Debuff</debuff>"
 
 class MadGremlin(Enemy):
     def __init__(self):
