@@ -11,6 +11,7 @@ class EncounterType(StrEnum):
     ELITE = auto()
     REST_SITE = auto()
     BOSS = auto()
+    SHOP = auto()
     UNKNOWN = auto()
 
 class Rarity(StrEnum):
