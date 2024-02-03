@@ -75,14 +75,20 @@ class Shop():
       attack_cards = [c for c in all_cards if c["Type"] == "Attack" and c["Class"] != "Colorless"]
       skill_cards = [c for c in all_cards if c["Type"] == "Skill" and c["Class"] != "Colorless"]
       power_cards = [c for c in all_cards if c["Type"] == "Power" and c["Class"] != "Colorless"]
-      items.extend(random.sample(attack_cards, 2))
-      items.extend(random.sample(skill_cards, 2))
-      items.extend(random.sample(power_cards, 1))
+      if len(attack_cards) >= 2:
+        items.extend(random.sample(attack_cards, 2))
+      if len(skill_cards) >= 2:
+        items.extend(random.sample(skill_cards, 2))
+      if len(power_cards) >= 1:
+        items.extend(random.sample(power_cards, 1))
+
       colorless_cards = [c for c in all_cards if "Class" in c and c["Class"] == "Colorless"]
       colorless_uncommon = [c for c in colorless_cards if c["Rarity"] == Rarity.UNCOMMON]
       colorless_rare = [c for c in colorless_cards if c["Rarity"] == Rarity.RARE]
-      items.extend(random.sample(colorless_uncommon, 1))
-      items.extend(random.sample(colorless_rare, 1))
+      if len(colorless_uncommon) >= 1:
+        items.extend(random.sample(colorless_uncommon, 1))
+      if len(colorless_rare) >= 1:
+        items.extend(random.sample(colorless_rare, 1))
       return [SellableItem(item) for item in items]
 
     def loop(self):
