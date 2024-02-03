@@ -121,7 +121,7 @@ def create_first_map():
     start = Encounter(ET.START)
 
     F1a = Encounter(ET.NORMAL, parents=[start])
-    F1b = Encounter(ET.NORMAL, parents=[start])
+    F1b = Encounter(ET.SHOP, parents=[start])
     F1c = Encounter(ET.NORMAL, parents=[start])
     F1d = Encounter(ET.NORMAL, parents=[start])
 

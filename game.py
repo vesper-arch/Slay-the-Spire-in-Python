@@ -1,18 +1,23 @@
-from functools import partial
-from time import sleep
 import math
 import random
+from time import sleep
 from copy import copy, deepcopy
 from ansi_tags import ansiprint
 from events import choose_event
 from items import relics, potions, cards, activate_sacred_bark
-from helper import active_enemies, view, gen, ei
-from enemy_catalog import create_act1_normal_encounters, create_act1_elites, create_act1_boss
 from entities import player, Player, Enemy
 from definitions import CombatTier, EncounterType
 from message_bus_tools import Message, bus
 from dataclasses import dataclass
 import game_map
+from ansi_tags import ansiprint
+from enemy_catalog import (
+    create_act1_boss,
+    create_act1_elites,
+    create_act1_normal_encounters,
+)
+from helper import active_enemies, combat_turn, ei, gen, potion_dropchance, view
+from shop import Shop
 
 
 @dataclass
@@ -291,6 +296,8 @@ def play(encounter: EncounterType, gm: game_map.GameMap):
         return Combat(player, CombatTier.ELITE).combat(gm)
     elif encounter.type == EncounterType.NORMAL:
         return Combat(player, CombatTier.NORMAL).combat(gm)
+    elif encounter.type == EncounterType.SHOP:
+        return Shop(player).loop()
     else:
         raise game_map.MapError(f"Encounter type {encounter} is not valid.")
 

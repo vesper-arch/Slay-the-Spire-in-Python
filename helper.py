@@ -91,13 +91,22 @@ class Displayer():
             ansiprint(str(entity))
         print()
 
-    def list_input(self, input_string: str, choices: list, displayer: Callable, validator: Callable=lambda placehold: bool(placehold), message_when_invalid: str=None) -> int | None:
+    def list_input(self, input_string: str, choices: list,
+                    displayer: Callable,
+                    validator: Callable=lambda placehold: bool(placehold),
+                    message_when_invalid: str=None,
+                    extra_allowables=None) -> int | None:
         '''Allows the player to choose from a certain list of options. Includes validation.'''
+        if extra_allowables is None:
+            extra_allowables = []
         while True:
             try:
                 displayer(choices, validator=validator)
                 ansiprint(input_string + " > ", end='')
-                option = int(input()) - 1
+                response = input()
+                if response in extra_allowables:
+                    return response
+                option = int(response) - 1
                 if not validator(choices[option]):
                     ansiprint(f"\u001b[1A\u001b[1000D<red>{message_when_invalid}</red>", end='')
                     sleep(1.5)
