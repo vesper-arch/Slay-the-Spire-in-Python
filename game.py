@@ -1,16 +1,22 @@
-from functools import partial
-from time import sleep
 import math
 import random
 from copy import copy, deepcopy
-from ansi_tags import ansiprint
-from events import choose_event
-from items import relics, potions, cards, activate_sacred_bark
-from helper import active_enemies, combat_turn, potion_dropchance, view, gen, ei
-from enemy_catalog import create_act1_normal_encounters, create_act1_elites, create_act1_boss
-from entities import player
-from definitions import CombatTier, EncounterType
+from functools import partial
+from time import sleep
+
 import game_map
+from ansi_tags import ansiprint
+from definitions import CombatTier, EncounterType
+from enemy_catalog import (
+    create_act1_boss,
+    create_act1_elites,
+    create_act1_normal_encounters,
+)
+from entities import player
+from events import choose_event
+from helper import active_enemies, combat_turn, ei, gen, potion_dropchance, view
+from items import activate_sacred_bark, cards, potions, relics
+from shop import Shop
 
 cards['Whirlwind']['Energy'] = player.energy
 
@@ -302,6 +308,8 @@ def play(encounter: EncounterType, gm: game_map.GameMap):
         return combat(CombatTier.ELITE, gm)
     elif encounter.type == EncounterType.NORMAL:
         return combat(CombatTier.NORMAL, gm)
+    elif encounter.type == EncounterType.SHOP:
+        return Shop(player).loop()
     else:
         raise game_map.MapError(f"Encounter type {encounter} is not valid.")
 
