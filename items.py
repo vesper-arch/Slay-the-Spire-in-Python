@@ -3,7 +3,7 @@ from time import sleep
 from copy import deepcopy
 from ansi_tags import ansiprint
 from helper import view, ei
-
+from definitions import CardType, Rarity
 
 
 def modify_energy_cost(amount: int, modify_type: str, card: dict):
@@ -477,6 +477,7 @@ def use_reaper(enemies, using_card, entity):
         sleep(0.5)
     sleep(1)
     view.clear()
+
 relics: dict[str: dict] = {
     # Starter Relics
     'Burning Blood': {'Name': 'Burning Blood', 'Class': 'Ironclad', 'Rarity': 'Starter', 'Health': 6, 'Info': 'At the end of combat, heal 6 HP', 'Flavor': "Your body's own blood burns with an undying rage."},
@@ -876,7 +877,57 @@ cards = {
     'Parasite': {'Name': 'Parasite', 'Playable': False, 'Max Hp Loss': 3, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable.</keyword> If transformed or removed from your deck, lose 3 Max HP.'},
     'Pride': {'Name': 'Pride', 'Innate': True, 'Exhaust': True, 'Energy': 1, 'Rarity': 'Special', 'Type': 'Curse', 'Info': '<keyword>Innate.</keyword> At the end of your turn, put a copy of this card on top of your draw pile. <keyword>Exhaust.</keyword>'},
     'Shame': {'Name': 'Shame', 'Playable': False, 'Frail': 1, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable.</keyword> At the end of your turn, gain 1 <red>Frail</red>.'},
-    'Writhe': {'Name': 'Writhe', 'Playable': False, 'Innate': True, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable. Innate.</keyword>'}
+    'Writhe': {'Name': 'Writhe', 'Playable': False, 'Innate': True, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable. Innate.</keyword>'},
+
+    # Colorless Cards
+    "Bandage Up": {"Name": "Bandage Up", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Heal 4(6) HP. Exhaust.", "Exhaust": True},
+    "Blind": {"Name": "Blind", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Apply 2 Icon Weak Weak (to ALL enemies)."},
+    "Dark Shackles": {"Name": "Dark Shackles", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Enemy loses 9(15) Icon Strength Strength for the rest of this turn. Exhaust.", "Exhaust": True},
+    "Deep Breath": {"Name": "Deep Breath", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Shuffle your discard pile into your draw pile. Draw 1(2) card(s)."},
+    "Discovery": {"Name": "Discovery", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 1, "Info": "Choose 1 of 3 random cards to add to your hand. It costs 0 this turn. Exhaust. (Don't Exhaust.)", "Exhaust": True},
+    "Dramatic Entrance": {"Name": "Dramatic Entrance", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.ATTACK, "Energy": 0, "Info": "Innate. Deal 8(12) damage to ALL enemies. Exhaust.", "Exhaust": True},
+    "Enlightenment": {"Name": "Enlightenment", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Reduce the cost of cards in your hand to 1 this turn(combat)."},
+    "Finesse": {"Name": "Finesse", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Gain 2(4) Icon Block Block. Draw 1 card."},
+    "Flash of Steel": {"Name": "Flash of Steel", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.ATTACK, "Energy": 0, "Info": "Deal 3(6) damage. Draw 1 card."},
+    "Forethought": {"Name": "Forethought", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Place a card(any number of cards) from your hand on the bottom of your draw pile. It (They) costs 0 until played."},
+    "Good Instincts": {"Name": "Good Instincts", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Gain 6(9) Icon Block Block."},
+    "Impatience": {"Name": "Impatience", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "If you have no Attack cards in your hand, draw 2(3) cards."},
+    "Jack Of All Trades": {"Name": "Jack Of All Trades", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Add 1(2) random Colorless card(s) to your hand. Exhaust.", "Exhaust": True},
+    "Madness": {"Name": "Madness", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 1, "Energy+": 0, "Info": "A random card in your hand costs 0 for the rest of combat. Exhaust.", "Exhaust": True},
+    "Mind Blast": {"Name": "Mind Blast", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.ATTACK, "Energy": 2, "Energy+": 1, "Info": "Innate. Deal damage equal to the number of cards in your draw pile."},
+    "Panacea": {"Name": "Panacea", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Gain 1(2) Icon Artifact Artifact. Exhaust.", "Exhaust": True},
+    "Panic Button": {"Name": "Panic Button", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Gain 30(40) Icon Block Block. You cannot gain Icon Block Block from cards for the next 2 turns. Exhaust.", "Exhaust": True},
+    "Purity": {"Name": "Purity", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Choose and Exhaust 3(5) cards in your hand. Exhaust.", "Exhaust": True},
+    "Swift Strike": {"Name": "Swift Strike", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.ATTACK, "Energy": 0, "Info": "Deal 7(10) damage."},
+    "Trip": {"Name": "Trip", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Apply 2 Icon Vulnerable Vulnerable (to ALL enemies)."},
+    "Apotheosis": {"Name": "Apotheosis", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 2, "Energy+": 1, "Info": "Upgrade ALL of your cards for the rest of combat. Exhaust.", "Exhaust": True},
+    "Chrysalis": {"Name": "Chrysalis", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 2, "Info": "Add 3(5) random Skills into your Draw Pile. They cost 0 this combat. Exhaust.", "Exhaust": True},
+    "Hand of Greed": {"Name": "Hand of Greed", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.ATTACK, "Energy": 2, "Info": "Deal 20(25) damage. If this kills a non-minion enemy, gain 20(25) Gold."},
+    "Magnetism": {"Name": "Magnetism", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.POWER, "Energy": 2, "Energy+": 1, "Info": "At the start of each turn, add a random colorless card to your hand."},
+    "Master Of Strategy": {"Name": "Master Of Strategy", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 0, "Info": "Draw 3(4) cards. Exhaust.", "Exhaust": True},
+    "Mayhem": {"Name": "Mayhem", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.POWER, "Energy": 2, "Energy+": 1, "Info": "At the start of your turn, play the top card of your draw pile."},
+    "Metamorphosis": {"Name": "Metamorphosis", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 2, "Info": "Add 3(5) random Attacks into your Draw Pile. They cost 0 this combat. Exhaust.", "Exhaust": True},
+    "Panache": {"Name": "Panache", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.POWER, "Energy": 0, "Info": "Every time you play 5 cards in a single turn, deal 10(14) damage to ALL enemies."},
+    "Sadistic Nature": {"Name": "Sadistic Nature", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.POWER, "Energy": 0, "Info": "Whenever you apply a Debuff to an enemy, they take 5(7) damage."},
+    "Secret Technique": {"Name": "Secret Technique", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 0, "Info": "Choose a Skill from your draw pile and place it into your hand. Exhaust. (Don't Exhaust)", "Exhaust": True},
+    "Secret Weapon": {"Name": "Secret Weapon", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 0, "Info": "Choose an Attack from your draw pile and place it into your hand. Exhaust. (Don't Exhaust)", "Exhaust": True},
+    "The Bomb": {"Name": "The Bomb", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 2, "Info": "At the end of 3 turns, deal 40(50) damage to ALL enemies."},
+    "Thinking Ahead": {"Name": "Thinking Ahead", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 0, "Info": "Draw 2 cards. Place a card from your hand on top of your draw pile. Exhaust. (Don't Exhaust.)", "Exhaust": True},
+    "Transmutation": {"Name": "Transmutation", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": "X", "Info": "Add X random (Upgraded) colorless cards into your hand. They cost 0 this turn. Exhaust.", "Exhaust": True},
+    "Violence": {"Name": "Violence", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 0, "Info": "Place 3(4) random Attack cards from your draw pile into your hand. Exhaust.", "Exhaust": True},
+    "Apparition": {"Name": "Apparition", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.SKILL, "Energy": 1, "Info": "Gain 1 Icon Intangible Intangible. Exhaust. Ethereal. (no longer Ethereal.) (Obtained from event: Council of Ghosts).", "Exhaust": True},
+    "Beta": {"Name": "Beta", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.SKILL, "Energy": 2, "Energy+": 1, "Info": "Shuffle an Omega into your draw pile. Exhaust.  (Obtained from Alpha).", "Exhaust": True},
+    "Bite": {"Name": "Bite", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.ATTACK, "Energy": 1, "Info": "Deal 7(8) damage. Heal 2(3) HP. (Obtained from event: Vampires(?))."},
+    "Expunger": {"Name": "Expunger", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.ATTACK, "Energy": 1, "Info": "Deal 9(15) damage X times. (Obtained from Conjure Blade)."},
+    "Insight": {"Name": "Insight", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.SKILL, "Energy": 0, "Info": "Icon Retain Retain. Draw 2(3) cards. Exhaust. (Obtained from Evaluate, Pray and Study).", "Exhaust": True},
+    "J.A.X.": {"Name": "J.A.X.", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.SKILL, "Energy": 0, "Info": "Lose 3 HP.  Gain 2(3) Icon Strength Strength. (Obtained from event: Augmenter)."},
+    "Miracle": {"Name": "Miracle", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.SKILL, "Energy": 0, "Info": "Icon Retain Retain. Gain (2) Energy. Exhaust. (Obtained from Collect, Deus Ex Machina, PureWater-0 Pure Water, and Holy water Holy Water).", "Exhaust": True},
+    "Omega": {"Name": "Omega", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.POWER, "Energy": 3, "Info": "At the end of your turn deal 50(60) damage to ALL enemies. (Obtained from Beta)."},
+    "Ritual Dagger": {"Name": "Ritual Dagger", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.ATTACK, "Energy": 1, "Info": "Deal 15 damage. If this kills an enemy then permanently increase this card's damage by 3(5). Exhaust. (Obtained during event: The Nest)", "Exhaust": True},
+    "Safety": {"Name": "Safety", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.SKILL, "Energy": 1, "Info": "Icon Retain Retain. Gain 12(16) Icon Block Block. Exhaust. (Obtained from Deceive Reality).", "Exhaust": True},
+    "Shiv": {"Name": "Shiv", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.ATTACK, "Energy": 0, "Info": "Deal 4(6) damage. Exhaust. (Obtained from Blade Dance, Cloak and Dagger, Infinite Blades, Storm of Steel, and NinjaScroll Ninja Scroll).", "Exhaust": True},
+    "Smite": {"Name": "Smite", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.ATTACK, "Energy": 1, "Info": "Icon Retain Retain. Deal 12(16) damage. Exhaust. (Obtained from Carve Reality and Battle Hymn).", "Exhaust": True},
+    "Through Violence": {"Name": "Through Violence", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.ATTACK, "Energy": 0, "Info": "Icon Retain Retain. Deal 20(30) damage. Exhaust. (Obtained from Reach Heaven).", "Exhaust": True},
 }
 
 sacred_multi: int = 1
