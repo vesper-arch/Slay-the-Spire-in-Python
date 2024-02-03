@@ -41,3 +41,15 @@ class PlayerClass(StrEnum):
     WATCHER = 'Watcher'
     COLORLESS = 'Colorless'
     ANY = 'Any'
+    ENTROPIC = 'Entropic'
+    SNECKO = 'Snecko'
+    DARK_ESSENCE = 'Dark Essence'
+
+class TargetType(StrEnum):
+    ANY = 'Any'
+    AREA = 'Area'
+    ENEMY = 'Enemy'
+    NOTHING = 'Nothing'
+    RANDOM = 'Random'
+    SINGLE = 'Single'
+    YOURSELF = 'Yourself'
