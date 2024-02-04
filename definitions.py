@@ -32,9 +32,6 @@ class CardType(StrEnum):
     POWER = 'Power'
     STATUS = 'Status'
     CURSE = 'Curse'
-    ENTROPIC = 'Entropic'
-    SNECKO = 'Snecko'
-    DARK_ESSENCE = 'Dark Essence'
 
 class TargetType(StrEnum):
     ANY = 'Any'
