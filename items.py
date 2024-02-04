@@ -85,6 +85,16 @@ def use_cleave(enemies, using_card, entity):
     for enemy in enemies:
         entity.attack(using_card['Damage'], enemy, using_card)
 
+def use_dramaticentrance(enemies, using_card, entity):
+    '''Deal 8(12) damage to ALL enemies. Exhaust.'''
+    for enemy in enemies:
+        entity.attack(using_card['Damage'], enemy, using_card)
+
+def use_blind(enemies, using_card, entity):
+    '''Apply 2 Weak (to ALL enemies).'''
+    for enemy in enemies:
+        ei.apply_effect(enemy, entity, 'Weak', using_card['Weak'])
+
 
 def use_perfectedstrike(targeted_enemy, using_card, entity):
     '''Deal 6 damage. Deals 2(3) additional damage for ALL your cards containing "Strike"'''
@@ -97,6 +107,12 @@ def use_anger(targeted_enemy, using_card, entity):
     '''Deal 6(8) damage. Add a copy of this card to your discard pile.'''
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
     entity.discard_pile.append(deepcopy(using_card))
+
+def use_apotheosis(using_card, entity):
+    '''Upgrade ALL of your cards for the rest of combat. Exhaust.'''
+    for card in entity.hand:
+        card = entity.card_actions(card, 'Upgrade')
+        sleep(0.3)
 
 def use_armaments(using_card, entity):
     '''Gain 5 Block. Upgrade a(ALL) card(s) in your hand for the rest of combat.'''
@@ -349,6 +365,12 @@ def use_recklesscharge(targeted_enemy, using_card, entity):
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
     entity.draw_pile.insert(random.randint(0, len(entity.draw_pile) - 1), deepcopy(cards['Dazed']))
     ansiprint("A <status>Dazed</status> was shuffled into your draw pile.")
+
+def use_deepbreath(using_card, entity):
+    '''Shuffle your discard pile into your draw pile. Draw 1(2) cards.'''
+    entity.draw_pile.extend(entity.discard_pile)
+    entity.discard_pile = []
+    entity.draw_cards(True, using_card['Cards'])
 
 def use_rupture(using_card, entity):
     '''Whenever you lose HP from a card, gain 1(2) Strength.'''
@@ -916,11 +938,11 @@ cards_old = {
 
     # Colorless Cards
     "Bandage Up": {"Name": "Bandage Up", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Heal 4(6) HP. Exhaust.", "Exhaust": True, "Target": TargetType.YOURSELF, "Function": use_bandageup},
-    # "Blind": {"Name": "Blind", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Apply 2 Weak (to ALL enemies)."},
+    "Blind": {"Name": "Blind", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Apply 2 Weak (to ALL enemies).", "Target": TargetType.AREA, "Function": use_blind},
     "Dark Shackles": {"Name": "Dark Shackles", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Enemy loses 9(15) Strength for the rest of this turn. Exhaust.", "Exhaust": True, "Target": TargetType.ENEMY, "Function": use_darkshackles, "Magic Number": 9},
-    # "Deep Breath": {"Name": "Deep Breath", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Shuffle your discard pile into your draw pile. Draw 1(2) card(s)."},
+    "Deep Breath": {"Name": "Deep Breath", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Shuffle your discard pile into your draw pile. Draw 1(2) card(s).", "Target": TargetType.NOTHING, "Function": use_deepbreath, "Cards": 1},
     # "Discovery": {"Name": "Discovery", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 1, "Info": "Choose 1 of 3 random cards to add to your hand. It costs 0 this turn. Exhaust. (Don't Exhaust.)", "Exhaust": True, "Target": TargetType.YOURSELF, "Function": use_discovery},
-    # "Dramatic Entrance": {"Name": "Dramatic Entrance", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.ATTACK, "Energy": 0, "Info": "Innate. Deal 8(12) damage to ALL enemies. Exhaust.", "Exhaust": True},
+    "Dramatic Entrance": {"Name": "Dramatic Entrance", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.ATTACK, "Energy": 0, "Info": "Innate. Deal 8(12) damage to ALL enemies. Exhaust.", "Exhaust": True, "Target": TargetType.AREA, "Function": use_dramaticentrance, "Damage": 8},
     # "Enlightenment": {"Name": "Enlightenment", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Reduce the cost of cards in your hand to 1 this turn(combat)."},
     # "Finesse": {"Name": "Finesse", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Gain 2(4) Block. Draw 1 card."},
     # "Flash of Steel": {"Name": "Flash of Steel", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.ATTACK, "Energy": 0, "Info": "Deal 3(6) damage. Draw 1 card."},
@@ -935,7 +957,8 @@ cards_old = {
     # "Purity": {"Name": "Purity", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Choose and Exhaust 3(5) cards in your hand. Exhaust.", "Exhaust": True},
     # "Swift Strike": {"Name": "Swift Strike", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.ATTACK, "Energy": 0, "Info": "Deal 7(10) damage."},
     # "Trip": {"Name": "Trip", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Apply 2 Vulnerable (to ALL enemies)."},
-    # "Apotheosis": {"Name": "Apotheosis", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 2, "Energy+": 1, "Info": "Upgrade ALL of your cards for the rest of combat. Exhaust.", "Exhaust": True},
+
+    "Apotheosis": {"Name": "Apotheosis", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 2, "Energy+": 1, "Info": "Upgrade ALL of your cards for the rest of combat. Exhaust.", "Exhaust": True, "Target": TargetType.YOURSELF, "Function": use_apotheosis},
     # "Chrysalis": {"Name": "Chrysalis", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 2, "Info": "Add 3(5) random Skills into your Draw Pile. They cost 0 this combat. Exhaust.", "Exhaust": True},
     # "Hand of Greed": {"Name": "Hand of Greed", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.ATTACK, "Energy": 2, "Info": "Deal 20(25) damage. If this kills a non-minion enemy, gain 20(25) Gold."},
     # "Magnetism": {"Name": "Magnetism", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.POWER, "Energy": 2, "Energy+": 1, "Info": "At the start of each turn, add a random colorless card to your hand."},
