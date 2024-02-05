@@ -26,6 +26,19 @@ class Rarity(StrEnum):
     STARTER ='Starter'
     UNCOMMON ='Uncommon'
 
+class Rarity(StrEnum):
+    BASIC = 'Basic'
+    STARTER = 'Starter'
+    COMMON = 'Common'
+    UNCOMMON = 'Uncommon'
+    RARE = 'Rare'
+    SPECIAL = 'Special'
+    CURSE = 'Curse'
+    STATUS = 'Status'
+    BOSS = 'Boss'
+    EVENT = 'Event'
+    SHOP = 'Shop'
+
 class CardType(StrEnum):
     ATTACK = 'Attack'
     SKILL = 'Skill'
@@ -46,3 +59,9 @@ class CardCategory(StrEnum):
     CARD = 'Card'
     POTION = 'Potion'
     RELIC = 'Relic'
+
+class PlayerClass(StrEnum):
+    IRONCLAD = 'Ironclad'
+    SILENT = 'Silent'
+    DEFECT = 'Defect'
+    WATCHER = 'Watcher'

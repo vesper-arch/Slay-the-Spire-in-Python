@@ -1,5 +1,6 @@
 from enum import StrEnum
 from ansi_tags import ansiprint
+from definitions import Rarity, CardType, PlayerClass
 
 class Message(StrEnum):
     '''Messages that can be sent to the message bus.'''
@@ -9,7 +10,12 @@ class Message(StrEnum):
     END_OF_TURN = 'end_of_turn'
     BEFORE_ATTACK = 'before_attack'
     AFTER_ATTACK = 'after_attack'
+    BEFORE_BLOCK = 'before_block'
+    AFTER_BLOCK = 'after_block'
     ON_PICKUP = 'on_pickup' # For relics
+    ON_DRAW = 'on_draw'
+    ON_EXHAUST = 'on_exhaust'
+    ON_CARD_PLAY = 'on_card_play'
 
 class MessageBus():
     '''This is a Pub/Sub, or Publish/Subscribe, message bus. It allows components to subscribe to messages,
@@ -63,13 +69,35 @@ class Relic(Registerable):
         return f"<{self.rarity}>{self.name}</{self.rarity}> | <yellow>{self.info}</yellow> | <italic><dark-blue>{self.flavor_text}</dark-blue></italic>"
     
 class Card(Registerable):
-    def __init__(self, name, info, rarity, player_class, card_type, energy_cost=-1):
+    def __init__(self, name: str, info: str, rarity: Rarity, player_class: PlayerClass, card_type: CardType, target='Nothing', energy_cost=-1):
         self.name = name
         self.info = info
         self.rarity = rarity
         self.player_class = player_class
         self.type = card_type
+        self.base_energy_cost = energy_cost
         self.energy_cost = energy_cost
+        self.reset_energy_next_turn = False
+        self.target = target
+        self.upgrade = False
+        self.upgrade_preview = f"{self.name} -> <green>{self.name + '+'}</green> | "
 
     def pretty_print(self):
-        return f"<{self.rarity}>{self.name}</{self.rarity}>{f' | <light-red>{self.energy_cost} Energy</light-red>' if self.energy > -1 else ''} | <yellow>{self.info}</yellow>"
+        return f"""<{self.rarity.lower()}>{self.name}</{self.rarity.lower()}> | <light-black>{self.type}</light-black>{f' | <light-red>{"<green>" if self.base_energy_cost != self.energy_cost else ""}{self.energy_cost}{"</green>" if self.base_energy_cost != self.energy_cost else ""} Energy</light-red>' if self.energy > -1 else ''} | <yellow>{self.info}</yellow>"""
+
+    def upgrade_markers(self):
+        self.info += '<green>+</green>'
+        self.upgraded = True
+    
+    def modify_energy_cost(self, amount, modify_type='Adjust', one_turn=False):
+        if not (modify_type == 'Set' and amount != self.energy_cost) or not (modify_type == 'Adjust' and amount != 0):
+            pass
+        if modify_type == 'Adjust':
+            self.energy_cost += amount
+            ansiprint(f"{self.name} got its energy {'reduced' if amount < 0 else 'increased'} by {amount:+d}")
+        elif modify_type == 'Set':
+            self.energy_cost = amount
+            ansiprint(f"{self.name} got its energy set to {amount}.")
+        if one_turn:
+            self.reset_energy_next_turn = True
+bus = MessageBus(debug=True)
