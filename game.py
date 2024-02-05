@@ -6,108 +6,114 @@ from copy import copy, deepcopy
 from ansi_tags import ansiprint
 from events import choose_event
 from items import relics, potions, cards, activate_sacred_bark
-from helper import active_enemies, combat_turn, potion_dropchance, view, gen, ei
+from helper import active_enemies, view, gen, ei
 from enemy_catalog import create_act1_normal_encounters, create_act1_elites, create_act1_boss
-from entities import player
+from entities import player, Player, Enemy
 from definitions import CombatTier, EncounterType
+from message_bus_tools import Message, bus
+from dataclasses import dataclass
 import game_map
 
-cards['Whirlwind']['Energy'] = player.energy
 
-def combat(tier: CombatTier, current_map) -> None:
-    """There's too much to say here."""
-    global combat_turn
-    # Spawns enemies and shuffles the player's deck into their draw pile.
-    boss_name = start_combat(tier)
-    if relics['Preserved Insect'] in player.relics and tier == CombatTier.ELITE:
-        for enemy in active_enemies:
-            enemy.health -= round(enemy.health * 0.25)
-        ansiprint('<bold>Preserved Insect</bold> <blue>activated</blue>.')
-    # Combat automatically ends when all enemies are dead.
-    while len(active_enemies) > 0:
-        # Draws cards, removes block, ticks debuffs, and activates start-of-turn buffs, debuffs, and relics.
-        player.start_turn()
-        for enemy in active_enemies:
-            enemy.start_turn()
-        while True:
-            if len(active_enemies) == 0:
-                end_combat(tier, killed_enemies=True)
-                break
-            if all((getattr(enemy, 'escaped', False) for enemy in active_enemies)):
-                end_combat(tier, robbed=True)
-                break
-            print(f"Turn {combat_turn}: ")
-            _ = player.draw_cards(True, 1) if len(player.hand) == 0 and relics['Unceasing Top'] in player.relics else None # Assigned to _ so my linter shuts up
-            # Shows the player's potions, cards(in hand), amount of cards in discard and draw pile, and shows the status for you and the enemies.
-            view.display_ui(player, active_enemies)
-            print("1-0: Play card, P: Play Potion, M: View Map, D: View Deck, A: View Draw Pile, S: View Discard Pile, X: View Exhaust Pile, E: End Turn, F: View Debuffs and Buffs")
-            action = input("> ").lower()
-            other_options = {'d': lambda: view.view_piles(player.deck, player), 'a': lambda: view.view_piles(player.draw_pile, player),
-                     's': lambda: view.view_piles(player.discard_pile, player), 'x': lambda: view.view_piles(player.exhaust_pile, player),
-                     'p': play_potion, 'f': lambda: ei.full_view(player, active_enemies), 'm': lambda: view.view_map(current_map)}
-            if action.isdigit():
-                option = int(action) - 1
-                if option + 1 in range(len(player.hand) + 1):
-                    play_card(player.hand[option])
+@dataclass
+class Combat:
+    player: Player
+    tier: CombatTier
+    active_enemies: list[Enemy] = None # Used to hardcode enemy encounters
+    turn: int = 1
+
+    def combat(self, current_map) -> None:
+        """There's too much to say here."""
+        global combat_turn
+        boss_name = self.start_combat(self.tier)
+        # Combat automatically ends when all enemies are dead.
+        while len(active_enemies) > 0:
+            # Draws cards, removes block, ticks debuffs, and activates start-of-turn buffs, debuffs, and relics.
+            bus.publish(Message.START_OF_TURN, (self.player, self.active_enemies, self.tier))
+            while True:
+                if len(active_enemies) == 0:
+                    self.end_combat(self.tier, killed_enemies=True)
+                    break
+                if all((getattr(enemy, 'escaped', False) for enemy in active_enemies)):
+                    self.end_combat(self.tier, robbed=True)
+                    break
+                print(f"Turn {self.turn}: ")
+                _ = player.draw_cards(True, 1) if len(player.hand) == 0 and relics['Unceasing Top'] in player.relics else None # Assigned to _ so my linter shuts up
+                # Shows the player's potions, cards(in hand), amount of cards in discard and draw pile, and shows the status for you and the enemies.
+                view.display_ui(player, active_enemies)
+                print("1-0: Play card, P: Play Potion, M: View Map, D: View Deck, A: View Draw Pile, S: View Discard Pile, X: View Exhaust Pile, E: End Turn, F: View Debuffs and Buffs")
+                action = input("> ").lower()
+                other_options = {'d': lambda: view.view_piles(player.deck), 'a': lambda: view.view_piles(player.draw_pile),
+                        's': lambda: view.view_piles(player.discard_pile), 'x': lambda: view.view_piles(player.exhaust_pile),
+                        'p': play_potion, 'f': lambda: ei.full_view(player, self.active_enemies), 'm': lambda: view.view_map(current_map)}
+                if action.isdigit():
+                    option = int(action) - 1
+                    if option + 1 in range(len(player.hand) + 1):
+                        play_card(player.hand[option])
+                    else:
+                        view.clear()
+                        continue
+                elif action in other_options:
+                    other_options[action]()
+                elif action == 'e':
+                    view.clear()
+                    break
                 else:
                     view.clear()
                     continue
-            elif action in other_options:
-                other_options[action]()
-            elif action == 'e':
+                sleep(1)
                 view.clear()
-                break
-            else:
+            player.end_player_turn()
+            for enemy in active_enemies:
+                enemy.execute_move()
+                input('Press enter to continue > ')
                 view.clear()
-                continue
-            sleep(1)
-            view.clear()
-        player.end_player_turn()
-        for enemy in active_enemies:
-            enemy.execute_move()
-            input('Press enter to continue > ')
-            view.clear()
-        combat_turn += 1
+            combat_turn += 1
 
-def end_combat(tier, killed_enemies=False, escaped=False, robbed=False):
-    global potion_dropchance, combat_turn
-    if killed_enemies is True:
-        player.in_combat = False
-        player.hand.clear()
-        player.discard_pile.clear()
-        player.draw_pile.clear()
-        player.exhaust_pile.clear()
-        potion_roll = random.randint(0, 100)
-        ansiprint("<green>Combat finished!</green>")
-        player.gain_gold(random.randint(10, 20) * 1 if relics['Golden Idol'] not in player.relics else 1.25)
-        if potion_roll < potion_dropchance or relics['White Beast Statue'] in player.relics:
-            gen.claim_potions(True, 1, player, potions)
-            potion_dropchance -= 10
-        else:
-            potion_dropchance += 10
-        for _ in range(int(relics['Prayer Wheel'] in player.relics) + 1):
-            gen.card_rewards(tier, True, player, cards)
-        combat_turn = 0
-        sleep(1.5)
-        view.clear()
-    elif escaped is True:
-        active_enemies.clear()
-        print("Escaped...")
-        player.in_combat = False
-        sleep(0.8)
-        print("You recieve nothing.")
-        sleep(1.5)
-        view.clear()
-        combat_turn = 1
-    elif robbed:
-        active_enemies.clear()
-        print("Robbed...")
-        player.in_combat = False
-        sleep(0.8)
-        print("You recieve nothing.")
-        sleep(1.2)
-        view.clear()
-        combat_turn = 1
+    def end_combat(self, killed_enemies=False, escaped=False, robbed=False):
+        if killed_enemies is True:
+            potion_roll = random.random()
+            ansiprint("<green>Combat finished!</green>")
+            player.gain_gold(random.randint(10, 20) * 1 if relics['Golden Idol'] not in self.player.relics else 1.25)
+            if potion_roll < self.player.potion_dropchance or relics['White Beast Statue'] in self.player.relics:
+                gen.claim_potions(True, 1, player, potions)
+                potion_dropchance -= 10
+            else:
+                potion_dropchance += 10
+            for _ in range(int(relics['Prayer Wheel'] in self.player.relics) + 1):
+                gen.card_rewards(self.tier, True, self.player, cards)
+            sleep(1.5)
+            view.clear()
+        elif escaped is True:
+            active_enemies.clear()
+            print("Escaped...")
+            sleep(0.8)
+            print("You recieve nothing.")
+            sleep(1.5)
+            view.clear()
+        elif robbed:
+            active_enemies.clear()
+            print("Robbed...")
+            sleep(0.8)
+            print("You recieve nothing.")
+            sleep(1.2)
+            view.clear()
+        bus.publish(Message.END_OF_COMBAT, (self.tier, self.player))
+
+    def start_combat(self, combat_tier: CombatTier):
+        act1_normal_encounters  = create_act1_normal_encounters()
+        act1_elites = create_act1_elites()
+        act1_boss = create_act1_boss()
+        encounter_types = {
+            CombatTier.NORMAL: act1_normal_encounters,
+            CombatTier.ELITE: act1_elites,
+            CombatTier.BOSS: act1_boss
+        }
+        encounter_enemies = encounter_types[combat_tier][0]
+        for enemy in encounter_enemies:
+            active_enemies.append(enemy)
+        bus.publish(Message.START_OF_COMBAT, (combat_tier, player))
+        return act1_boss[0].name
 
 def rest_site():
     """
@@ -206,23 +212,7 @@ def rest_site():
         sleep(1.5)
         view.clear()
 
-def start_combat(combat_tier: CombatTier):
-    player.in_combat = True
-    # Shuffles the player's deck into their draw pile
-    player.draw_pile = random.sample(player.deck, len(player.deck))
-    act1_normal_encounters  = create_act1_normal_encounters()
-    act1_elites = create_act1_elites()
-    act1_boss = create_act1_boss()
-    encounter_types = {
-        CombatTier.NORMAL: act1_normal_encounters,
-        CombatTier.ELITE: act1_elites,
-        CombatTier.BOSS: act1_boss
-    }
-    encounter_enemies = encounter_types[combat_tier][0]
-    for enemy in encounter_enemies:
-        active_enemies.append(enemy)
-    player.start_of_combat_relics(combat_tier)
-    return act1_boss[0].name
+
 
 def unknown() -> None:
     # Chances
@@ -244,7 +234,7 @@ def unknown() -> None:
         normal_combat = 0.1
         treasure_room += 0.02
         merchant += 0.03
-        combat(CombatTier.NORMAL)
+        Combat.combat(CombatTier.NORMAL)
     else:
         ansiprint(player)
         chosen_event = choose_event()
@@ -297,11 +287,11 @@ def play(encounter: EncounterType, gm: game_map.GameMap):
     elif encounter.type == EncounterType.UNKNOWN:
         return unknown()
     elif encounter.type == EncounterType.BOSS:
-        return combat(CombatTier.BOSS, gm)
+        return Combat(player, CombatTier.BOSS).combat(gm)
     elif encounter.type == EncounterType.ELITE:
-        return combat(CombatTier.ELITE, gm)
+        return Combat(player, CombatTier.ELITE).combat(gm)
     elif encounter.type == EncounterType.NORMAL:
-        return combat(CombatTier.NORMAL, gm)
+        return Combat(player, CombatTier.NORMAL).combat(gm)
     else:
         raise game_map.MapError(f"Encounter type {encounter} is not valid.")
 

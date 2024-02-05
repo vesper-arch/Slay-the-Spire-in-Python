@@ -12,3 +12,29 @@ class EncounterType(StrEnum):
     REST_SITE = auto()
     BOSS = auto()
     UNKNOWN = auto()
+
+class Rarity(StrEnum):
+    BASIC = 'Basic'
+    STARTER = 'Starter'
+    COMMON = 'Common'
+    UNCOMMON = 'Uncommon'
+    RARE = 'Rare'
+    SPECIAL = 'Special'
+    CURSE = 'Curse'
+    STATUS = 'Status'
+    BOSS = 'Boss'
+    EVENT = 'Event'
+    SHOP = 'Shop'
+
+class CardType(StrEnum):
+    ATTACK = 'Attack'
+    SKILL = 'Skill'
+    POWER = 'Power'
+    CURSE = 'Curse'
+    STATUS = 'Status'
+
+class PlayerClass(StrEnum):
+    IRONCLAD = 'Ironclad'
+    SILENT = 'Silent'
+    DEFECT = 'Defect'
+    WATCHER = 'Watcher'
