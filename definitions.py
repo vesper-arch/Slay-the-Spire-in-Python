@@ -53,3 +53,8 @@ class TargetType(StrEnum):
     RANDOM = 'Random'
     SINGLE = 'Single'
     YOURSELF = 'Yourself'
+
+class CardCategory(StrEnum):
+    CARD = 'Card'
+    POTION = 'Potion'
+    RELIC = 'Relic'
