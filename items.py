@@ -1,12 +1,14 @@
 import random
-from time import sleep
 from copy import deepcopy
+from time import sleep
+
 from ansi_tags import ansiprint
-from helper import view, ei
 from definitions import CardType, Rarity, TargetType
+from helper import ei, view
 
 
 def modify_energy_cost(amount: int, modify_type: str, card: dict):
+    assert modify_type in ('Set', 'Adjust'), f"modify_type must be 'Set' or 'Adjust', not {modify_type}"
     if card.get("Energy") is None:
         ansiprint("<red>This card is not playable and therefore its energy cannot be changed.</red>")
         return
@@ -80,7 +82,6 @@ def use_perfectedstrike(targeted_enemy, using_card, entity):
     print()
     entity.attack(total_damage, targeted_enemy, using_card)
 
-
 def use_anger(targeted_enemy, using_card, entity):
     '''Deal 6(8) damage. Add a copy of this card to your discard pile.'''
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
@@ -130,6 +131,13 @@ def use_headbutt(targeted_enemy, using_card, entity):
         entity.move_card(card=entity.discard_pile[choice], move_to=entity.draw_pile, from_location=entity.discard_pile, cost_energy=False)
         break
 
+def use_handofgreed(targeted_enemy, using_card, entity):
+    '''Deal 20(25) damage. If Fatal, gain 20(25) Gold.'''
+    entity.attack(using_card['Damage'], targeted_enemy, using_card)
+    if targeted_enemy.health <= 0:
+        entity.gold += using_card['Gold']
+        ansiprint(f"You gained {using_card['Gold']} <keyword>Gold</keyword>.")
+
 def use_shrugitoff(using_card, entity):
     '''Gain 8(11) Block. Draw 1 card.'''
     entity.blocking(using_card['Block'])
@@ -157,6 +165,10 @@ def use_ironwave(targeted_enemy, using_card, entity):
 def use_pommelstrike(targeted_enemy, using_card, entity):
     '''Deal 9(10) damage. Draw 1(2) cards.'''
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
+    entity.draw_cards(True, using_card['Cards'])
+
+def use_masterofstrategy(using_card, entity):
+    '''Draw 3(4) cards. Exhaust.'''
     entity.draw_cards(True, using_card['Cards'])
 
 def use_truegrit(using_card, entity):
@@ -298,6 +310,11 @@ def use_infernalblade(using_card, entity):
     _ = using_card
     valid_cards = [card for card in cards.values() if card.get('Type') == 'Attack' and card.get('Class') == entity.player_class]
     entity.hand.append(modify_energy_cost(0, 'Set', deepcopy(random.choice(valid_cards))))
+
+def use_chrysalis(using_card, entity):
+    '''Add 3(5) random Skills into your hand. They cost 0 this turn. Exhaust.'''
+    valid_cards = [card for card in cards.values() if card.get('Type') == CardType.SKILL and card.get('Class') == entity.player_class]
+    entity.hand.append(modify_energy_cost(amount=0, modify_type='Set', card=deepcopy(random.choice(valid_cards))))
 
 def use_discovery(using_card, entity):
     '''Choose 1 of 3 random cards to add to your hand. It costs 0 this turn. Exhaust. (Don't Exhaust.)'''
@@ -936,10 +953,10 @@ cards = {
     # "Trip": {"Name": "Trip", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Apply 2 Vulnerable (to ALL enemies)."},
 
     "Apotheosis": {"Name": "Apotheosis", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 2, "Energy+": 1, "Info": "Upgrade ALL of your cards for the rest of combat. Exhaust.", "Exhaust": True, "Target": TargetType.YOURSELF, "Function": use_apotheosis},
-    # "Chrysalis": {"Name": "Chrysalis", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 2, "Info": "Add 3(5) random Skills into your Draw Pile. They cost 0 this combat. Exhaust.", "Exhaust": True},
-    # "Hand of Greed": {"Name": "Hand of Greed", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.ATTACK, "Energy": 2, "Info": "Deal 20(25) damage. If this kills a non-minion enemy, gain 20(25) Gold."},
+    "Chrysalis": {"Name": "Chrysalis", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 2, "Info": "Add 3(5) random Skills into your Draw Pile. They cost 0 this combat. Exhaust.", "Exhaust": True, "Target": TargetType.YOURSELF, "Function": use_chrysalis},
+    "Hand of Greed": {"Name": "Hand of Greed", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.ATTACK, "Energy": 2, "Info": "Deal 20(25) damage. If this kills a non-minion enemy, gain 20(25) Gold.", "Damage": 20, "Gold": 20, "Target": TargetType.ENEMY, "Function": use_handofgreed},
     # "Magnetism": {"Name": "Magnetism", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.POWER, "Energy": 2, "Energy+": 1, "Info": "At the start of each turn, add a random colorless card to your hand."},
-    # "Master Of Strategy": {"Name": "Master Of Strategy", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 0, "Info": "Draw 3(4) cards. Exhaust.", "Exhaust": True},
+    "Master Of Strategy": {"Name": "Master Of Strategy", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 0, "Info": "Draw 3(4) cards. Exhaust.", "Exhaust": True, "Cards": 3, "Target": TargetType.YOURSELF, "Function": use_masterofstrategy},
     # "Mayhem": {"Name": "Mayhem", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.POWER, "Energy": 2, "Energy+": 1, "Info": "At the start of your turn, play the top card of your draw pile."},
     # "Metamorphosis": {"Name": "Metamorphosis", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 2, "Info": "Add 3(5) random Attacks into your Draw Pile. They cost 0 this combat. Exhaust.", "Exhaust": True},
     # "Panache": {"Name": "Panache", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.POWER, "Energy": 0, "Info": "Every time you play 5 cards in a single turn, deal 10(14) damage to ALL enemies."},
