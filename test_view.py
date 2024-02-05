@@ -7,8 +7,8 @@ def test_view_piles_on_all_cards(monkeypatch):
   entity = entities.create_player()
   entity.energy = 3
   all_conditions = [(lambda card: card.get("Upgraded") is True, "Upgraded"), (lambda card: not card.get("Upgraded") and (card['Type'] not in ("Status", "Curse") or card['Name'] == 'Burn'), "Upgradeable"),
-                    (lambda card: card.get("Removable") is False, "Removable"), (lambda card: card['Type'] == 'Skill', "Skill"), (lambda card: card['Type'] == 'Attack', "Attack"), (lambda card: card['Type'] == 'Power', "Power"), 
-                    (lambda card: card.get("Energy", float('inf')) <= entity.energy, "Playable")]
+                    (lambda card: card.get("Removable") is False, "Removable"), (lambda card: card['Type'] == 'Skill', "Skill"), (lambda card: card['Type'] == 'Attack', "Attack"), (lambda card: card['Type'] == 'Power', "Power"),
+                    (lambda card:  (card.get("Energy", float('inf')) if card.get("Energy", float('inf')) != -1 else entity.energy) <= entity.energy, "Playable")]
 
   with monkeypatch.context() as m:
     # Patch sleeps so it's faster

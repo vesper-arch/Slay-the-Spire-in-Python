@@ -1,12 +1,14 @@
 import random
-from time import sleep
 from copy import deepcopy
-from ansi_tags import ansiprint
-from helper import view, ei
+from time import sleep
 
+from ansi_tags import ansiprint
+from definitions import CardType, Rarity, TargetType
+from helper import ei, view
 
 
 def modify_energy_cost(amount: int, modify_type: str, card: dict):
+    assert modify_type in ('Set', 'Adjust'), f"modify_type must be 'Set' or 'Adjust', not {modify_type}"
     if card.get("Energy") is None:
         ansiprint("<red>This card is not playable and therefore its energy cannot be changed.</red>")
         return
@@ -63,6 +65,16 @@ def use_cleave(enemies, using_card, entity):
     for enemy in enemies:
         entity.attack(using_card['Damage'], enemy, using_card)
 
+def use_dramaticentrance(enemies, using_card, entity):
+    '''Deal 8(12) damage to ALL enemies. Exhaust.'''
+    for enemy in enemies:
+        entity.attack(using_card['Damage'], enemy, using_card)
+
+def use_blind(enemies, using_card, entity):
+    '''Apply 2 Weak (to ALL enemies).'''
+    for enemy in enemies:
+        ei.apply_effect(enemy, entity, 'Weak', using_card['Weak'])
+
 
 def use_perfectedstrike(targeted_enemy, using_card, entity):
     '''Deal 6 damage. Deals 2(3) additional damage for ALL your cards containing "Strike"'''
@@ -70,11 +82,16 @@ def use_perfectedstrike(targeted_enemy, using_card, entity):
     print()
     entity.attack(total_damage, targeted_enemy, using_card)
 
-
 def use_anger(targeted_enemy, using_card, entity):
     '''Deal 6(8) damage. Add a copy of this card to your discard pile.'''
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
     entity.discard_pile.append(deepcopy(using_card))
+
+def use_apotheosis(using_card, entity):
+    '''Upgrade ALL of your cards for the rest of combat. Exhaust.'''
+    for card in entity.hand:
+        card = entity.card_actions(card, 'Upgrade')
+        sleep(0.3)
 
 def use_armaments(using_card, entity):
     '''Gain 5 Block. Upgrade a(ALL) card(s) in your hand for the rest of combat.'''
@@ -114,6 +131,13 @@ def use_headbutt(targeted_enemy, using_card, entity):
         entity.move_card(card=entity.discard_pile[choice], move_to=entity.draw_pile, from_location=entity.discard_pile, cost_energy=False)
         break
 
+def use_handofgreed(targeted_enemy, using_card, entity):
+    '''Deal 20(25) damage. If Fatal, gain 20(25) Gold.'''
+    entity.attack(using_card['Damage'], targeted_enemy, using_card)
+    if targeted_enemy.health <= 0:
+        entity.gold += using_card['Gold']
+        ansiprint(f"You gained {using_card['Gold']} <keyword>Gold</keyword>.")
+
 def use_shrugitoff(using_card, entity):
     '''Gain 8(11) Block. Draw 1 card.'''
     entity.blocking(using_card['Block'])
@@ -141,6 +165,10 @@ def use_ironwave(targeted_enemy, using_card, entity):
 def use_pommelstrike(targeted_enemy, using_card, entity):
     '''Deal 9(10) damage. Draw 1(2) cards.'''
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
+    entity.draw_cards(True, using_card['Cards'])
+
+def use_masterofstrategy(using_card, entity):
+    '''Draw 3(4) cards. Exhaust.'''
     entity.draw_cards(True, using_card['Cards'])
 
 def use_truegrit(using_card, entity):
@@ -220,6 +248,10 @@ def use_disarm(targeted_enemy, using_card, entity):
     '''Enemy loses 2(3) Strength. Exhaust.'''
     ei.apply_effect(targeted_enemy, entity, 'Strength', -using_card['Strength Loss'])
 
+def use_darkshackles(targeted_enemy, using_card, entity):
+    '''Enemy loses 9(15) Strength for the rest of this turn.'''
+    ei.apply_effect(targeted_enemy, entity, 'Strength', -using_card['Magic Number'])
+
 def use_dropkick(targeted_enemy, using_card, entity):
     '''Deal 5(8) damage. If the enemy has Vulnerable, gain 1 Energy and draw 1 card.'''
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
@@ -279,6 +311,15 @@ def use_infernalblade(using_card, entity):
     valid_cards = [card for card in cards.values() if card.get('Type') == 'Attack' and card.get('Class') == entity.player_class]
     entity.hand.append(modify_energy_cost(0, 'Set', deepcopy(random.choice(valid_cards))))
 
+def use_chrysalis(using_card, entity):
+    '''Add 3(5) random Skills into your hand. They cost 0 this turn. Exhaust.'''
+    valid_cards = [card for card in cards.values() if card.get('Type') == CardType.SKILL and card.get('Class') == entity.player_class]
+    entity.hand.append(modify_energy_cost(amount=0, modify_type='Set', card=deepcopy(random.choice(valid_cards))))
+
+def use_discovery(using_card, entity):
+    '''Choose 1 of 3 random cards to add to your hand. It costs 0 this turn. Exhaust. (Don't Exhaust.)'''
+    raise NotImplementedError("Need to have a user interaction here")
+
 def use_inflame(using_card, entity):
     '''Gain 2(3) Strength'''
     ei.apply_effect(entity, entity, 'Strength', using_card['Strength'])
@@ -319,6 +360,12 @@ def use_recklesscharge(targeted_enemy, using_card, entity):
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
     entity.draw_pile.insert(random.randint(0, len(entity.draw_pile) - 1), deepcopy(cards['Dazed']))
     ansiprint("A <status>Dazed</status> was shuffled into your draw pile.")
+
+def use_deepbreath(using_card, entity):
+    '''Shuffle your discard pile into your draw pile. Draw 1(2) cards.'''
+    entity.draw_pile.extend(entity.discard_pile)
+    entity.discard_pile = []
+    entity.draw_cards(True, using_card['Cards'])
 
 def use_rupture(using_card, entity):
     '''Whenever you lose HP from a card, gain 1(2) Strength.'''
@@ -427,6 +474,10 @@ def use_exhume(using_card, entity):
         del entity.exhaust_pile[option]
         break
 
+def use_bandageup(using_card, entity):
+    '''Heal 4(6) HP. Exhaust.'''
+    entity.health_actions(4, 'Heal')
+
 def use_feed(targeted_enemy, using_card, entity):
     '''Deal 10(12) damage. If Fatal, raise your Max HP by 3(4). Exhaust.'''
     entity.attack(using_card['Damage'], targeted_enemy, using_card)
@@ -477,6 +528,7 @@ def use_reaper(enemies, using_card, entity):
         sleep(0.5)
     sleep(1)
     view.clear()
+
 relics: dict[str: dict] = {
     # Starter Relics
     'Burning Blood': {'Name': 'Burning Blood', 'Class': 'Ironclad', 'Rarity': 'Starter', 'Health': 6, 'Info': 'At the end of combat, heal 6 HP', 'Flavor': "Your body's own blood burns with an undying rage."},
@@ -500,7 +552,7 @@ relics: dict[str: dict] = {
     'Lantern': {'Name': 'Lantern', 'Class': 'Any', 'Rarity': 'Common', 'Energy': 1, 'Info': 'Gain 1 <keyword>Energy</keyword> on the first turn of each combat.', 'Flavor': 'An eerie lantern which illuminates only for the user.'},
     'Max Bank': {'Name': 'Maw Bank', 'Class': 'Any', 'Rarity': 'Common', 'Gold': 12, 'Info': 'Whenever you climb a floor, gain 12 Gold. No longer works when you spend any gold at the shop.', 'Flavor': 'Suprisingly popular, despite maw attacks being a common occurence.'},
     'Meal Ticket': {'Name': 'Meal Ticket', 'Class': 'Any', 'Rarity': 'Common', 'Health': 15, 'Info': 'Whenever you enter a shop, heal 15 HP.', 'Flavor': 'Complementary meatballs with every visit!'},
-    'Nunchaku': {'Name': 'Nunchaku', 'Class': 'Any', 'Rarity': 'Common', 'Energy': 1, 'Info': 'Every time you play 10 <keyword>Attacks</keyword, gain 1 <keyword>Energy</keyword>', 'Flavor': 'A good training tool. Inproves the posture and agility of the user.'},
+    'Nunchaku': {'Name': 'Nunchaku', 'Class': 'Any', 'Rarity': 'Common', 'Energy': 1, 'Info': 'Every time you play 10 <keyword>Attacks</keyword>, gain 1 <keyword>Energy</keyword>', 'Flavor': 'A good training tool. Inproves the posture and agility of the user.'},
     'Oddly Smooth Stone': {'Name': 'Oddly Smooth Stone', 'Class': 'Any', 'Rarity': 'Common', 'Dexterity': 1, 'Info': 'At the start of each combat, gain 1 <buff>Dexterity</buff>.', 'Flavor': 'You have never seen smething so smooth and pristine. This must be the work of the Ancients.'},
     'Omamori': {'Name': 'Omamori', 'Class': 'Any', 'Rarity': 'Common', 'Curses': 2, 'Info': 'Negate the next 2 <keyword>Curses</keyword> you obtain.', 'Flavor': 'A common charm for staving off vile spirits. This one seems to possess a spark of divine energy.'},
     'Orichaicum': {'Name': 'Orichaicum', 'Class': 'Any', 'Rarity': 'Common', 'Block': 6, 'Info': 'If you end your turn without <keyword>Block</keyword>, gain 6 <keyword>Block</keyword>.', 'Flavor': 'A green tinted metal from an unknown origin.'},
@@ -509,7 +561,7 @@ relics: dict[str: dict] = {
     'Preserved Insect': {'Name': 'Preserved Insect', 'Class': 'Any', 'Rarity': 'Common', 'Hp Percent Loss': 25, 'Info': 'Enemies in <bold>Elite</bold> rooms have 20% less health.', 'Flavor': 'The insect seems to create a shrinking aura that targets particularly large enemies.'},
     'Regal Pillow': {'Name': 'Regal Pillow', 'Class': 'Any', 'Rarity': 'Common', 'Heal HP': 15, 'Info': 'Heal an additional 15 HP when you Rest.', 'Flavor': "Now you can get a proper night's rest."},
     'Smiling Mask': {'Name': 'Smiling Mask', 'Class': 'Any', 'Rarity': 'Common', 'Info': "The merchant's card removal service now always costs 50 Gold.", 'Flavor': 'Mask worn by the merchant. He must have spares...'},
-    'Strawberry': {'Name': 'Strawberry', 'Class': 'Any', 'Rarity': 'Common', 'Max HP': 7, 'Flavor': "'Delicious! Haven't seen any of these since the blight.' - Ranwid"},
+    'Strawberry': {'Name': 'Strawberry', 'Class': 'Any', 'Rarity': 'Common', 'Max HP': 7, 'Info': "Upon pickup, raise your Max HP by 7.", 'Flavor': "'Delicious! Haven't seen any of these since the blight.' - Ranwid"},
     'The Boot': {'Name': 'The Boot', 'Class': 'Any', 'Rarity': 'Common', 'Info': 'When you would deal 4 or less unblocked <keyword>Attack</keyword> damage, increase it to 5.', 'Flavor': 'When wound up, the boot grows larger in size.'},
     'Tiny Chest': {'Name': 'Tiny Chest', 'Class': 'Any', 'Rarity': 'Common', 'Info': 'Every 4th <bold>?</bold> room is a <bold>Treasure</bold> room.', 'Flavor': '"A fine prototype." - The Architect'},
     # Class specific common relics
@@ -527,13 +579,13 @@ relics: dict[str: dict] = {
     'Molten Egg': {'Name': 'Molten Egg', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'Whenever you add an <keyword>Attack</keyword> card to your deck, it is <keyword>Upgraded</keyword>. ', 'Flavor': 'The egg of a Pheonix. It glows red hot with a simmering lava.'},
     'Toxic Egg': {'Name': 'Toxic Egg', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'Whenever you add a <keyword>Skill</keyword> card to your deck, it is <keyword>Upgraded</keyword>. ', 'Flavor': '"What a marvelous discovery! This appears to be the inert egg of some magical creature. Who or what created this?" - Ranwid'},
     'Frozen Egg': {'Name': 'Frozen Egg', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'Whenever you add a <keyword>Power</keyword> card to your deck, it is <keyword>Upgraded</keyword>. ', 'Flavor': 'The egg lies inert and frozen, never to hatch'},
-    'Gremlin Horn': {'Name': 'Gremlin Horn', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'Whenever an enemy dies, gain 1 <keyword>Energy</keyword> and draw 1 card.'},
+    'Gremlin Horn': {'Name': 'Gremlin Horn', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'Whenever an enemy dies, gain 1 <keyword>Energy</keyword> and draw 1 card.', 'Flavor': '"Gremlin Nobs are capable of growing until the day they die. Remarkable." - Ranwid'},
     'Horn Cleat': {'Name': 'Horn Cleat', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'At the start of your 2nd trun, gain 14 <keyword>Block</keyword>.', 'Flavor': 'Pleasant to hold in the hand. What was it for?'},
     'Ink Bottle': {'Name': 'Ink Bottle', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'Whenever you play 10 cards, draw 1 card.', 'Flavor': 'Once exhausted, it appears to refil itself in a different color.'},
     'Kunai': {'Name': 'Kunai', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'Every time you play 3 <keyword>Attacks</keyword> in a single turn, gain 1 <buff>Dexterity</buff>.', 'Flavor': 'A blade favored by assasins for its lethality at range.'},
     'Letter Opener': {'Name': 'Letter Opener', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'Every time you play 3 <keyword>Skills</keyword> in a single turn, deal 5 damage to ALL enemies.', 'Flavor': 'Unnaturally sharp.'},
     'Matryoshka': {'Name': 'Matryoshka', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'The next 2 non-boss chests you open contain 2 relics.', 'Flavor': 'A stackable set of dolls. The paint depicts an unknown bird with white eyes and blue feathers.'},
-    'Meat on the Bone': {'Name': 'Meat on the Bone', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'If your HP is at 50% or lower at the end of combat, heal 12 HP.'},
+    'Meat on the Bone': {'Name': 'Meat on the Bone', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'If your HP is at 50% or lower at the end of combat, heal 12 HP.', 'Flavor': 'The meat keeps replenishing, never seeming to fully run out.' },
     'Mercury Hourglass': {'Name': 'Mercury Hourglass', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'At the start of your turn, deal 3 damage to ALL enemies.', 'Flavor': 'An enchanted hourglass that endlessly drips.'},
     'Mummified Hand': {'Name': 'Mummified Hand', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'Whenever you play a <keyword>Power</keyword> card, a random card in your hand costs 0 that turn.', 'Flavor': 'Frequently twitches, especially when your pulse is high.'},
     'Ornamental Fan': {'Name': 'Ornamental Fan', 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'Every time you play 3 <keyword>Attacks</keyword> in a single turn, gain 4 <keyword>Block</keyword>.', 'Flavor': 'The fan seems to extend and harden as blood is spilled.'},
@@ -604,7 +656,7 @@ relics: dict[str: dict] = {
     'Orange Pellets': {'Name': 'Orange Pellets', 'Class': 'Any', 'Rarity': 'Shop', 'Info': 'Whenever you play a <keyword>Power</keyword>, <keyword>Attack</keyword>, and <keyword>Skill</keyword> in the same turn, remove ALL of your debuffs.', 'Flavor': 'Made from various fungi found throughout the Spire, they will stave off any affliction.'},
     'Orrery': {'Name': 'Orrery', 'Class': 'Any', 'Rarity': 'Shop', 'Info': 'Choose and add 5 to your deck.', 'Flavor': '"Once you understand the universe..." - Zoroth'},
     'Prismatic Shard': {'Name': 'Prismatic Shard', 'Class': 'Any', 'Rarity': 'Shop', 'Info': 'Combat reward screens now contain colorless cards and cards from other colors.', 'Flavor': 'Looking through the shard, you are able to see entirely new perspectives.'},
-    'Sling of Courage': {'Name': 'Sling of Courage', 'Class': 'Any', 'Rarity': 'Shop', 'Info': 'Start each <keyword>Elite</keyword> combat with 2 <buff>Strength<buff>.', 'Flavor': 'A handy tool for dealing with particalarly tough opponents.'},
+    'Sling of Courage': {'Name': 'Sling of Courage', 'Class': 'Any', 'Rarity': 'Shop', 'Info': 'Start each <keyword>Elite</keyword> combat with 2 <buff>Strength</buff>.', 'Flavor': 'A handy tool for dealing with particalarly tough opponents.'},
     'Strange Spoon': {'Name': 'Strange Spoon', 'Class': 'Any', 'Rarity': 'Shop', 'Info': 'Cards that <keyword>Exhaust</keyword> will instead discard 50% of the time.', 'Flavor': 'Staring at the spoon, it appears to bend and twist around before your eyes.'},
     'The Abacus': {'Name': 'The Abacus', 'Class': 'Any', 'Rarity': 'Shop', 'Info': 'Gain 6 <keyword>Block</keyword> when you shuffle your draw pile.', 'Flavor': 'One...Two...Three...'},
     'Toolbox': {'Name': 'Toolbox', 'Class': 'Any', 'Rarity': 'Shop', 'Info': 'At the start of each combat, choose 1 of 3 Colorless cards to add to your hand.', 'Flavor': 'A tool for every job.'},
@@ -614,7 +666,7 @@ relics: dict[str: dict] = {
     'Runic Capacitor': {'Name': 'Runic Capacitor', 'Class': 'Defect', 'Rarity': 'Shop', 'Info': 'Start each combat with 3 additional <keyword>Orb</keyword> slots.', 'Flavor': 'More is better.'},
     'Melange': {'Name': 'Melange', 'Class': 'Watcher', 'Rarity': 'Shop', 'Info': 'Whenever you shuffle your draw pile, <keyword>Scry</keyword> 3.', 'Flavor': 'Mysterious sands from an unknown origin, smells of cinnamon.'},
     # Boss relics
-    'Astrolabe': {'Name': 'Astrolabe', 'Class': 'Any', 'Rarity': 'Boss', 'Info': 'Upon pickup, choose and <keyword>Transform</keyword> 3 cards, then <keyword>Upgrade<keyword> them.', 'Flavor': 'A tool to glean inavluable knowledge from the stars.'},
+    'Astrolabe': {'Name': 'Astrolabe', 'Class': 'Any', 'Rarity': 'Boss', 'Info': 'Upon pickup, choose and <keyword>Transform</keyword> 3 cards, then <keyword>Upgrade</keyword> them.', 'Flavor': 'A tool to glean inavluable knowledge from the stars.'},
     'Black Star': {'Name': 'Black Star', 'Class': 'Any', 'Rarity': 'Boss', 'Info': 'Elites now drop 2 relics when defeated.', 'Flavor': 'Originally discovered in the town of the serpent, aside a solitary candle.'},
     'Busted Crown': {'Name': 'Busted Crown', 'Class': 'Any', 'Rarity': 'Boss', 'Info': 'Gain 1 <keyword>Energy</keyword> at the start of each turn. On card reward screens, you have 2 less cards to choose from.', 'Flavor': "The Champ's crown... or a pale imitation?"},
     'Calling Bell': {'Name': 'Calling Bell', 'Class': 'Any', 'Rarity': 'Boss', 'Info': 'Obtain a special <keyword>Curse</keyword> and 3 relics.', 'Flavor': 'The dark iron bell rang 3 times when you found it, but now it remains silent.'},
@@ -876,7 +928,58 @@ cards = {
     'Parasite': {'Name': 'Parasite', 'Playable': False, 'Max Hp Loss': 3, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable.</keyword> If transformed or removed from your deck, lose 3 Max HP.'},
     'Pride': {'Name': 'Pride', 'Innate': True, 'Exhaust': True, 'Energy': 1, 'Rarity': 'Special', 'Type': 'Curse', 'Info': '<keyword>Innate.</keyword> At the end of your turn, put a copy of this card on top of your draw pile. <keyword>Exhaust.</keyword>'},
     'Shame': {'Name': 'Shame', 'Playable': False, 'Frail': 1, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable.</keyword> At the end of your turn, gain 1 <red>Frail</red>.'},
-    'Writhe': {'Name': 'Writhe', 'Playable': False, 'Innate': True, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable. Innate.</keyword>'}
+    'Writhe': {'Name': 'Writhe', 'Playable': False, 'Innate': True, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable. Innate.</keyword>'},
+
+    # Colorless Cards
+    "Bandage Up": {"Name": "Bandage Up", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Heal 4(6) HP. Exhaust.", "Exhaust": True, "Target": TargetType.YOURSELF, "Function": use_bandageup},
+    "Blind": {"Name": "Blind", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Apply 2 Weak (to ALL enemies).", "Target": TargetType.AREA, "Function": use_blind},
+    "Dark Shackles": {"Name": "Dark Shackles", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Enemy loses 9(15) Strength for the rest of this turn. Exhaust.", "Exhaust": True, "Target": TargetType.ENEMY, "Function": use_darkshackles, "Magic Number": 9},
+    "Deep Breath": {"Name": "Deep Breath", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Shuffle your discard pile into your draw pile. Draw 1(2) card(s).", "Target": TargetType.NOTHING, "Function": use_deepbreath, "Cards": 1},
+    # "Discovery": {"Name": "Discovery", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 1, "Info": "Choose 1 of 3 random cards to add to your hand. It costs 0 this turn. Exhaust. (Don't Exhaust.)", "Exhaust": True, "Target": TargetType.YOURSELF, "Function": use_discovery},
+    "Dramatic Entrance": {"Name": "Dramatic Entrance", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.ATTACK, "Energy": 0, "Info": "Innate. Deal 8(12) damage to ALL enemies. Exhaust.", "Exhaust": True, "Target": TargetType.AREA, "Function": use_dramaticentrance, "Damage": 8},
+    # "Enlightenment": {"Name": "Enlightenment", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Reduce the cost of cards in your hand to 1 this turn(combat)."},
+    # "Finesse": {"Name": "Finesse", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Gain 2(4) Block. Draw 1 card."},
+    # "Flash of Steel": {"Name": "Flash of Steel", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.ATTACK, "Energy": 0, "Info": "Deal 3(6) damage. Draw 1 card."},
+    # "Forethought": {"Name": "Forethought", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Place a card(any number of cards) from your hand on the bottom of your draw pile. It (They) costs 0 until played."},
+    # "Good Instincts": {"Name": "Good Instincts", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Gain 6(9) Block."},
+    # "Impatience": {"Name": "Impatience", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "If you have no Attack cards in your hand, draw 2(3) cards."},
+    # "Jack Of All Trades": {"Name": "Jack Of All Trades", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Add 1(2) random Colorless card(s) to your hand. Exhaust.", "Exhaust": True},
+    # "Madness": {"Name": "Madness", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 1, "Energy+": 0, "Info": "A random card in your hand costs 0 for the rest of combat. Exhaust.", "Exhaust": True},
+    # "Mind Blast": {"Name": "Mind Blast", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.ATTACK, "Energy": 2, "Energy+": 1, "Info": "Innate. Deal damage equal to the number of cards in your draw pile."},
+    # "Panacea": {"Name": "Panacea", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Gain 1(2) Artifact. Exhaust.", "Exhaust": True},
+    # "Panic Button": {"Name": "Panic Button", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Gain 30(40) Block. You cannot gain Block from cards for the next 2 turns. Exhaust.", "Exhaust": True},
+    # "Purity": {"Name": "Purity", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Choose and Exhaust 3(5) cards in your hand. Exhaust.", "Exhaust": True},
+    # "Swift Strike": {"Name": "Swift Strike", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.ATTACK, "Energy": 0, "Info": "Deal 7(10) damage."},
+    # "Trip": {"Name": "Trip", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Apply 2 Vulnerable (to ALL enemies)."},
+
+    "Apotheosis": {"Name": "Apotheosis", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 2, "Energy+": 1, "Info": "Upgrade ALL of your cards for the rest of combat. Exhaust.", "Exhaust": True, "Target": TargetType.YOURSELF, "Function": use_apotheosis},
+    "Chrysalis": {"Name": "Chrysalis", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 2, "Info": "Add 3(5) random Skills into your Draw Pile. They cost 0 this combat. Exhaust.", "Exhaust": True, "Target": TargetType.YOURSELF, "Function": use_chrysalis},
+    "Hand of Greed": {"Name": "Hand of Greed", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.ATTACK, "Energy": 2, "Info": "Deal 20(25) damage. If this kills a non-minion enemy, gain 20(25) Gold.", "Damage": 20, "Gold": 20, "Target": TargetType.ENEMY, "Function": use_handofgreed},
+    # "Magnetism": {"Name": "Magnetism", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.POWER, "Energy": 2, "Energy+": 1, "Info": "At the start of each turn, add a random colorless card to your hand."},
+    "Master Of Strategy": {"Name": "Master Of Strategy", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 0, "Info": "Draw 3(4) cards. Exhaust.", "Exhaust": True, "Cards": 3, "Target": TargetType.YOURSELF, "Function": use_masterofstrategy},
+    # "Mayhem": {"Name": "Mayhem", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.POWER, "Energy": 2, "Energy+": 1, "Info": "At the start of your turn, play the top card of your draw pile."},
+    # "Metamorphosis": {"Name": "Metamorphosis", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 2, "Info": "Add 3(5) random Attacks into your Draw Pile. They cost 0 this combat. Exhaust.", "Exhaust": True},
+    # "Panache": {"Name": "Panache", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.POWER, "Energy": 0, "Info": "Every time you play 5 cards in a single turn, deal 10(14) damage to ALL enemies."},
+    # "Sadistic Nature": {"Name": "Sadistic Nature", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.POWER, "Energy": 0, "Info": "Whenever you apply a Debuff to an enemy, they take 5(7) damage."},
+    # "Secret Technique": {"Name": "Secret Technique", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 0, "Info": "Choose a Skill from your draw pile and place it into your hand. Exhaust. (Don't Exhaust)", "Exhaust": True},
+    # "Secret Weapon": {"Name": "Secret Weapon", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 0, "Info": "Choose an Attack from your draw pile and place it into your hand. Exhaust. (Don't Exhaust)", "Exhaust": True},
+    # "The Bomb": {"Name": "The Bomb", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 2, "Info": "At the end of 3 turns, deal 40(50) damage to ALL enemies."},
+    # "Thinking Ahead": {"Name": "Thinking Ahead", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 0, "Info": "Draw 2 cards. Place a card from your hand on top of your draw pile. Exhaust. (Don't Exhaust.)", "Exhaust": True},
+    # "Transmutation": {"Name": "Transmutation", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": -1, "Info": "Add X random (Upgraded) colorless cards into your hand. They cost 0 this turn. Exhaust.", "Exhaust": True},
+    # "Violence": {"Name": "Violence", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 0, "Info": "Place 3(4) random Attack cards from your draw pile into your hand. Exhaust.", "Exhaust": True},
+    # "Apparition": {"Name": "Apparition", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.SKILL, "Energy": 1, "Info": "Gain 1 Intangible. Exhaust. Ethereal. (no longer Ethereal.) (Obtained from event: Council of Ghosts).", "Exhaust": True},
+    # "Beta": {"Name": "Beta", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.SKILL, "Energy": 2, "Energy+": 1, "Info": "Shuffle an Omega into your draw pile. Exhaust.  (Obtained from Alpha).", "Exhaust": True},
+    # "Bite": {"Name": "Bite", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.ATTACK, "Energy": 1, "Info": "Deal 7(8) damage. Heal 2(3) HP. (Obtained from event: Vampires(?))."},
+    # "Expunger": {"Name": "Expunger", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.ATTACK, "Energy": 1, "Info": "Deal 9(15) damage X times. (Obtained from Conjure Blade)."},
+    # "Insight": {"Name": "Insight", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.SKILL, "Energy": 0, "Info": "Retain. Draw 2(3) cards. Exhaust. (Obtained from Evaluate, Pray and Study).", "Exhaust": True},
+    # "J.A.X.": {"Name": "J.A.X.", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.SKILL, "Energy": 0, "Info": "Lose 3 HP.  Gain 2(3) Strength. (Obtained from event: Augmenter)."},
+    # "Miracle": {"Name": "Miracle", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.SKILL, "Energy": 0, "Info": "Retain. Gain (2) Energy. Exhaust. (Obtained from Collect, Deus Ex Machina, PureWater-0 Pure Water, and Holy water Holy Water).", "Exhaust": True},
+    # "Omega": {"Name": "Omega", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.POWER, "Energy": 3, "Info": "At the end of your turn deal 50(60) damage to ALL enemies. (Obtained from Beta)."},
+    # "Ritual Dagger": {"Name": "Ritual Dagger", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.ATTACK, "Energy": 1, "Info": "Deal 15 damage. If this kills an enemy then permanently increase this card's damage by 3(5). Exhaust. (Obtained during event: The Nest)", "Exhaust": True},
+    # "Safety": {"Name": "Safety", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.SKILL, "Energy": 1, "Info": "Retain. Gain 12(16) Block. Exhaust. (Obtained from Deceive Reality).", "Exhaust": True},
+    # "Shiv": {"Name": "Shiv", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.ATTACK, "Energy": 0, "Info": "Deal 4(6) damage. Exhaust. (Obtained from Blade Dance, Cloak and Dagger, Infinite Blades, Storm of Steel, and NinjaScroll Ninja Scroll).", "Exhaust": True},
+    # "Smite": {"Name": "Smite", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.ATTACK, "Energy": 1, "Info": "Retain. Deal 12(16) damage. Exhaust. (Obtained from Carve Reality and Battle Hymn).", "Exhaust": True},
+    "Through Violence": {"Name": "Through Violence", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.ATTACK, "Energy": 0, "Info": "Retain. Deal 20(30) damage. Exhaust. (Obtained from Reach Heaven).", "Exhaust": True, "Target": TargetType.ENEMY},
 }
 
 sacred_multi: int = 1
@@ -890,7 +993,7 @@ potions = {
     'Skill Potion': {'Name': 'Skill Potion', 'Cards': 1 * sacred_multi, 'Card Type': 'Skill', 'Class': 'Any', 'Rarity': 'Common', 'Info': f'Add {"1" if sacred_multi < 2 else "2 copies"} of 3 random <keyword>Skill</keyword> cards to your hand, {"it" if sacred_multi < 2 else "they"} costs 0 this turn'},
     'Colorless Potion': {'Name': 'Colorless Potion', 'Cards': 1 * sacred_multi, 'Card Type': 'Colorless', 'Class': 'Any', 'Rarity': 'Common', 'Info': f'Choose {"1" if sacred_multi < 2 else "2 copies"} of 3 random Colorless cards to add to your hand, {"it" if sacred_multi < 2 else "they"} costs 0 this turn'},
     'Block Potion': {'Name': 'Block Potion', 'Block': 12 * sacred_multi, 'Class': 'Any', 'Rarity': 'Common', 'Info': f'Gain {12 * sacred_multi} <keyword>Block</keyword>'},
-    'Dexterity Potion': {'Name': 'Dexterity Potion', 'Dexterity': 2 * sacred_multi, 'Class': 'Any', 'Rarity': 'Common', 'Info': f'Gain {2 * sacred_multi} <buff>Dexterity<buff>'},
+    'Dexterity Potion': {'Name': 'Dexterity Potion', 'Dexterity': 2 * sacred_multi, 'Class': 'Any', 'Rarity': 'Common', 'Info': f'Gain {2 * sacred_multi} <buff>Dexterity</buff>'},
     'Energy Potion': {'Name': 'Energy Potion', 'Energy': 2 * sacred_multi, 'Class': 'Any', 'Rarity': 'Common', 'Info': f'Gain {2 * sacred_multi} <keyword>Energy</keyword>'},
     'Explosive Potion': {'Name': 'Explosive Potion', 'Damage': 10 * sacred_multi, 'Target': 'Any', 'Class': 'Any', 'Rarity': 'Common', 'Info': f'Deal {10 * sacred_multi} damage to ALL enemies'},
     'Fear Potion': {'Name': 'Fear Potion', 'Vulnerable': 3 * sacred_multi, 'Target': 'Enemy', 'Class': 'Any', 'Rarity': 'Common', 'Info': f'Apply {3 * sacred_multi} <debuff>Vulnerable</debuff>'},
