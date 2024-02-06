@@ -100,12 +100,13 @@ def category_to_pretty_string(item, valid):
 
 class SellableItem():
     '''A class to represent an item that can be sold in the shop. This is a wrapper around the actual item, and includes a price.'''
-    def __init__(self, item, price=None):
+    def __init__(self, item, price=None, discount=0.0):
         self.item = item
         if price is not None:
           self.price = price
         else:
           self.price = self.set_price()
+        self.discount = discount
 
     def invalid_string(self):
         pretty_string = category_to_pretty_string(self.item, valid=False)
@@ -128,7 +129,7 @@ class SellableItem():
             # Unsure what to do with these. We'll set to some high bogus value for now.
             return 999
         else:
-            raise ValueError(f"Item rarity broken")
+            raise ValueError("Item rarity broken")
 
 class Shop():
     def __init__(self, player, items=None):
@@ -139,7 +140,20 @@ class Shop():
         self.items = items
 
     def initialize_items(self) -> list[SellableItem]:
-      # TODO: Make this class-specific and include relics and potions
+      return self.initialize_cards() + self.initialize_relics() + self.initialize_potions()
+
+    def initialize_relics(self):
+      items = []
+      all_relics = list(relics.values())
+      shop_relics = [r for r in all_relics if r["Rarity"] == Rarity.SHOP]
+      if len(shop_relics) >= 1:
+        items.extend(random.sample(shop_relics, 1))
+      return [SellableItem(item) for item in items]
+
+    def initialize_potions(self):
+      return []
+
+    def initialize_cards(self):
       items = []
       all_cards = list(cards.values())
       attack_cards = [c for c in all_cards if c["Type"] == "Attack" and c["Class"] != "Colorless"]

@@ -7,7 +7,6 @@ from ansi_tags import ansiprint
 from shop import SellableItem, Shop
 
 
-@pytest.mark.only
 class TestSellableItems():
   def test_cards(self):
     '''See that we can make sellable items out of all cards and that they display correctly'''
