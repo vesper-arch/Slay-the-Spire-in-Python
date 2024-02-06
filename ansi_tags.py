@@ -31,5 +31,3 @@ user_tags = {
 am = AnsiMarkup(tags=user_tags, strict=True)
 
 ansiprint = am.ansiprint
-strip = am.strip
-parse = am.parse

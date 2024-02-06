@@ -1,16 +1,15 @@
 import math
 import sys
 import random
-import items
 from time import sleep
 from ast import literal_eval
 from copy import deepcopy
 from ansi_tags import ansiprint
-from helper import active_enemies, view, gen, ei
+from items import relics, cards, potions, modify_energy_cost, activate_sacred_bark
+from helper import active_enemies, combat_turn, view, gen, ei
 from definitions import CombatTier
-from message_bus_tools import bus, Message, Registerable, Card
 
-class Player(Registerable):
+class Player:
     """
     Attributes:::
     health: The player's current health
@@ -18,13 +17,12 @@ class Player(Registerable):
     name: The player's name
     player_class: Ironclad, Silent, Defect, and Watcher
     max_health: The max amount health the player can have
-    energy: Resource used to play items.cards. Replenished at the start of their turn
+    energy: Resource used to play cards. Replenished at the start of their turn
     max_energy/energy_gain: The base amount of energy the player gains at the start of their turn
-    deck: All the items.cards the player has
+    deck: All the cards the player has
     potions: Consumables that have varying effects.
     max_potions: The max amount of potions the player can have
     """
-    registers = [Message.END_OF_COMBAT, Message.START_OF_COMBAT, Message.START_OF_TURN, Message.END_OF_TURN]
 
     def __init__(self, health: int, block: int, max_energy: int, deck: list, powers: dict=None):
         if not powers:
@@ -40,17 +38,16 @@ class Player(Registerable):
         self.energy: int = 0
         self.max_energy: int = max_energy
         self.energy_gain: int = max_energy
-        self.deck: list[Card] = deck
+        self.deck: list[dict] = deck
         self.potions: list[dict] = []
         self.relics: list[dict] = []
         self.max_potions: int = 3
-        self.hand: list[Card] = []
-        self.draw_pile: list[Card] = []
-        self.discard_pile: list[Card] = []
+        self.hand: list[dict] = []
+        self.draw_pile: list[dict] = []
+        self.discard_pile: list[dict] = []
         self.card_reward_choices: int = 3
         self.draw_strength: int = 5
         self.exhaust_pile: list[dict] = []
-        self.potion_dropchance = 0.4
         self.orbs = []
         self.orb_slots: int = 3
         self.gold: int = 100
@@ -71,7 +68,7 @@ class Player(Registerable):
         self.nunckaku_attacks: int = 0
         self.starting_strength: int = 0  # Used for the Red Skull and Vajra relic
         self.golden_bark: bool = False  # Used for the Golden Bark relic
-        # Used for the Molten, Toxic, and Frozen Egg items.relics
+        # Used for the Molten, Toxic, and Frozen Egg relics
         self.upgrade_attacks = False
         self.upgrade_skills = False
         self.upgrade_powers = False
@@ -86,7 +83,7 @@ class Player(Registerable):
         self.draw_shuffles = 0 # Used for the Sundial relic
         self.incense_turns = 0 # Used for the Incense Burner relic
         self.girya_charges = 3 # Stores how many times the player can gain Energy from Girya
-        self.plays_this_turn = 0 # Counts how many items.cards the played plays each turn
+        self.plays_this_turn = 0 # Counts how many cards the played plays each turn
         self.stone_calender = 0
         self.choker_cards_played = 0 # Used for the Velvet Choker relic
 
@@ -113,21 +110,31 @@ class Player(Registerable):
         for debuff in self.debuffs:
             ansiprint(f'<debuff>{debuff}</debuff>: {ei.ALL_EFFECTS[debuff].replace("X", str(self.debuffs[debuff]))}')
 
-    def use_card(self, card, target: 'Enemy', exhaust, pile) -> None:
+    def use_card(self, card: dict, target: 'Enemy', exhaust, pile) -> None:
         """
         Uses a card
         Wow!
         """
-        if card.type in ('Status', 'Curse') and card.name not in ('Slimed', 'Pride'):
+        if card['Type'] in ('Status', 'Curse') and card['Name'] not in ('Slimed', 'Pride'):
             ansiprint("<red>This card is not playable. This message shouldn't appear outside of tests.</red>")
             return
-        if card.target == 'Single':
-            card.apply(self, target)
-        elif card.target == 'Area':
-            card.apply(self, active_enemies)
-        elif card.target == 'Player':
-            card.apply(self)
-        bus.publish(Message.ON_CARD_PLAY, (self, card, target))
+        if card.get('Target') == 'Single':
+            card['Function'](target, card, self)
+        elif card.get('Target') in ('Area', 'Random'):
+            card['Function'](active_enemies, card, self)
+        elif card.get('Target') == 'Yourself':
+            card['Function'](card, self)
+        elif not card.get('Target') and (card['Name'] not in ('Slimed', 'Pride') and card['Type'] not in ("Status", "Curse")):
+            raise KeyError(f"{card['Name']} does not have a 'Target' key.")
+        if card.get('Type') == 'Attack' and relics['Pen Nib'] in self.relics:
+            self.pen_nib_attacks += 1
+        if card.get('Type') == 'Attack' and relics['Nunchaku'] in self.relics:
+            self.nunckaku_attacks += 1
+            if self.nunckaku_attacks == 10:
+                self.energy += 1
+                ansiprint('You gained 1 Energy from <bold>Nunckaku</bold>.')
+                self.nunckaku_attacks = 0
+        self.on_card_play(card)
         if self.buffs['Corruption']:
             exhaust = True
 
@@ -136,9 +143,9 @@ class Player(Registerable):
             sleep(1.5)
             view.clear()
             self.use_card(card=card, target=target, exhaust=True, pile=None)
-        if card.get('Type') == 'Status' and items.relics['Medical Kit'] in player.items.relics:
+        if card.get('Type') == 'Status' and relics['Medical Kit'] in player.relics:
             exhaust = True
-        elif card.get('Type') == 'Curse' and items.relics['Blue Candle'] in player.items.relics:
+        elif card.get('Type') == 'Curse' and relics['Blue Candle'] in player.relics:
             self.take_sourceless_dmg(1)
             exhaust = True
         if pile is not None:
@@ -181,12 +188,12 @@ class Player(Registerable):
             while True:
                 try:
                     view.view_piles(self.deck, self, False, 'Removable')
-                    target_cards = literal_eval(f"({input('Choose 3 items.cards to <keyword>Transform</keyword> and <keyword>Upgrade</keyword> separated by colons > ')})")
+                    target_cards = literal_eval(f"({input('Choose 3 cards to <keyword>Transform</keyword> and <keyword>Upgrade</keyword> separated by colons > ')})")
                     if len(target_cards) != 3:
                         raise TypeError("")
                     for card in target_cards:
-                        self.deck[card] = self.card_actions(self.deck[card], 'Transform', items.cards)
-                        self.deck[card] = self.card_actions(self.deck[card], "Upgrade", items.cards)
+                        self.deck[card] = self.card_actions(self.deck[card], 'Transform', cards)
+                        self.deck[card] = self.card_actions(self.deck[card], "Upgrade", cards)
                     break
                 except (TypeError, ValueError):
                     ansiprint("<red>Incorrect syntax, wrong length, or invalid card number</red> Correct: '_, _, _'")
@@ -194,99 +201,99 @@ class Player(Registerable):
                     view.clear()
                     continue
         elif relic['Name'] == 'Calling Bell':
-            gen.card_rewards(CombatTier.NORMAL, False, self, None, [items.cards['Call of the Bell']])
+            gen.card_rewards(CombatTier.NORMAL, False, self, None, [cards['Call of the Bell']])
             for _ in range(3):
-                gen.claim_items.relics(True, self, 3)
+                gen.claim_relics(True, self, 3)
         elif relic['Name'] == 'Empty Cage':
             view.view_piles(self.deck, self, False, 'Removable')
             backup_counter = 2 # Used to account for wrong or invalid inputs
             for _ in range(backup_counter):
                 option = view.list_input("Choose a card to remove > ", self.deck, view.view_piles, lambda card: card.get("Removable") is False, "That card is not removable.")
-                self.deck[option] = self.card_actions(self.deck[option], 'Remove', items.cards)
+                self.deck[option] = self.card_actions(self.deck[option], 'Remove', cards)
         elif relic['Name'] == "Pandora's Box":
             for card in self.deck:
                 if card['Name'] in ('Strike', 'Defend'):
-                    card = self.card_actions(card, 'Upgrade', items.cards)
+                    card = self.card_actions(card, 'Upgrade', cards)
         elif relic['Name'] == 'Sacred Bark':
-            items.activate_sacred_bark()
+            activate_sacred_bark()
         elif relic['Name'] == "Tiny House":
-            gen.claim_potions(False, 1, self, items.potions)
+            gen.claim_potions(False, 1, self, potions)
             self.gain_gold(50)
             self.health_actions(5, "Max Health")
-            gen.card_rewards('Normal', True, self, items.cards)
+            gen.card_rewards('Normal', True, self, cards)
             upgrade_card = random.choice((index for index in range(len(self.deck)) if not self.deck[index].get("Upgraded") and (self.deck[index]['Name'] == "Burn" or self.deck[index]['Type'] not in ("Status", "Curse"))))
             self.deck[upgrade_card] = self.card_actions(self.deck[upgrade_card], "Upgrade")
         elif relic['Name'] == 'Velvet Choker':
             self.max_energy += 1
         elif relic['Name'] == 'Black Blood':
-            burning_blood_index = self.relics.index(items.relics['Burning Blood']) # Will have to change once other characters are added
+            burning_blood_index = self.relics.index(relics['Burning Blood']) # Will have to change once other characters are added
             self.deck[burning_blood_index] = relic
         elif relic['Name'] == 'Mark of Pain':
             self.max_energy += 1
         _ = self.gain_gold(300) if relic['Name'] == 'Old Coin' else None
         self.card_reward_choices += 1 if relic['Name'] == 'Question Card' else 0
 
-    def on_card_play(self, card: Card):
-        if items.relics['Kunai'] in self.relics and card.get('Type') == 'Attack':
+    def on_card_play(self, card):
+        if relics['Kunai'] in self.relics and card.get('Type') == 'Attack':
             self.kunai_attacks += 1
             if self.kunai_attacks == 3:
                 ansiprint("<bold>Kunai</bold> activated: ", end='')
                 ei.apply_effect(self, self, 'Dexterity', 1)
                 self.kunai_attacks = 0
-        if items.relics['Ornamental Fan'] in self.relics and card.get('Type') == 'Attack':
+        if relics['Ornamental Fan'] in self.relics and card.get('Type') == 'Attack':
             self.ornament_fan_attacks += 1
             if self.ornament_fan_attacks == 3:
                 ansiprint("<bold>Ornamental Fan</bold> activated: ", end='')
                 self.blocking(4, False)
-        if items.relics['Letter Opener'] in self.relics and card.get('Type') == 'Skill':
+        if relics['Letter Opener'] in self.relics and card.get('Type') == 'Skill':
             self.letter_opener_skills += 1
             if self.letter_opener_skills == 3:
                 ansiprint("<bold>Letter Opener</bold> activated")
                 for enemy in active_enemies:
                     self.attack(5, enemy)
                 self.letter_opener_skills = 0
-        if items.relics['Mummified Hand'] in self.relics and card.get('Type') == 'Power':
+        if relics['Mummified Hand'] in self.relics and card.get('Type') == 'Power':
             ansiprint('<bold>Mummified Hand</bold> activated: ', end='')
             target_card = random.choice(self.hand)
-            target_card.modify_energy_cost(0, 'Set', True)
-        if items.relics['Shuriken'] in self.relics and card.get('Type') == 'Attack':
+            target_card = modify_energy_cost(0, 'Set', target_card)
+        if relics['Shuriken'] in self.relics and card.get('Type') == 'Attack':
             self.shuriken_attacks += 1
             if self.shuriken_attacks == 3:
                 ansiprint('<bold>Shuriken</bold> activated: ', end='')
                 ei.apply_effect(self, self, 'Strength', 1)
-        if items.relics['Ink Bottle'] in self.relics:
-            self.inked_items.cards += 1
-            if self.inked_items.cards == 10:
+        if relics['Ink Bottle'] in self.relics:
+            self.inked_cards += 1
+            if self.inked_cards == 10:
                 ansiprint("<bold>Ink Bottle</bold> activated: ", end='')
                 self.draw_cards(True, 1)
-                self.inked_items.cards = 0
-        if items.relics['Duality'] in self.relics and card.get('Type') == 'Attack':
+                self.inked_cards = 0
+        if relics['Duality'] in self.relics and card.get('Type') == 'Attack':
             ansiprint('<bold>Duality</bold> activated: ', end='')
             ei.apply_effect(self, self, 'Dexterity', 1)
-        if items.relics['Bird-Faced Urn'] in self.relics and card.get('Type') == 'Power':
+        if relics['Bird-Faced Urn'] in self.relics and card.get('Type') == 'Power':
             ansiprint('<bold>Bird-Faced Urn</bold> activated: ', end='')
             self.health_actions(2, 'Heal')
-        if items.relics['Velvet Choker'] in self.relics:
-            self.choker_items.cards_played += 1
+        if relics['Velvet Choker'] in self.relics:
+            self.choker_cards_played += 1
 
     def draw_cards(self, middle_of_turn: bool, draw_cards: int = 0):
-        '''Draws [draw_cards] items.cards.'''
+        '''Draws [draw_cards] cards.'''
         if draw_cards == 0:
             draw_cards = self.draw_strength
         while True:
             if self.debuffs["No Draw"] is True:
-                print("You can't draw any more items.cards")
+                print("You can't draw any more cards")
                 break
             if middle_of_turn is False:
                 draw_cards += self.buffs["Draw Up"]
-                if items.relics['Bag of Preparation'] in self.relics:
+                if relics['Bag of Preparation'] in self.relics:
                     draw_cards += 2
-                if items.relics['Ring of the Snake'] in self.relics:
+                if relics['Ring of the Snake'] in self.relics:
                     draw_cards += 2
             if len(player.draw_pile) < draw_cards:
                 player.draw_pile.extend(random.sample(player.discard_pile, len(player.discard_pile)))
                 player.discard_pile = []
-                if items.relics['Sundial'] in self.relics:
+                if relics['Sundial'] in self.relics:
                     self.draw_shuffles += 1
                     if self.draw_shuffles == 3:
                         ansiprint('<bold>Sundial</bold> gave you 2 <italic><red>Energy</red></italic>')
@@ -294,28 +301,43 @@ class Player(Registerable):
                         self.draw_shuffles = 0
                 ansiprint("<bold>Discard pile shuffled into draw pile.</bold>")
             self.hand.extend(player.draw_pile[-draw_cards:])
-            # Removes those items.cards
+            # Removes those cards
             player.draw_pile = player.draw_pile[:-draw_cards]
-            print(f"Drew {draw_cards} items.cards.")
-            # bus.publish(Message.ON_DRAW, (pl))
+            print(f"Drew {draw_cards} cards.")
+            for card in player.hand[-draw_cards:]:
+                if card['Type'] in ('Status', 'Curse') and self.buffs['Fire Breathing'] > 0:
+                    for enemy in active_enemies:
+                        self.attack(self.buffs['Fire Breathing'], enemy)
+                if card['Type'] == 'Status' and self.buffs['Evolve'] > 0:
+                    view.clear()
+                    self.draw_cards(True, self.buffs['Evolve'])
             break
 
-    def blocking(self,card: bool = True):
-        '''Gains [block] Block. items.Cards are affected by Dexterity and Frail.'''
-        bus.publish(Message.BEFORE_BLOCK, (self, card))
-        self.block += card.block
-        ansiprint(f'{self.name} gained {card.block} <blue>Block</blue> from {card.block_affected_by}')
-        bus.publish(Message.AFTER_BLOCK, (self, card))
-        
+    def blocking(self, block: int, card: bool = True):
+        '''Gains [block] Block. Cards are affected by Dexterity and Frail.'''
+        block_affected_by = ''
+        if card:
+            block += self.buffs["Dexterity"]
+            if self.buffs["Dexterity"] > 0:
+                block_affected_by += f'{self.buffs["Dexterity"]} <{"light-cyan" if self.buffs["Dexterity"] > 0 else "red"}>Dexterity</{"light-cyan" if self.buffs["Dexterity"] > 0 else "red"}>({"+" if self.buffs["Dexterity"] > 0 else "-"}{self.buffs["Dexterity"]} Block) | '
+            if self.debuffs["Frail"] > 0 and card:
+                block = math.floor(block * 0.75)
+                block_affected_by += '<light-cyan>Frail</light-cyan> (x0.75 block) | '
+        self.block += block
+        ansiprint(f'{self.name} gained {block} <blue>Block</blue>')
+        if self.buffs['Juggernaut'] > 0:
+            self.attack(self.buffs['Juggernaut'], random.choice(active_enemies))
+        print('Affected by:')
+        ansiprint(block_affected_by if block_affected_by else 'Nothing')
 
     def health_actions(self, heal: int, heal_type: str):
         '''If [heal_type] is 'Heal', you heal for [heal] HP. If [heal_type] is 'Max Health', increase your max health by [heal].'''
         if heal_type == "Heal":
-            heal = round(heal * 1.5 if self.in_combat and items.relics['Magic Flower'] in self.relics else 1)
+            heal = round(heal * 1.5 if self.in_combat and relics['Magic Flower'] in self.relics else 1)
             self.health += heal
             self.health = min(self.health, self.max_health)
             ansiprint(f"You heal <green>{min(self.max_health - self.health, heal)}</green> <light-blue>HP</light-blue>")
-            if self.health >= math.floor(self.health * 0.5) and items.relics['Red Skull'] in self.relics:
+            if self.health >= math.floor(self.health * 0.5) and relics['Red Skull'] in self.relics:
                 ansiprint('<red><bold>Red Skull</bold> deactivates</red>.')
                 self.starting_strength -= 3
         elif heal_type == "Max Health":
@@ -330,17 +352,17 @@ class Player(Registerable):
         [action] == 'Store', (Only in the Note From Yourself event) stores a card to be collected from the event in another run.
         '''
         if card_pool is None:
-            card_pool = items.cards
+            card_pool = cards
         while True:
             if action == "Remove":
                 del subject_card
             elif action == 'Transform':
-                # Curse items.cards can only be transformed into other Curses
+                # Curse cards can only be transformed into other Curses
                 ansiprint(f"{subject_card['Name']} was <bold>transformed</bold> into ", end='')
                 if subject_card.get('Type') == 'Curse':
-                    options = [valid_card for valid_card in items.cards.values() if valid_card.get('Type') == 'Curse' and valid_card.get('Rarity') != 'Special']
+                    options = [valid_card for valid_card in cards.values() if valid_card.get('Type') == 'Curse' and valid_card.get('Rarity') != 'Special']
                 else:
-                    options = [valid_card for valid_card in items.cards.values() if valid_card.get('Class') == valid_card.get('Class') and valid_card.get('Type') not in ('Status', 'Curse', 'Special') and valid_card.get('Upgraded') is not True and valid_card.get('Rarity') != 'Basic']
+                    options = [valid_card for valid_card in cards.values() if valid_card.get('Class') == valid_card.get('Class') and valid_card.get('Type') not in ('Status', 'Curse', 'Special') and valid_card.get('Upgraded') is not True and valid_card.get('Rarity') != 'Basic']
                 while True:
                     new_card = random.choice(options)
                     if new_card == subject_card:
@@ -366,10 +388,10 @@ class Player(Registerable):
 
     def end_player_turn(self):
         self.discard_pile += self.hand
-        if items.relics['Runic Pyramid'] not in self.relics:
+        if relics['Runic Pyramid'] not in self.relics:
             self.hand.clear()
         self.end_of_turn_effects()
-        self.end_of_turn_items.relics()
+        self.end_of_turn_relics()
         sleep(1.5)
         view.clear()
 
@@ -381,11 +403,19 @@ class Player(Registerable):
             move_to.insert(random.randint(0, len(move_to) - 1), card)
         else:
             move_to.append(card)
-        if move_to == self.exhaust_pile:
-            bus.publish(Message.ON_EXHAUST, (card))
+        if self.buffs["Dark Embrace"] > 0 and move_to == self.exhaust_pile:
+            ansiprint("<bold>Dark Embrace</bold> allows you to draw 1 card to your hand.")
+            self.draw_cards(True, 1)
+        if relics['Dead Branch'] in self.relics and move_to == self.exhaust_pile:
+            random_card = deepcopy(random.choice([card for card in cards.values() if card.get('Upgraded') is not True and card.get('Class') == self.player_class]))
+            ansiprint(f"<bold>Dead Branch</bold> allows you to draw a <bold>{random_card['Name']}</bold> card to your hand.")
+            self.hand.append(random_card)
+        if relics["Charon's Ashes"] in self.relics and move_to == self.exhaust_pile:
+            for enemy in active_enemies:
+                self.attack(3, enemy)
 
     def curse_status_effects(self):
-        if items.cards['Burn'] in self.relics:
+        if cards['Burn'] in self.relics:
             self.take_sourceless_dmg(2)
 
     def attack(self, dmg,  target: 'Enemy', card=None, ignore_block=False):
@@ -394,24 +424,65 @@ class Player(Registerable):
         if target.health <= 0:
             return
         if card is not None and card.get('Type') not in ('Status', 'Curse'):
-            bus.publish(Message.BEFORE_ATTACK, (self, target, card))
-            if dmg <= target.block:
-                target.block -= dmg
-                dmg = 0
-                ansiprint("<blue>Blocked</blue>")
-            elif dmg > target.block:
-                dmg -= target.block
-                dmg = max(0, dmg)
-                target.health -= dmg
-                ansiprint(f"You dealt {dmg} damage(<light-blue>{target.block} Blocked</light-blue>) to {target.name}")
-                ansiprint(f"Affected by: \n{dmg_affected_by.rstrip(' | ') if dmg_affected_by else 'Nothing'}")
-                target.block = 0
-                bus.publish(Message.AFTER_ATTACK, (self, target, card))
-                if target.health <= 0:
-                    target.die()
+            dmg = dmg + self.buffs['Strength'] * card.get("Strength Multi", 1) + self.buffs['Vigor']
+            if relics['Strike Dummy'] in self.relics and 'strike' in card.get('Name').lower():
+                dmg += 3
+                dmg_affected_by += "<bold>Strike Dummy</bold>(+3 dmg) | "
+            if self.debuffs["Weak"] > 0 and card:
+                dmg = math.floor(dmg * 0.75)
+                dmg_affected_by += "<debuff>Weak</debuff>(x0.75 dmg) | "
+            if target.debuffs["Vulnerable"] > 0:
+                dmg = math.floor(dmg * (1.50 + 0 if relics['Paper Phrog'] not in self.relics else 0.25))
+                dmg_affected_by += f"<debuff>Vulnerable</debuff>(x{'1.5' if relics['Paper Phrog'] not in self.relics else '1.75'} dmg) | "
+            if self.buffs["Vigor"] > 0:
+                dmg_affected_by += f"{self.buffs['Vigor']} <buff>Vigor</buff>(+{self.buffs['Vigor']} dmg) | "
+            if self.buffs["Strength"] != 0:
+                dmg_affected_by += f"{'<buff>' if self.buffs['Strength'] < 0 else '<debuff>'}{self.buffs['Strength']}{'</buff>' if self.buffs['Strength'] < 0 else '</debuff>'} <buff>Strength</buff> | "
+                if "Heavy Blade" in card.get('Name'):
+                    dmg_affected_by += f"Heavy Blade(x{card.get('Strength Multi')} Strength gain) | "
+            if self.buffs["Pen Nib"] > 0:
+                dmg *= 2
+                dmg_affected_by += "<light-cyan>Pen Nib</light-cyan>(x2 dmg) | "
+            if self.buffs['Double Damage'] > 0:
+                dmg *= 2
+                dmg_affected_by += "<bold>Phantasmal Killer</bold>(x2 dmg) | "
+            if target.buffs['Intangible'] > 0:
+                dmg = 1
+                dmg_affected_by = "<buff>Intangible</buff>(ALL damage reduced to 1)"
+            if not ignore_block:
+                if dmg <= target.block:
+                    target.block -= dmg
+                    dmg = 0
+                    ansiprint("<blue>Blocked</blue>")
+                elif dmg > target.block:
+                    dmg -= target.block
+                    dmg = max(0, dmg)
+                    if self.buffs['Envenom'] > 0:
+                        target.debuffs['Poison'] += 1
+                        ansiprint(f"<light-cyan>Envenom</light-cyan> applied {self.buffs['Envenom']} <red>Poison</red>.")
+                    if dmg <= 4 and relics['The Boot'] in self.relics and card.get('Type') == 'Attack':
+                        dmg = 5
+                        dmg_affected_by += "<bold>The Boot</bold>(dmg increased to 5) | "
+                    target.health -= dmg
+                    ansiprint(f"You dealt {dmg} damage(<light-blue>{target.block} Blocked</light-blue>) to {target.name}")
+                    ansiprint(f"Affected by: \n{dmg_affected_by.rstrip(' | ') if dmg_affected_by else 'Nothing'}")
+                    target.block = 0
+                    if target.buffs['Curl Up'] > 0:
+                        target.blocking(target.buffs['Curl Up'])
+                        target.buffs['Curl Up'] = 0
+                        ansiprint("<buff>Curl Up</buff> wears off.")
+                    if target.buffs.get('Split'):
+                        if target.name == 'Spike Slime (L)':
+                            target.next_move, target.intent = [("Split", "Split")], "<yellow>Unknown</yellow>"
+                    if dmg_affected_by.count(" | ") > 0:
+                        sleep(math.log(dmg_affected_by.count(" | "), 12) + 0.2)
+                    if target.health <= 0:
+                        target.die()
+                    if 'Reaper' in card['Name']:
+                        self.health_actions(dmg, 'Heal')
 
     def gain_gold(self, gold, dialogue=True):
-        if items.relics['Ectoplasm'] not in self.relics:
+        if relics['Ectoplasm'] not in self.relics:
             self.gold += gold
         else:
             ansiprint("You cannot gain <yellow>Gold</yellow> because of <bold>Ectoplasm</bold>.")
@@ -440,9 +511,28 @@ class Player(Registerable):
             sleep(0.8)
             break
 
-    def start_turn(self, turn):
+    def start_turn(self):
         ansiprint(f"<underline><bold>{self.name}</bold></underline>:")
-        self.energy = self.energy if items.relics['Ice Cream'] in self.relics else 0
+        # Start of turn effects
+        self.draw_cards(False, (self.draw_strength + 3) if self.plays_this_turn <= 3 and relics['Pocketwatch'] in self.relics and combat_turn > 1 else 0)
+        self.plays_this_turn = 0
+        ei.tick_effects(self)
+        self.fresh_effects.clear()
+        self.start_of_turn_relics()
+        self.start_of_turn_effects()
+        if combat_turn > 0:
+            if relics['Incense Burner'] in self.relics:
+                self.incense_turns += 1
+                if self.incense_turns == 6:
+                    ansiprint('<bold>Incense Burner</bold> caused: ', end='')
+                    self.buff('Intangible', 1, False)
+                    self.incense_turns = 0
+            if relics['Stone Calender'] in self.relics:
+                self.stone_calender += 1
+                if self.stone_calender == 7:
+                    for enemy in active_enemies:
+                        self.attack(52, enemy)
+        self.energy = self.energy if relics['Ice Cream'] in self.relics else 0
         self.energy += self.energy_gain + self.buffs["Energized"] + self.buffs["Berzerk"]
         if self.buffs["Energized"] > 0:
             ansiprint(f"You gained {self.buffs['Energized']} extra energy because of <light-cyan>Energized</light-cyan>")
@@ -451,9 +541,9 @@ class Player(Registerable):
         if self.buffs["Berzerk"] > 0:
             ansiprint(f"You gained {self.buffs['Berzerk']} extra energy because of <light-cyan>Berzerk</light-cyan>")
         if self.buffs['Barricade']:
-            if turn > 1:
+            if combat_turn > 1:
                 ansiprint('You kept your block because of <light-cyan>Barriacade</light-cyan>')
-        elif items.relics['Calipers'] in self.relics and self.block > 15:
+        elif relics['Calipers'] in self.relics and self.block > 15:
             self.block -= 15
             ansiprint(f'You kept {self.block} <light-blue>Block</light-blue> because of <bold>Calipers</bold>')
         else:
@@ -494,68 +584,125 @@ class Player(Registerable):
                 ansiprint("<light-cyan>The Bomb</light-cyan> wears off")
                 self.the_bomb_countdown = 3
 
+    def start_of_turn_effects(self):
+        if self.buffs['Brutality'] > 0:
+            ansiprint("From <buff>Brutality</buff>: ")
+            self.take_sourceless_dmg(self.buffs['Brutality'])
+            self.draw_cards(True, self.buffs['Brutality'])
+        if self.buffs["Next Turn Block"] > 0:
+            self.blocking(self.buffs["Next Turn Block"], False)
+            self.buffs["Next Turn Block"] = 0
+            ansiprint('<light-cyan>Next Turn Block</light-cyan> wears off')
+        if self.debuffs['Bias'] > 0:
+            self.buffs['Focus'] -= self.debuffs['Bias']
+            ansiprint(f"<red>Bias</red> reduced <light-cyan>Focus</light-cyan> by {self.debuffs['Bias']}. You now have {self.buffs['Focus']} <light-cyan>Focus</light-cyan>.")
+        if relics['Brimstone'] in self.relics:
+            ansiprint("From <bold>Brimstone</bold>:")
+            for enemy in active_enemies:
+                ei.apply_effect(enemy, self, 'Strength', 1)
+            ei.apply_effect(self, self, 'Strength', 2)
+        if self.buffs['Demon Form'] > 0:
+            ansiprint("From <buff>Demon Form</buff>: ", end='')
+            ei.apply_effect(self, self, 'Strength', self.buffs['Demon Form'])
+        if relics['Warped Tongs'] in self.relics:
+            ansiprint("From <bold>Warped Tongs</bold>:")
+            chosen_card = random.randint(0, len(self.hand) - 1)
+            self.hand[chosen_card] = self.card_actions(self.hand[chosen_card], 'Upgrade', cards)
+        if relics['Horn Cleat'] in self.relics:
+            self.blocking(14, False)
+
+    def start_of_turn_relics(self):
+        if relics['Anchor'] in self.relics and combat_turn == 1:
+            ansiprint('From <bold>Anchor</bold>: ', end='')
+            self.blocking(10, False)
+        if relics['Horn Cleat'] in self.relics and combat_turn == 2:
+            ansiprint("From <bold>Horn Cleat</bold>: ", end='')
+            self.blocking(14, False)
+        if relics["Captain's Wheel"] in self.relics and combat_turn == 3:
+            ansiprint("From <bold>Captain's Wheel</bold>: ", end='')
+            self.blocking(18, False)
+        if self.attacks_played_this_turn is False and relics['Art of War'] in self.relics:
+            self.energy += 1
+            ansiprint('You gained 1 Energy from <bold>Art of War</bold>.')
+        if relics['Damaru'] in self.relics:
+            ansiprint('From <bold>Damaru</bold>: ', end='')
+            self.buff('Mantra', 1, False)
+        if relics['Lantern'] in self.relics:
+            ansiprint('From <bold>Lantern</bold: ', end='')
+            self.buff('Energized', 1, False)
+        if relics['Happy Flower'] in self.relics:
+            if self.happy_flower % 3 != 0:
+                self.happy_flower += 1
+                if self.happy_flower == 3:
+                    ansiprint('From <bold>Happy Flower</bold>: ', end='')
+                    self.buff('Energized', 1, False)
+        if relics['Mercury Hourglass'] in self.relics:
+            for enemy in active_enemies:
+                ansiprint("<bold>Mercury Hourglass</bold> activated.")
+                self.attack(3, enemy)
+
     def end_of_turn_relics(self):
-        if items.relics['Orichaicum'] in self.relics and self.block == 0:
+        if relics['Orichaicum'] in self.relics and self.block == 0:
             ansiprint('From <bold>Orichaicum</bold>: ', end='')
             self.blocking(6, False)
 
     def take_sourceless_dmg(self, dmg):
-        if items.relics['Tungsten Rod'] in self.relics:
+        if relics['Tungsten Rod'] in self.relics:
             dmg -= 1
         self.health -= dmg
         ansiprint(f"<light-red>You lost {dmg} health.</light-red>")
-        if items.relics['Red Skull'] in self.relics and self.health <= math.floor(self.max_health * 0.5) and not self.red_skull_active:
+        if relics['Red Skull'] in self.relics and self.health <= math.floor(self.max_health * 0.5) and not self.red_skull_active:
             self.starting_strength += 3
             ansiprint("<bold>Red Skull</bold> activated. You now start combat with 3 <light-cyan>Strength</light-cyan>.")
             self.red_skull_active = True
-        if items.relics['Runic Cube'] and dmg > 0:
+        if relics['Runic Cube'] and dmg > 0:
             self.draw_cards(False, 1)
 
-    def start_of_combat_relics(self, turn, combat_type):
-        if items.relics['Snecko Eye'] in self.relics:
+    def start_of_combat_relics(self, combat_type):
+        if relics['Snecko Eye'] in self.relics:
             ei.apply_effect(self, self, 'Confused')
-        if items.relics["Slaver's Collar"] in self.relics and combat_type in (CombatTier.BOSS, CombatTier.ELITE):
+        if relics["Slaver's Collar"] in self.relics and combat_type in (CombatTier.BOSS, CombatTier.ELITE):
             self.max_energy += 1
-        if items.relics['Du-Vu Doll'] in self.relics:
+        if relics['Du-Vu Doll'] in self.relics:
             num_curses = len([card for card in self.deck if card.get('Type') == 'Curse'])
             if num_curses > 0:
                 ansiprint('From <bold>Du-Vu Doll</bold>: ', end='')
                 ei.apply_effect(self, self, 'Strength', num_curses)
-        if items.relics['Pantograph'] in self.relics and combat_type == CombatTier.BOSS:
+        if relics['Pantograph'] in self.relics and combat_type == CombatTier.BOSS:
             ansiprint('From <bold>Pantograph</bold>: ', end='')
             self.health_actions(25, 'Heal')
-        if items.relics['Fossilized Helix'] in self.relics:
+        if relics['Fossilized Helix'] in self.relics:
             ei.apply_effect(self, self, 'Buffer', 1)
-        if items.relics['Thread and Needle'] in self.relics:
+        if relics['Thread and Needle'] in self.relics:
             self.buff("Plated Armor", 4, False)
-        if items.relics['Akabeko'] in self.relics:
+        if relics['Akabeko'] in self.relics:
             self.buff('Vigor', 8, False)
-        if self.ancient_tea_set is True and items.relics['Ancient Tea Set'] in self.relics and turn == 1:
+        if self.ancient_tea_set is True and relics['Ancient Tea Set'] in self.relics and combat_turn == 1:
             self.energy += 2
             ansiprint('You gained 2 Energy from <bold>Ancient Tea Set</bold>')
-        if items.relics['Bag of Marbles'] in self.relics:
+        if relics['Bag of Marbles'] in self.relics:
             for enemy in active_enemies:
                 ansiprint('From <bold>Bag of Marbles</bold>: ', end='')
                 self.debuff('Vulnerable', 1, enemy, False)
         # Bag of Preparation and Ring of the Snake are coded in the .draw_cards() method above.
-        if items.relics['Blood Vial'] in self.relics:
+        if relics['Blood Vial'] in self.relics:
             ansiprint('From <bold>Blood Vial</bold>: ', end='')
             self.health_actions(2, 'Heal')
-        if items.relics['Bronze Scales'] in self.relics:
+        if relics['Bronze Scales'] in self.relics:
             ansiprint('From <bold>Bronze Scales</bold>: ', end='')
             self.buff('Thorns', 3, False)
-        if items.relics['Oddly Smooth Stone'] in self.relics:
+        if relics['Oddly Smooth Stone'] in self.relics:
             ansiprint('From <bold>Oddly Smooth Stone</bold>: ', end='')
             self.buff('Dexterity', 1, False)
-        if items.relics['Data Disk'] in self.relics:
+        if relics['Data Disk'] in self.relics:
             ansiprint('From <bold>Data Disk</bold>: ', end='')
             self.buff('Focus', 1, False)
-        if items.relics["Philosopher's Stone"] in self.relics:
+        if relics["Philosopher's Stone"] in self.relics:
             for enemy in active_enemies:
                 ei.apply_effect(enemy, self, 'Strength', 1)
-        if items.relics['Mark of Pain'] in self.relics:
+        if relics['Mark of Pain'] in self.relics:
             for _ in range(2):
-                self.hand.append(deepcopy(items.cards['Wound']))
+                self.hand.append(deepcopy(cards['Wound']))
 
     def die(self):
         view.clear()
@@ -564,42 +711,39 @@ class Player(Registerable):
         sys.exit()
 
     def end_of_combat_effects(self, combat_type):
-        if items.relics["Slaver's Collar"] in self.relics and combat_type in (CombatTier.BOSS, CombatTier.ELITE):
+        if relics["Slaver's Collar"] in self.relics and combat_type in (CombatTier.BOSS, CombatTier.ELITE):
             self.max_energy -= 1
-        if items.relics['Meat on the Bone'] in self.relics and self.health <= math.floor(self.max_health * 0.5):
+        if relics['Meat on the Bone'] in self.relics and self.health <= math.floor(self.max_health * 0.5):
             ansiprint("<bold>Meat on the Bone</bold> activated.")
             self.health_actions(12, "Heal")
-        if items.relics['Burning Blood'] in self.relics:
+        if relics['Burning Blood'] in self.relics:
             ansiprint("<bold>Burning Blood</bold> activated.")
             self.health_actions(6, 'Heal')
-        elif items.relics['Black Blood'] in player.items.relics:
+        elif relics['Black Blood'] in player.relics:
             ansiprint("<bold>Black Blood</bold> activated.")
             self.health_actions(12, 'Heal')
         if self.buffs['Repair'] > 0:
             ansiprint("<light-cyan>Self Repair</light-cyan>: ", end='')
             self.health_actions(self.buffs['Repair'], 'Heal')
-    
-    def callback(self, message, data):
-        if message == Message.START_OF_COMBAT:
-            self.in_combat = True
-            self.draw_pile = random.sample(self.deck, len(self.deck))
-        elif message == Message.END_OF_COMBAT:
-            self.in_combat = False
-            self.draw_pile.clear()
-            self.discard_pile.clear()
-            self.hand.clear()
-            self.exhaust_pile.clear()
-        elif message == Message.START_OF_TURN:
-            self.draw_cards(False)
-            self.plays_this_turn = 0
-            ei.tick_effects(self)
-            self.fresh_effects.clear()
-            self.start_of_turn_relics()
-            self.start_of_turn_effects()
-
 
 
 class Enemy:
+    '''
+    Attributes::
+    health: Current health[int]
+    max_health: Maximum health[int]
+    block: Current block[int]
+    name: Enemy name[str]
+    order: Order of moves(planning on using parsing to run)[list]
+    moves: All moves the enemy can use[2D dict]
+    barricade: Block is not removed at the start of combat[bool]
+    artifact: Blocks the next debuff[int]
+    vulnerable: Takes 50% more damage from attacks[int](duration stack)
+    weak: Deals 25% less damage with attacks[int](duration stack)
+    strength: Deal X more damage[int](intensity stack)
+    ritual: At the end of it's turn, gains X Strength(intensity stack)
+    '''
+
     def __init__(self, health_range: list, block: int, name: str, powers: dict=None):
         if not powers:
             powers = {}
@@ -637,7 +781,7 @@ class Enemy:
         if self.flames > 0:
             status += f"<yellow>{self.flames} Flames</yellow> | "
         actual_intent, _ = view.display_actual_damage(self.intent, player, self)
-        status += 'Intent: ' + actual_intent if items.relics['Runic Dome'] not in player.relics else "<light-black>Hidden</light-black>"
+        status += 'Intent: ' + actual_intent if relics['Runic Dome'] not in player.relics else "<light-black>Hidden</light-black>"
         return status
 
     def show_effects(self):
@@ -755,7 +899,7 @@ class Enemy:
         Dies.
         """
         print(f"{self.name} has died.")
-        if items.relics['Gremlin Horn'] in player.items.relics:
+        if relics['Gremlin Horn'] in player.relics:
             player.energy += 1
             player.draw_cards(True, 1)
         try:
@@ -792,7 +936,7 @@ class Enemy:
                 dmg = math.floor(dmg * 1.5)
                 dmg_affected_by += "<red>Vulnerable</red>(x1.5 dmg) | "
             if self.debuffs['Weak'] > 0:
-                dmg = math.floor(dmg * 0.75 - 0.15 if items.relics['Paper Krane'] in player.items.relics else 0)
+                dmg = math.floor(dmg * 0.75 - 0.15 if relics['Paper Krane'] in player.relics else 0)
                 dmg_affected_by += "<red>Weak</red>(x0.75 dmg) | "
             if player.buffs['Intangible']  > 0:
                 dmg = 1
@@ -804,23 +948,23 @@ class Enemy:
             elif dmg > player.block:
                 dmg -= player.block
                 dmg = max(0, dmg)
-                if items.relics['Torii'] in player.items.relics and dmg in range(2, 6):
+                if relics['Torii'] in player.relics and dmg in range(2, 6):
                     dmg = min(dmg, 1)
                     dmg_affected_by += "<bold>Torii</bold>(dmg reduced to 1) | "
-                if items.relics['Tungsten Rod'] in player.items.relics:
+                if relics['Tungsten Rod'] in player.relics:
                     dmg -= 1
                     dmg_affected_by += "<bold>Tungsten Rod</bold>(dmg reduced by 1) | "
-                if items.relics['Red Skull'] in player.items.relics and player.health <= math.floor(player.health * 0.5) and not player.red_skull_active:
+                if relics['Red Skull'] in player.relics and player.health <= math.floor(player.health * 0.5) and not player.red_skull_active:
                     player.starting_strength += 3
                     player.buffs['Strength'] += 3
                     ansiprint("<bold>Red Skull</bold> gives you 3 <light-cyan>Strength</light-cyan>.")
-                if dmg > 0 and items.relics['Self-Forming Clay'] in player.items.relics:
+                if dmg > 0 and relics['Self-Forming Clay'] in player.relics:
                     ansiprint('<bold>Self-Forming Clay</bold> activated.')
                     player.buffs['Next Turn Block'] += 3
                 ansiprint(f"{self.name} dealt {dmg}(<light-blue>{player.block} Blocked</light-blue>) damage to you.")
                 player.block = 0
                 player.health -= dmg
-                if items.relics['Runic Cube'] in player.items.relics and dmg > 0:
+                if relics['Runic Cube'] in player.relics and dmg > 0:
                     player.draw_cards(True, 1)
             if player.buffs['Flame Barrier'] > 0:
                 if self.block >= dmg:
@@ -855,7 +999,7 @@ class Enemy:
         locations = {'draw pile': player.draw_pile, 'discard pile': player.discard_pile, 'hand': player.hand}
         pile = locations[location]
         for _ in range(amount):
-            status_card = deepcopy(items.cards[status_card_name])
+            status_card = deepcopy(cards[status_card_name])
             upper_bound = len(location) - 1 if len(location) > 0 else 1
             insert_index = random.randint(0, upper_bound)
             pile.insert(insert_index, status_card)
@@ -901,8 +1045,8 @@ class Enemy:
 
 
 def create_player():
-    return Player(80, 0, 3, [deepcopy(card) for card in [items.IroncladStrike, items.IroncladStrike, items.IroncladStrike, items.IroncladStrike, items.IroncladStrike, items.IroncladDefend, items.IroncladDefend, items.IroncladDefend, items.IroncladDefend, items.Bash]])
+    return Player(80, 0, 3, [deepcopy(card) for card in [cards['Strike'], cards['Strike'], cards['Strike'], cards['Strike'], cards['Strike'], cards['Defend'], cards['Defend'], cards['Defend'], cards['Defend'], cards['Bash'],]])
 
 # Characters
 player = create_player()
-player.relics.append(items.relics['Burning Blood'])
+player.relics.append(relics['Burning Blood'])

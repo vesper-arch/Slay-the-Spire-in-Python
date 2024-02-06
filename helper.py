@@ -4,16 +4,31 @@ import math
 from time import sleep
 from os import system
 from copy import deepcopy
-from ansi_tags import ansiprint, strip
+from ansi_tags import ansiprint
 from typing import Callable
 from definitions import CombatTier
 
 active_enemies = []
-
+combat_turn = 1
+potion_dropchance = 40
 class Displayer():
     '''Displays important info to the player during combat'''
     def __init__(self):
         pass
+
+    def upgrade_preview(self, pile, validator: Callable=lambda placehold: bool(placehold)):
+        """Print all of the cards in a given pile with their upgraded stats shown. Upgradeable validation is built-in, the validator function adds restrictions."""
+        counter = 1
+        for card in pile:
+            if not card.get("Upgraded") and (card['Type'] not in ("Status", "Curse") or card['Name'] == 'Burn') and validator(card):
+                upgraded_energy = f' <green>-></green> <green>{card["Effects+"].get("Energy")}</green>' if card['Effects+'].get('Energy', card['Energy']) != card['Energy'] else ''
+                upgraded_info = f' <green>-></green> <yellow>{card["Effects+"].get("Info")}</yellow>' if card['Effects+'].get('Info', card['Info']) != card['Info'] else ''
+                ansiprint(f"{counter}: <{card['Type'].lower()}>{card['Name']}</{card['Type'].lower()}> | <light-red>{card.get('Energy', 'Unplayable')} Energy{upgraded_energy}</light-red> | <yellow>{card['Info']}</yellow>{upgraded_info}".replace('Σ', '').replace('Ω', ''))
+            else:
+                ansiprint(f"{counter}: <light-black>{card['Name']} | {card['Type']} | {card.get('Energy', 'Unplayable')}{' Energy' if card.get('Energy') else ''} | {card['Info']}</light-black>".replace('Σ', '').replace('Ω', ''))
+            counter += 1
+            sleep(0.05)
+
 
     def view_piles(self, pile: list[dict], shuffle=False, end=False, validator: Callable=lambda placehold: bool(placehold)):
         """Prints a numbered list of all the cards in a certain pile."""
@@ -27,12 +42,13 @@ class Displayer():
             ansiprint("<italic>Cards are not shwon in order.</italic>")
         counter = 1
         for card in pile:
+            changed_energy = 'light-red' if not card.get('Changed Energy') else 'green'
             if validator(card):
-                ansiprint(f"{counter}: {card.pretty_print()}")
+                ansiprint(f"{counter}: <{card['Rarity'].lower()}>{card['Name']}</{card['Rarity'].lower()}> | <{card['Type'].lower()}>{card['Type']}</{card['Type'].lower()}> | <{changed_energy}>{card.get('Energy', 'Unplayable')}{' Energy' if card.get('Energy') is not None else ''}</{changed_energy}> | <yellow>{card['Info']}</yellow>".replace('Σ', '').replace('Ω', ''))
                 counter += 1
                 sleep(0.05)
             else:
-                ansiprint(f"{counter}: <light-black>{strip(card.pretty_print())}</light-black>")
+                ansiprint(f"{counter}: <light-black>{card['Name']} | {card['Type']} | {card.get('Energy', 'Unplayable')}{' Energy' if card.get('Energy') else ''} | {card['Info']}</light-black>".replace('Σ', '').replace('Ω', ''))
                 counter += 1
                 sleep(0.05)
         if end:
