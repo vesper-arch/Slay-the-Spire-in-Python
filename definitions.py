@@ -44,5 +44,6 @@ class TargetType(StrEnum):
 
 class CardCategory(StrEnum):
     CARD = 'Card'
+    COLORLESS = 'Colorless'
     POTION = 'Potion'
     RELIC = 'Relic'
