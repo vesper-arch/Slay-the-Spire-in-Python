@@ -28,7 +28,7 @@ import random
 import time
 
 from ansi_tags import ansiprint
-from definitions import CardCategory, Rarity
+from definitions import CardCategory, PlayerClass, Rarity
 from helper import Displayer
 from items import cards, potions, relics
 
@@ -78,10 +78,7 @@ def determine_item_category(item) -> CardCategory:
   potion_names = [p['Name'] for p in potions.values()]
   relic_names = [r['Name'] for r in relics.values()]
   if name in card_names:
-    if item['Type'] in ('Attack', 'Skill', 'Power', 'Status', 'Curse'):
-      return CardCategory.CARD
-    else:
-      return CardCategory.COLORLESS
+    return CardCategory.CARD
   elif name in potion_names:
     return CardCategory.POTION
   elif name in relic_names:
@@ -91,7 +88,7 @@ def determine_item_category(item) -> CardCategory:
 
 def category_to_pretty_string(item, valid):
   category = determine_item_category(item)
-  if category in (CardCategory.CARD, CardCategory.COLORLESS):
+  if category == CardCategory.CARD:
     return card_pretty_string(item, valid)
   elif category == CardCategory.POTION:
     return potion_pretty_string(item, valid)
@@ -112,6 +109,9 @@ class SellableItem():
           self.price = self.set_price()
         self.discount = discount
 
+    def __repr__(self):
+        return f"Sellable({self.item['Name']})"
+
     def invalid_string(self):
         pretty_string = category_to_pretty_string(self.item, valid=False)
         return f"<light-black>{self.price:3d} Gold</light-black> : {pretty_string}"
@@ -124,26 +124,24 @@ class SellableItem():
     def set_price(self) -> int:
         '''Set the price of the item based on its rarity.'''
         assert "Rarity" in self.item, f"Item {self.item} has no rarity."
-        if self.item_category == CardCategory.CARD:
+        assert "Class" in self.item, f"Item {self.item} has no class."
+        if self.item_category == CardCategory.CARD and self.item["Class"] != PlayerClass.COLORLESS:
             if self.item["Rarity"] in (Rarity.BASIC, Rarity.COMMON, Rarity.STARTER):
                 return random.randint(45, 55)
             elif self.item["Rarity"] == Rarity.UNCOMMON:
                 return random.randint(68, 82)
             elif self.item["Rarity"] == Rarity.RARE:
                 return random.randint(135, 165)
-            elif self.item["Rarity"] in (Rarity.CURSE, Rarity.SHOP, Rarity.SPECIAL, Rarity.EVENT, Rarity.BOSS):
-                # Unsure what to do with these. We'll set to some high bogus value for now.
-                return 999
             else:
-                raise ValueError(f"Unexpected rarity for card: {self.item['Rarity']}")
+                raise ValueError(f"Cannot determine price. Unexpected rarity for card: {self.item['Rarity']}")
 
-        elif self.item_category == CardCategory.COLORLESS:
+        elif self.item_category == CardCategory.CARD and self.item["Class"] == PlayerClass.COLORLESS:
             if self.item["Rarity"] == Rarity.UNCOMMON:
                 return random.randint(81, 99)
             elif self.item["Rarity"] == Rarity.RARE:
                 return random.randint(162, 198)
             else:
-                raise ValueError(f"Unexpected rarity for colorless card: {self.item['Rarity']}")
+                raise ValueError(f"Cannot determine colorless card price.Unexpected rarity for colorless card: {self.item['Rarity']}")
 
         elif self.item_category == CardCategory.POTION:
           if self.item["Rarity"] == Rarity.COMMON:
@@ -164,9 +162,6 @@ class SellableItem():
               return random.randint(285, 315)
           elif self.item["Rarity"] == Rarity.SHOP:
               return random.randint(143, 157)
-          elif self.item["Rarity"] in (Rarity.SHOP, Rarity.SPECIAL, Rarity.EVENT, Rarity.BOSS):
-              # Unsure what to do with these. We'll set to some high bogus value for now.
-              return 999
           else:
               raise ValueError(f"Unexpected rarity for relic: {self.item['Rarity']}")
 
@@ -180,6 +175,18 @@ class Shop():
         self.items = self.initialize_items()
       else:
         self.items = items
+
+    def split_by_category(self, sellables:list[SellableItem]=None) -> dict[CardCategory, list[SellableItem]]:
+      if sellables is None:
+        sellables = self.items
+      ret = {
+        CardCategory.CARD: [],
+        CardCategory.POTION: [],
+        CardCategory.RELIC: []
+      }
+      for sellable in sellables:
+        ret[determine_item_category(sellable.item)].append(sellable)
+      return ret
 
     def initialize_items(self) -> list[SellableItem]:
       return self.initialize_cards() + self.initialize_relics() + self.initialize_potions()
@@ -228,7 +235,7 @@ class Shop():
         choice = Displayer().list_input(
           input_string="Buy something?",
           choices=self.items,
-          displayer=self.view_sellables,
+          displayer=self.display,
           validator=self.validator,
           extra_allowables=['e'])
         if choice == 'e':
@@ -245,10 +252,30 @@ class Shop():
     def validator(self, item):
       return item.price <= self.player.gold
 
-    def view_sellables(self, items, validator):
-      for idx, item in enumerate(items):
+    def display(self, items, validator):
+      organized = self.split_by_category()
+      ansiprint("<bold>CARDS</bold>")
+      for idx, item in enumerate(organized[CardCategory.CARD]):
         if validator(item):
           ansiprint(f"{idx+1}: {item.valid_string()}")
         else:
           ansiprint(f"{idx+1}: {item.invalid_string()}")
+
+      ansiprint("<bold>POTIONS</bold>")
+      for idx, item in enumerate(organized[CardCategory.POTION]):
+        if validator(item):
+          ansiprint(f"{idx+1+len(organized[CardCategory.CARD])}: {item.valid_string()}")
+        else:
+          ansiprint(f"{idx+1+len(organized[CardCategory.CARD])}: {item.invalid_string()}")
+
+      ansiprint("<bold>RELICS</bold>")
+      for idx, item in enumerate(organized[CardCategory.RELIC]):
+        if validator(item):
+          ansiprint(f"{idx+1+len(organized[CardCategory.CARD])+len(organized[CardCategory.POTION])}: {item.valid_string()}")
+        else:
+          ansiprint(f"{idx+1+len(organized[CardCategory.CARD])+len(organized[CardCategory.POTION])}: {item.invalid_string()}")
+
+      ansiprint("<bold>SERVICES</bold>")
+      ansiprint("r: Card REMOVAL Service (tbd)")
+      ansiprint("")
       ansiprint("e: Exit Shop")

@@ -8,10 +8,12 @@ from shop import SellableItem, Shop
 
 
 class TestSellableItems():
-  def test_cards(self):
+  def test_colored_cards(self):
     '''See that we can make sellable items out of all cards and that they display correctly'''
     all_sellable_cards = list(items.cards.values())
-    # all_sellable_cards = [card for card in all_sellable_cards if card["Type"] in ("Attack", "Skill", "Power") and card["Rarity"] not in ("Special")]
+    all_sellable_cards = [card for card in all_sellable_cards if card["Type"] in ("Attack", "Skill", "Power") and
+                          card["Rarity"] not in ("Special", "Boss") and
+                          card['Class'] != 'Colorless']
     for card in all_sellable_cards:
       sellable = SellableItem(card)
       ansiprint(sellable.valid_string())
@@ -26,6 +28,23 @@ class TestSellableItems():
         assert 68 <= sellable.price <= 82
       elif card["Rarity"] == "Rare":
         assert 135 <= sellable.price <= 165
+
+  def test_colorless_cards(self):
+    all_sellable_cards = list(items.cards.values())
+    all_sellable_cards = [card for card in all_sellable_cards if card["Type"] in ("Attack", "Skill", "Power") and
+                          card["Rarity"] not in ("Special", "Boss") and
+                          card['Class'] == 'Colorless']
+    for card in all_sellable_cards:
+      sellable = SellableItem(card)
+      ansiprint(sellable.valid_string())
+      ansiprint(sellable.invalid_string())
+      # Lets also check that the gold values are within the expected ranges
+      # - uncommmon  (81-99)
+      # - Rare (162-198)
+      if card["Rarity"] == "Uncommon":
+        assert 81 <= sellable.price <= 99
+      elif card["Rarity"] == "Rare":
+        assert 162 <= sellable.price <= 198
 
   def test_potions(self):
     '''See that we can make sellable items out of all potions and that they display correctly'''
@@ -48,6 +67,7 @@ class TestSellableItems():
   def test_relics(self):
     '''See that we can make sellable items out of all relics and that they display correctly'''
     all_sellable_relics = list(items.relics.values())
+    all_sellable_relics = [relic for relic in all_sellable_relics if relic["Rarity"] not in ("Event", "Special", "Boss")]
     for relic in all_sellable_relics:
       sellable = SellableItem(relic)
       ansiprint(sellable.valid_string())
@@ -74,3 +94,9 @@ def test_buying_a_card(monkeypatch):
   with monkeypatch.context() as m:
     m.setattr('builtins.input', lambda *a, **kw: next(responses))
     shop.loop()
+
+@pytest.mark.skip("Manual test requires user input.")
+def test_buying_cards_MANUAL():
+  player = entities.create_player()
+  shop = Shop(player)
+  shop.loop()
