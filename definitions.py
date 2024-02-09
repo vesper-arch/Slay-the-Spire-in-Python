@@ -38,3 +38,5 @@ class PlayerClass(StrEnum):
     SILENT = 'Silent'
     DEFECT = 'Defect'
     WATCHER = 'Watcher'
+    COLORLESS = 'Colorless'
+    ANY = 'Any'

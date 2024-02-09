@@ -692,6 +692,7 @@ relics: dict[str: dict] = {
 }
 cards = (IroncladStrike, IroncladDefend, Bash)
 
+# Need to convert this to a method once I do the potions to eliminate this global variable.
 sacred_multi: int = 1
 def activate_sacred_bark():
     global sacred_multi

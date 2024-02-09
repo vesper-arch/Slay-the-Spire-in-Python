@@ -1,4 +1,5 @@
 from enum import StrEnum
+from typing import Any
 from ansi_tags import ansiprint
 from definitions import Rarity, CardType, PlayerClass
 
@@ -16,6 +17,7 @@ class Message(StrEnum):
     ON_DRAW = 'on_draw'
     ON_EXHAUST = 'on_exhaust'
     ON_CARD_PLAY = 'on_card_play'
+    ON_CARD_ADD = 'on_card_add'
 
 class MessageBus():
     '''This is a Pub/Sub, or Publish/Subscribe, message bus. It allows components to subscribe to messages,

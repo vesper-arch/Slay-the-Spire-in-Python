@@ -6,7 +6,8 @@ from os import system
 from copy import deepcopy
 from ansi_tags import ansiprint, strip
 from typing import Callable
-from definitions import CombatTier
+from definitions import CombatTier, Rarity, PlayerClass, CardType
+from message_bus_tools import bus, Message
 
 active_enemies = []
 
@@ -24,7 +25,7 @@ class Displayer():
             return
         if shuffle is True:
             pile = random.sample(pile, len(pile))
-            ansiprint("<italic>Cards are not shwon in order.</italic>")
+            ansiprint("<italic>Cards are not shown in order.</italic>")
         counter = 1
         for card in pile:
             if validator(card):
@@ -45,7 +46,7 @@ class Displayer():
         for relic in relic_pool:
             if validator(relic):
                 name_colors = {'Starter': 'starter', 'Common': 'white', 'Uncommon': 'uncommon', 'Rare': 'rare', 'Event': 'event'}
-                ansiprint(f"{counter}: <{name_colors[relic['Rarity']]}>{relic['Name']}</{name_colors[relic['Rarity']]}> | {relic['Class']} | <yellow>{relic['Info']}</yellow> | <dark-blue><italic>{relic['Flavor']}</italic></dark-blue>")
+                ansiprint(f"{counter}: <{name_colors[relic.rarity]}>{relic.name}</{name_colors[relic.rarity]}> | {relic.player_class} | <yellow>{relic.info}</yellow> | <dark-blue><italic>{relic.flavor_text}</italic></dark-blue>")
                 counter += 1
                 sleep(0.05)
         if end:
@@ -61,7 +62,7 @@ class Displayer():
             if validator(potion):
                 chosen_class_color = class_colors[potion['Class']]
                 chosen_rarity_color = rarity_colors[potion['Rarity']]
-                ansiprint(f"{f'{counter}: ' if numbered_list else ''}<{chosen_rarity_color}>{potion['Name']}</{chosen_rarity_color}> | <{chosen_class_color}>{potion['Class']}</{chosen_class_color}> | <yellow>{potion['Info']}</yellow>")
+                ansiprint(f"{f'{counter}: ' if numbered_list else ''}<{chosen_rarity_color}>{potion.name}</{chosen_rarity_color}> | <{chosen_class_color}>{potion.player_class}</{chosen_class_color}> | <yellow>{potion.info}</yellow>")
                 counter += 1
         for _ in range(max_potions - len(potion_pool)):
             ansiprint(f"<light-black>{f'{counter}: ' if numbered_list else ''}(Empty)</light-black>")
@@ -78,7 +79,7 @@ class Displayer():
         ansiprint("<bold>Relics: </bold>")
         self.view_relics(entity.relics)
         ansiprint("<bold>Hand: </bold>")
-        self.view_piles(entity.hand, entity, False, lambda card: (card.get("Energy", float('inf')) if card.get("Energy", float('inf')) != -1 else entity.energy) <= entity.energy)
+        self.view_piles(entity.hand, entity, False, lambda card: (card.energy_cost if card.energy_cost != -1 else entity.energy) <= entity.energy)
         if combat is True:
             counter = 1
             ansiprint("\n<bold>Enemies:</bold>")
@@ -175,9 +176,9 @@ class Generators():
         Boss combat rewards:
         Rare: 100% | Uncommon: 0% | Common: 0%
         """
-        common_cards = [card for card in card_pool.values() if card.get("Rarity") == "Common" and card.get("Type") not in ('Status', 'Curse') and card.get('Class') == entity.player_class]
-        uncommon_cards = [card for card in card_pool.values() if card.get("Rarity") == "Uncommon" and card.get("Type") not in ('Status', 'Curse') and card.get('Class') == entity.player_class]
-        rare_cards = [card for card in card_pool.values() if card.get("Rarity") == "Rare" and card.get("Type") not in ('Status', 'Curse') and card.get('Class') == entity.player_class]
+        common_cards = [card() for card in card_pool if card.rarity == Rarity.COMMON and card.type not in (CardType.STATUS, CardType.CURSE) and card.player_class == entity.player_class]
+        uncommon_cards = [card() for card in card_pool if card.rarity == Rarity.UNCOMMON and card.type not in (CardType.STATUS, CardType.CURSE) and card.player_class == entity.player_class]
+        rare_cards = [card() for card in card_pool if card.rarity == Rarity.RARE and card.type not in (CardType.STATUS, CardType.CURSE) and card.player_class == entity.player_class]
         assert len(common_cards) > 0, f"Common pool is empty."
         assert len(uncommon_cards) > 0, f"Uncommon pool is empty."
         assert len(rare_cards) > 0, f"Rare pool is empty."
@@ -200,9 +201,9 @@ class Generators():
         """You have a 40% chance to get a potion at the end of combat.
         -10% when you get a potion.
         +10% when you don't get a potion."""
-        common_potions: list[dict] = [potion for potion in potion_pool.values() if potion.get("Rarity") == "Common" and (potion.get("Class") == "Any" or entity.player_class in potion.get('Class'))]
-        uncommon_potions: list[dict] = [potion for potion in potion_pool.values() if potion.get("Rarity") == "Uncommon" and (potion.get("Class") == "Any" or entity.player_class in potion.get('Class'))]
-        rare_potions: list[dict] = [potion for potion in potion_pool.values() if potion.get("Rarity") == "Rare" and (potion.get("Class") == "Any" or entity.player_class in potion.get('Class'))]
+        common_potions: list[dict] = [potion() for potion in potion_pool if potion.rarity == Rarity.COMMON and (potion.player_class == PlayerClass.ANY or potion.player_class == entity.player_class)]
+        uncommon_potions: list[dict] = [potion() for potion in potion_pool if potion.rarity == Rarity.UNCOMMON and (potion.player_class == PlayerClass.ANY or potion.player_class == entity.player_class)]
+        rare_potions: list[dict] = [potion() for potion in potion_pool if potion.rarity == Rarity.RARE and (potion.player_class == PlayerClass.ANY or potion.player_class == entity.player_class)]
         assert len(common_potions) > 0, f"Common potions pool is empty."
         assert len(uncommon_potions) > 0, f"Uncommon potions pool is empty."
         assert len(rare_potions) > 0, f"Rare potions pool is empty."
@@ -219,9 +220,10 @@ class Generators():
 
 
     def generate_relic_rewards(self, source: str, amount: int, entity, relic_pool: dict, chance_based=True) -> list[dict]:
-        common_relics = [relic for relic in relic_pool.values() if (relic.get('Rarity') == 'Common') and (relic.get('Class') == entity.player_class) and (relic not in entity.relics)]
-        uncommon_relics = [relic for relic in relic_pool.values() if (relic.get('Rarity') == 'Uncommon') and (relic.get('Class') == entity.player_class) and (relic not in entity.relics)]
-        rare_relics = [relic for relic in relic_pool.values() if (relic.get('Rarity') == 'Rare') and (relic.get('Class') == entity.player_class) and (relic not in entity.relics)]
+        claimed_relics = [relic.name for relic in entity.relics]
+        common_relics = [relic() for relic in relic_pool if relic.get('Rarity') == 'Common' and relic.get('Class') == entity.player_class and relic not in entity.relics and relic.name not in claimed_relics]
+        uncommon_relics = [relic() for relic in relic_pool if relic.get('Rarity') == 'Uncommon' and relic.get('Class') == entity.player_class and relic not in entity.relics and relic.name not in claimed_relics]
+        rare_relics = [relic() for relic in relic_pool if relic.get('Rarity') == 'Rare' and relic.get('Class') == entity.player_class and relic not in entity.relics and relic.name not in claimed_relics]
         all_relic_pool = common_relics + uncommon_relics + rare_relics
         rarities = [common_relics, uncommon_relics, rare_relics]
         assert len(common_relics) > 0, "Common relics pool is empty."
@@ -256,11 +258,6 @@ class Generators():
                 sleep(0.5)
             sleep(0.5)
         while len(rewards) > 0 and choice:
-            counter = 1
-            for relic in rewards:
-                ansiprint(f"{counter}: {relic['Name']} | {relic['Class']} | <light-black>{relic['Rarity']}</light-black> | <yellow>{relic['Info']}</yellow> | <blue><italic>{relic['Flavor']}</italic></blue>")
-                counter += 1
-                sleep(0.05)
             option = view.list_input('What relic do you want? > ', rewards, view.view_relics)
             if not option:
                 sleep(1.5)
@@ -273,38 +270,29 @@ class Generators():
 
     def claim_potions(self, choice: bool, potion_amount: int, entity,  potion_pool: dict, rewards=None, chance_based=True):
         for relic in entity.relics:
-            if relic['Name'] == 'Sozu':
+            if relic.name == 'Sozu':
                 return
         if not rewards:
             rewards = self.generate_potion_rewards(potion_amount, entity, potion_pool, chance_based)
         if not choice:
             for i in range(potion_amount):
-                potion_pool.append(rewards[i])
-                print(f"{entity.name} obtained {rewards[i]['Name']} | {rewards[i]['Info']}")
-                rewards.remove(rewards[i])
+                if len(entity.potions) <= entity.max_potions:
+                    entity.potions.append(rewards[i])
+                    print(f"{entity.name} obtained {rewards[i].name} | {rewards[i].info}")
+                    rewards.remove(rewards[i])
             sleep(1.5)
             view.clear()
         while len(rewards) > 0:
-            counter = 1
             print(f"Potion Bag: ({len(potion_pool)} / {entity.max_potions})")
             view.view_potions(entity, False)
             print()
             print("Potion reward(s):")
-            counter = 1
-            for potion in rewards:
-                ansiprint(f"{counter}: <blue>{potion['Name']}</blue> | <light-black>{potion['Rarity']}</light-black> | <green>{potion['Class']}</green> | <yellow>{potion['Info']}</yellow>")
-                counter += 1
-            print()
             option = view.list_input('What potion you want? >', rewards, view.view_potions)
             if len(potion_pool) == entity.max_potions:
-                ansiprint("<red>Potion bag full!")
+                ansiprint("<red>Potion bag full!</red>")
                 sleep(1)
                 option = input("Discard a potion?(y|n) > ")
                 if option == 'y':
-                    counter = 1
-                    for potion in potion_pool:
-                        ansiprint(f"{counter}: <light-black>{potion['Rarity']}</light-black> | <green>{potion['Class']}</green> | <blue>{potion['Name']}</blue> | <yellow>{potion['Info']}</yellow>")
-                        counter += 1
                     option = view.list_input('What potion do you want to discard? > ', potion_pool, view.view_potions)
                     print(f"Discarded {potion_pool[option]['Name']}.")
                     potion_pool.remove(potion_pool[option])
@@ -325,38 +313,29 @@ class Generators():
         while True:
             if choice:
                 chosen_reward = view.list_input('What card do you want? > ', rewards, view.view_piles)
-                if (entity.upgrade_attacks or entity.upgrade_skills or entity.upgrade_powers) and rewards[chosen_reward]['Type'] in ['Attack', 'Skill', 'Power']:
-                    entity.card_actions(rewards[chosen_reward], 'Upgrade')
-                for relic in entity.relics:
-                    if relic['Name'] == 'Ceramic Fish':
-                        ansiprint("From <bold>Ceramic Fish</bold>: ", end='')
-                        entity.gain_gold(9)
+                # This could probably be condensed
+                if entity.upgrade_attacks and rewards[chosen_reward].type == 'Attack':
+                    rewards[chosen_reward].upgrade()
+                elif entity.upgrade_skills and rewards[chosen_reward].type == 'Skill':
+                    rewards[chosen_reward].upgrade()
+                elif entity.upgrade_powers and rewards[chosen_reward].type == 'Power':
+                    rewards[chosen_reward].upgrade()
                 entity.deck.append(rewards[chosen_reward])
-                ansiprint(f"{entity.name} obtained <bold>{rewards[chosen_reward]['Name']}</bold>")
+                ansiprint(f"{entity.name} obtained <bold>{rewards[chosen_reward].name}</bold>")
                 rewards.clear()
                 break
             for card in rewards:
-                if card.get('Type') == 'Curse' and entity.block_curses > 0:
-                    ansiprint(f"{card['Name']} was negated by <bold>Omamori</bold>.")
-                    entity.block_curses -= 1
-                    if entity.block_curses == 0:
-                        ansiprint('<bold>Omamori</bold> is depleted.')
-                    continue
-                if card.get('Type') == 'Curse' and entity.darkstone_health:
-                    ansiprint("<bold>Darkstone Periapt</bold> activated.")
-                    entity.health_actions(6, "Max Health")
+                bus.publish(Message.ON_CARD_ADD, (entity, card))
                 entity.deck.append(card)
-                print(f"{entity.name} obtained {card['Name']}")
+                print(f"{entity.name} obtained {card.name}")
                 rewards.remove(card)
-            if entity.gold_on_card_add:
-                entity.gold += 9
-                ansiprint('You gained 9 <yellow>Gold</yellow> from <bold>Ceramic Fish</bold>.')
             break
         rewards.clear()
         sleep(1)
 
 class EffectInterface():
     '''Responsible for applying effects, creating buff/debuff dictionaries, and counting down certain effects'''
+    # I'm gonna leave this alone for now because that's a lot of changes to be made
     def __init__(self):
         # Effects that wear off at the start of your turn despite not being duration effects
         self.REMOVE_ON_TURN = ('Next Turn Block', 'Energized', 'Amplify', 'Burst', 'Double Tap', 'Duplication', 'Flame Barrier', 'Rebound', 'Simmering Rage',

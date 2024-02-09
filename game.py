@@ -24,12 +24,11 @@ class Combat:
 
     def combat(self, current_map) -> None:
         """There's too much to say here."""
-        global combat_turn
         boss_name = self.start_combat(self.tier)
         # Combat automatically ends when all enemies are dead.
         while len(active_enemies) > 0:
             # Draws cards, removes block, ticks debuffs, and activates start-of-turn buffs, debuffs, and relics.
-            bus.publish(Message.START_OF_TURN, (self.player, self.active_enemies, self.tier))
+            bus.publish(Message.START_OF_TURN, (self.turn, ))
             while True:
                 if len(active_enemies) == 0:
                     self.end_combat(self.tier, killed_enemies=True)
