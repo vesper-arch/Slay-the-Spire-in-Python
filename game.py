@@ -238,7 +238,7 @@ def unknown() -> None:
         normal_combat = 0.1
         treasure_room += 0.02
         merchant += 0.03
-        Combat.combat(CombatTier.NORMAL)
+        Combat(player, CombatTier.NORMAL).combat()
     else:
         ansiprint(player)
         chosen_event = choose_event()

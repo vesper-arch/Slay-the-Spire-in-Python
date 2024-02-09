@@ -6,9 +6,13 @@ from time import sleep
 from ast import literal_eval
 from copy import deepcopy
 from ansi_tags import ansiprint
-from helper import active_enemies, view, gen, ei
+from helper import active_enemies, view, gen, ei, combat_turn
 from definitions import CombatTier, CardType, Rarity, PlayerClass
 from message_bus_tools import bus, Message, Registerable, Card
+
+relics = items.relics
+cards = items.cards
+potions = items.potions
 
 class Player(Registerable):
     """
@@ -373,7 +377,6 @@ class Player(Registerable):
             self.take_sourceless_dmg(2)
 
     def attack(self, dmg,  target: 'Enemy', card=None, ignore_block=False):
-        dmg_affected_by: str = ''
         # Check if already dead and skip if so
         if target.health <= 0:
             return
