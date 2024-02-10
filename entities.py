@@ -834,7 +834,7 @@ class Enemy:
 
 
 def create_player():
-    return Player(80, 0, 3, [deepcopy(card) for card in [items.IroncladStrike, items.IroncladStrike, items.IroncladStrike, items.IroncladStrike, items.IroncladStrike, items.IroncladDefend, items.IroncladDefend, items.IroncladDefend, items.IroncladDefend, items.Bash]])
+    return Player(80, 0, 3, [card() for card in [items.IroncladStrike, items.IroncladStrike, items.IroncladStrike, items.IroncladStrike, items.IroncladStrike, items.IroncladDefend, items.IroncladDefend, items.IroncladDefend, items.IroncladDefend, items.Bash]])
 
 # Characters
 player = create_player()
