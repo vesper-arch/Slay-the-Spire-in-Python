@@ -313,7 +313,7 @@ class Player(Registerable):
         self.block += card.block
         ansiprint(f'{self.name} gained {card.block} <blue>Block</blue> from {card.block_affected_by}')
         bus.publish(Message.AFTER_BLOCK, (self, card))
-        
+
 
     def health_actions(self, heal: int, heal_type: str):
         '''If [heal_type] is 'Heal', you heal for [heal] HP. If [heal_type] is 'Max Health', increase your max health by [heal].'''
@@ -406,7 +406,7 @@ class Player(Registerable):
             ansiprint(f"<blue>{self.deck[option]['Name']}</blue> is now bottled.")
             sleep(0.8)
             break
-        
+
     def end_of_turn_effects(self):
         if self.debuffs['Strength Down'] > 0:
             self.buffs['Strength'] -= self.debuffs['Strength Down']
@@ -526,7 +526,7 @@ class Player(Registerable):
         if self.buffs['Repair'] > 0:
             ansiprint("<light-cyan>Self Repair</light-cyan>: ", end='')
             self.health_actions(self.buffs['Repair'], 'Heal')
-    
+
     def callback(self, message, data: tuple):
         if message == Message.START_OF_COMBAT:
             self.in_combat = True
