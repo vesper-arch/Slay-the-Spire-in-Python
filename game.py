@@ -16,7 +16,7 @@ from enemy_catalog import (
     create_act1_elites,
     create_act1_normal_encounters,
 )
-from helper import active_enemies, combat_turn, ei, gen, potion_dropchance, view
+from helper import active_enemies, ei, gen, view
 from shop import Shop
 
 
@@ -47,8 +47,8 @@ class Combat:
                 view.display_ui(player, active_enemies)
                 print("1-0: Play card, P: Play Potion, M: View Map, D: View Deck, A: View Draw Pile, S: View Discard Pile, X: View Exhaust Pile, E: End Turn, F: View Debuffs and Buffs")
                 action = input("> ").lower()
-                other_options = {'d': lambda: view.view_piles(player.deck), 'a': lambda: view.view_piles(player.draw_pile),
-                        's': lambda: view.view_piles(player.discard_pile), 'x': lambda: view.view_piles(player.exhaust_pile),
+                other_options = {'d': lambda: view.view_piles(player.deck, end=True), 'a': lambda: view.view_piles(player.draw_pile, shuffle=True, end=True),
+                        's': lambda: view.view_piles(player.discard_pile, end=True), 'x': lambda: view.view_piles(player.exhaust_pile, end=True),
                         'p': play_potion, 'f': lambda: ei.full_view(player, self.active_enemies), 'm': lambda: view.view_map(current_map)}
                 if action.isdigit():
                     option = int(action) - 1
@@ -67,12 +67,8 @@ class Combat:
                     continue
                 sleep(1)
                 view.clear()
-            player.end_player_turn()
-            for enemy in active_enemies:
-                enemy.execute_move()
-                input('Press enter to continue > ')
-                view.clear()
-            combat_turn += 1
+            bus.publish(Message.END_OF_TURN, data=None) # So far I don't need to have anything passed for data
+            self.turn += 1
 
     def end_combat(self, killed_enemies=False, escaped=False, robbed=False):
         if killed_enemies is True:

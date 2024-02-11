@@ -6,9 +6,10 @@ from time import sleep
 from ast import literal_eval
 from copy import deepcopy
 from ansi_tags import ansiprint
-from helper import active_enemies, view, gen, ei, combat_turn
+from helper import active_enemies, view, gen, ei
 from definitions import CombatTier, CardType, Rarity, PlayerClass
 from message_bus_tools import bus, Message, Registerable, Card
+from uuid import uuid4
 
 relics = items.relics
 cards = items.cards
@@ -22,15 +23,17 @@ class Player(Registerable):
     name: The player's name
     player_class: Ironclad, Silent, Defect, and Watcher
     max_health: The max amount health the player can have
-    energy: Resource used to play items.cards. Replenished at the start of their turn
-    max_energy/energy_gain: The base amount of energy the player gains at the start of their turn
-    deck: All the items.cards the player has
-    potions: Consumables that have varying effects.
+    energy: Resource used to play cards. Replenished at the start of their turn
+    energy_gain: The base amount of energy the player gains at the start of their turn
+    deck: All the cards the player has. Is shuffled into the player's draw pile at the start of combat.
+    potions: Holds the potions the player gets.
     max_potions: The max amount of potions the player can have
     """
     registers = [Message.END_OF_COMBAT, Message.START_OF_COMBAT, Message.START_OF_TURN, Message.END_OF_TURN]
 
-    def __init__(self, health: int, block: int, max_energy: int, deck: list, powers: dict=None):
+    def __init__(self, health: int, block: int, max_energy: int, deck: list[Card], powers: dict=None):
+        self.uid = uuid4()
+        self.register(bus=bus)
         if not powers:
             powers = {}
         self.health: int = health
@@ -352,15 +355,6 @@ class Player(Registerable):
                     ansiprint(f"{new_card['Name']} | <yellow>{new_card['Info']}</yellow>")
                     return new_card
 
-    def end_player_turn(self):
-        self.discard_pile += self.hand
-        if items.relics['Runic Pyramid'] not in self.relics:
-            self.hand.clear()
-        self.end_of_turn_effects()
-        self.end_of_turn_items.relics()
-        sleep(1.5)
-        view.clear()
-
     def move_card(self, card, move_to, from_location, cost_energy, shuffle=False):
         if cost_energy is True:
             self.energy -= max(card.energy_cost, 0)
@@ -566,13 +560,18 @@ class Player(Registerable):
             self.plays_this_turn = 0
             ei.tick_effects(self)
             self.fresh_effects.clear()
-            self.start_of_turn_relics()
-            self.start_of_turn_effects()
+        elif message == Message.END_OF_TURN:
+            self.discard_pile += self.hand
+            if items.relics['Runic Pyramid'] not in self.relics:
+                self.hand.clear()
+            sleep(1)
+            view.clear()
 
 
 
-class Enemy:
+class Enemy(Registerable):
     def __init__(self, health_range: list, block: int, name: str, powers: dict=None):
+        self.uid = uuid4()
         if not powers:
             powers = {}
         actual_health = random.randint(health_range[0], health_range[1])
@@ -621,7 +620,7 @@ class Enemy:
     def set_intent(self):
         pass
 
-    def execute_move(self) -> tuple[str]:
+    def execute_move(self):
         moves = 1
         display_name = "DEFAULT: UNKNOWN"
         for action in self.next_move:
@@ -806,18 +805,6 @@ class Enemy:
             active_enemies.append(chosen_enemy)
             ansiprint(f"<bold>{chosen_enemy.name}</bold> summoned!")
 
-    def start_turn(self):
-        ansiprint(f"<underline><bold>{self.name}</bold></underline>:")
-        if "Block" not in self.intent: # Checks the last move used to see if the enemy Blocked last turn
-            if self.buffs["Barricade"] is False:
-                self.block = 0
-            else:
-                if self.active_turns > 1 and self.block > 0:
-                    ansiprint(f"{self.name}'s Block was not removed because of <light-cyan>Barricade</light-cyan")
-        ei.tick_effects(self)
-        print()
-        self.set_intent()
-
     def end_of_turn_effects(self):
         if self.buffs['Ritual'] > 0:
             ansiprint('<light-cyan>Ritual</light-cyan>: ', end='')
@@ -834,6 +821,23 @@ class Enemy:
         if self.buffs['Strength Up'] > 0:
             ansiprint('<light-cyan>Strength Up</light-cyan>: ', end='')
             ei.apply_effect(self, self, 'Strength', self.buffs['Strength Up'])
+    
+    def callback(self, message, data):
+        if message == Message.START_OF_TURN:
+            ansiprint(f"<underline><bold>{self.name}</bold></underline>:")
+            if "Block" not in self.intent: # Checks the last move(its intent hasn't been updated yet) used to see if the enemy Blocked last turn
+                if self.buffs["Barricade"] is False:
+                    self.block = 0
+                else:
+                    if self.active_turns > 1 and self.block > 0:
+                        ansiprint(f"{self.name}'s Block was not removed because of <light-cyan>Barricade</light-cyan")
+            ei.tick_effects(self)
+            print()
+            self.set_intent()
+        elif message == Message.END_OF_TURN:
+            self.execute_move()
+            # Needs to be expanded at some point
+
 
 
 def create_player():

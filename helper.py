@@ -46,7 +46,7 @@ class Displayer():
         for relic in relic_pool:
             if validator(relic):
                 name_colors = {'Starter': 'starter', 'Common': 'white', 'Uncommon': 'uncommon', 'Rare': 'rare', 'Event': 'event'}
-                ansiprint(f"{counter}: <{name_colors[relic.rarity]}>{relic.name}</{name_colors[relic.rarity]}> | {relic.player_class} | <yellow>{relic.info}</yellow> | <dark-blue><italic>{relic.flavor_text}</italic></dark-blue>")
+                ansiprint(f"{counter}: <{name_colors[relic['Rarity']]}>{relic['Name']}</{name_colors[relic['Rarity']]}> | {relic['Class']} | <yellow>{relic['Info']}</yellow> | <dark-blue><italic>{relic['Flavor']}</italic></dark-blue>")
                 counter += 1
                 sleep(0.05)
         if end:

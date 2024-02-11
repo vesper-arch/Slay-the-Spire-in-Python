@@ -2,6 +2,7 @@ from enum import StrEnum
 from typing import Any
 from ansi_tags import ansiprint
 from definitions import Rarity, CardType, PlayerClass
+from uuid import uuid4
 
 class Message(StrEnum):
     '''Messages that can be sent to the message bus.'''
@@ -50,6 +51,8 @@ class Registerable():
 
 class Effect(Registerable):
     def __init__(self, stack_type, info, amount=0):
+        self.uid = uuid4()
+        self.register(bus=bus)
         self.name = 'default'
         self.stack_type = stack_type
         self.info = info
@@ -61,6 +64,8 @@ class Effect(Registerable):
 
 class Relic(Registerable):
     def __init__(self, name, info, flavor_text, rarity, player_class='Any'):
+        self.uid = uuid4()
+        self.register(bus=bus)
         self.name = name
         self.info = info
         self.flavor_text = flavor_text
@@ -72,6 +77,8 @@ class Relic(Registerable):
     
 class Card(Registerable):
     def __init__(self, name: str, info: str, rarity: Rarity, player_class: PlayerClass, card_type: CardType, target='Nothing', energy_cost=-1):
+        self.uid = uuid4()
+        self.register(bus=bus)
         self.name = name
         self.info = info
         self.rarity = rarity
@@ -85,7 +92,7 @@ class Card(Registerable):
         self.upgrade_preview = f"{self.name} -> <green>{self.name + '+'}</green> | "
 
     def pretty_print(self):
-        return f"""<{self.rarity.lower()}>{self.name}</{self.rarity.lower()}> | <light-black>{self.type}</light-black>{f' | <light-red>{"<green>" if self.base_energy_cost != self.energy_cost else ""}{self.energy_cost}{"</green>" if self.base_energy_cost != self.energy_cost else ""} Energy</light-red>' if self.energy > -1 else ''} | <yellow>{self.info}</yellow>"""
+        return f"""<{self.rarity.lower()}>{self.name}</{self.rarity.lower()}> | <light-black>{self.type}</light-black>{f' | <light-red>{"<green>" if self.base_energy_cost != self.energy_cost else ""}{self.energy_cost}{"</green>" if self.base_energy_cost != self.energy_cost else ""} Energy</light-red>' if self.energy_cost > -1 else ''} | <yellow>{self.info}</yellow>"""
 
     def upgrade_markers(self):
         self.info += '<green>+</green>'
