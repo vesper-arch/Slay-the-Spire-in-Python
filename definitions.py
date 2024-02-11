@@ -15,23 +15,32 @@ class EncounterType(StrEnum):
     UNKNOWN = auto()
 
 class Rarity(StrEnum):
-    BASIC ='Basic'
-    BOSS ='Boss'
-    COMMON ='Common'
-    CURSE ='Curse'
-    EVENT ='Event'
-    RARE ='Rare'
-    SHOP ='Shop'
-    SPECIAL ='Special'
-    STARTER ='Starter'
-    UNCOMMON ='Uncommon'
+    BASIC = 'Basic'
+    STARTER = 'Starter'
+    COMMON = 'Common'
+    UNCOMMON = 'Uncommon'
+    RARE = 'Rare'
+    SPECIAL = 'Special'
+    CURSE = 'Curse'
+    STATUS = 'Status'
+    BOSS = 'Boss'
+    EVENT = 'Event'
+    SHOP = 'Shop'
 
 class CardType(StrEnum):
     ATTACK = 'Attack'
     SKILL = 'Skill'
     POWER = 'Power'
-    STATUS = 'Status'
     CURSE = 'Curse'
+    STATUS = 'Status'
+
+class PlayerClass(StrEnum):
+    IRONCLAD = 'Ironclad'
+    SILENT = 'Silent'
+    DEFECT = 'Defect'
+    WATCHER = 'Watcher'
+    COLORLESS = 'Colorless'
+    ANY = 'Any'
 
 class TargetType(StrEnum):
     ANY = 'Any'

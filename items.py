@@ -3,40 +3,61 @@ from copy import deepcopy
 from time import sleep
 
 from ansi_tags import ansiprint
-from definitions import CardType, Rarity, TargetType
-from helper import ei, view
+from helper import view, ei
+from message_bus_tools import Card, Message
+from definitions import CardType, Rarity, PlayerClass, TargetType
 
 
-def modify_energy_cost(amount: int, modify_type: str, card: dict):
-    assert modify_type in ('Set', 'Adjust'), f"modify_type must be 'Set' or 'Adjust', not {modify_type}"
-    if card.get("Energy") is None:
-        ansiprint("<red>This card is not playable and therefore its energy cannot be changed.</red>")
-        return
-    if (modify_type == 'Set' and amount != card['Energy']) or (modify_type == 'Adjust' and amount != 0):
-        card['Changed Energy'] = True
-    if modify_type == 'Set':
-        card['Energy'] = amount
-        ansiprint(f"{card['Name']} has its energy cost set to {amount}")
-    elif modify_type == 'Adjust':
-        card['Energy'] += amount
-        ansiprint(f"{card['Name']} got its energy cost {'<green>reduced</green>' if amount < 0 else '<red>increased</red>'} by {abs(amount)}")
-    return card
+class IroncladStrike(Card):
+    def __init__(self):
+        super().__init__("Strike", "Deal 6 damage.", Rarity.BASIC, PlayerClass.IRONCLAD, CardType.ATTACK, target='Single', energy_cost=1)
+        self.base_damage = 6
+        self.damage = self.base_damage
+        self.damage_affected_by = [f"Strike({self.damage} dmg)"]
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Deal <green>9</green> damage.</yellow>"
+    
+    def upgrade(self):
+        self.upgrade_markers()
+        self.base_damage, self.damage = 9
+        self.info = 'Deal 9 damage.'
+    
+    def apply(self, origin, target):
+        origin.attack(target, self)
 
-def use_strike(targeted_enemy: object, using_card, entity):
-    '''Deals 6(9) damage.'''
-    entity.attack(using_card['Damage'], targeted_enemy, using_card)
+class Bash(Card):
+    def __init__(self):
+        super().__init__("Bash", "Deal 8 damage. Apply 2 <debuff>Vulnerable</debuff>.", Rarity.BASIC, PlayerClass.IRONCLAD, CardType.ATTACK, target='Single', energy_cost=2)
+        self.base_damage = 8
+        self.damage = self.base_damage
+        self.damage_affected_by = [f"Bash({self.damage} dmg)"]
+        self.vulnerable = 2
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Deal <green>10</green> damage. Apply <green>3</green> <debuff>Vulnerable</debuff>.</yellow>"
+    
+    def upgrade(self):
+        self.upgrade_markers()
+        self.base_damage, self.damage = 10
+        self.vulnerable = 3
+        self.info = "Deal 10 damage. Apply 3 <debuff>Vulnerable</debuff>."
+    
+    def apply(self, origin, target):
+        origin.attack(target, self)
+        ei.apply_effect(target, origin, 'Vulnerable', self.vulnerable)
 
-
-def use_bash(targeted_enemy: object, using_card, entity):
-    '''Deals 8(10) damage. Apply 2(3) Vulnerable'''
-    print()
-    entity.attack(using_card['Damage'], targeted_enemy, using_card)
-    ei.apply_effect(targeted_enemy, entity, 'Vulnerable', using_card['Vulnerable'])
-
-
-def use_defend(using_card, entity):
-    '''Gain 5(8) Block'''
-    entity.blocking(using_card['Block'])
+class IroncladDefend(Card):
+    def __init__(self):
+        super().__init__("Defend", "Gain 5 <keyword>Block</keyword>.", Rarity.BASIC, PlayerClass.IRONCLAD, CardType.SKILL, target='Player', energy_cost=1)
+        self.base_block = 5
+        self.block = self.base_block
+        self.block_affected_by = [f"Defend({self.block} block)"]
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Gain <green>8</green> <keyword>Block</keyword>.</yellow>"
+    
+    def upgrade(self):
+        self.upgrade_markers()
+        self.base_block, self.block = 8
+        self.info = "Gain 8 <keyword>Block</keyword>."
+    
+    def apply(self, origin):
+        origin.blocking(self)
 
 
 def use_bodyslam(targeted_enemy, using_card, entity):
@@ -309,12 +330,12 @@ def use_infernalblade(using_card, entity):
     '''Add a random Attack into your hand. It costs 0 this turn. Exhaust.'''
     _ = using_card
     valid_cards = [card for card in cards.values() if card.get('Type') == 'Attack' and card.get('Class') == entity.player_class]
-    entity.hand.append(modify_energy_cost(0, 'Set', deepcopy(random.choice(valid_cards))))
+    entity.hand.append(random.choice(valid_cards).modify_energy_cost(0, 'Set'))
 
 def use_chrysalis(using_card, entity):
     '''Add 3(5) random Skills into your hand. They cost 0 this turn. Exhaust.'''
-    valid_cards = [card for card in cards.values() if card.get('Type') == CardType.SKILL and card.get('Class') == entity.player_class]
-    entity.hand.append(modify_energy_cost(amount=0, modify_type='Set', card=deepcopy(random.choice(valid_cards))))
+    valid_cards = [card() for card in cards if card.type == CardType.SKILL and card.player_class == entity.player_class]
+    entity.hand.append(random.choice(valid_cards).modify_energy_cost(0, 'Set'))
 
 def use_discovery(using_card, entity):
     '''Choose 1 of 3 random cards to add to your hand. It costs 0 this turn. Exhaust. (Don't Exhaust.)'''
@@ -720,13 +741,14 @@ relics: dict[str: dict] = {
     # Circlet can only be obtained once you have gotten all other relics.
     'Circlet': {'Name': 'Circlet', 'Class': 'Any', 'Rarity': 'Special', 'Info': 'Looks pretty.', 'Flavor': 'You ran out of relics to find. Impressive!'}
 }
-cards = {
+cards = (IroncladStrike, IroncladDefend, Bash)
+cards_old = {
     # Ironclad cards
-    'Strike': {'Name': 'Strike', 'Damage': 6, 'Energy': 1, 'Rarity': 'Basic', 'Target': 'Single', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ6 damage.', 'Effects+': {'Damage': 9, 'Info': 'Deal Σ9 damage.'}, 'Function': use_strike},
+    'Strike': {'Name': 'Strike', 'Damage': 6, 'Energy': 1, 'Rarity': 'Basic', 'Target': 'Single', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ6 damage.', 'Effects+': {'Damage': 9, 'Info': 'Deal Σ9 damage.'}},
 
-    'Defend': {'Name': 'Defend', 'Block': 5, 'Energy': 1, 'Target': 'Yourself', 'Rarity': 'Basic', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Gain Ω5 <keyword>Block</keyword>.', 'Effects+': {'Block': 8, 'Info': 'Gain Ω8 <keyword>Block</keyword>'}, 'Function': use_defend},
+    'Defend': {'Name': 'Defend', 'Block': 5, 'Energy': 1, 'Target': 'Yourself', 'Rarity': 'Basic', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Gain Ω5 <keyword>Block</keyword>.', 'Effects+': {'Block': 8, 'Info': 'Gain Ω8 <keyword>Block</keyword>'}},
 
-    'Bash': {'Name': 'Bash', 'Damage': 8, 'Vulnerable': 2, 'Energy': 2, 'Target': 'Single', 'Rarity': 'Basic', 'Class': 'Ironclad', 'Type': 'Attack', 'Info': 'Deal Σ8 damage. Apply 2 <debuff>Vulnerable</debuff>', 'Effects+': {'Damage': 10, 'Vulnerable': 3, 'Info': 'Deal Σ10 damage. Apply 3 <debuff>Vulnerable</debuff>'}, 'Function': use_bash},
+    'Bash': {'Name': 'Bash', 'Damage': 8, 'Vulnerable': 2, 'Energy': 2, 'Target': 'Single', 'Rarity': 'Basic', 'Class': 'Ironclad', 'Type': 'Attack', 'Info': 'Deal Σ8 damage. Apply 2 <debuff>Vulnerable</debuff>', 'Effects+': {'Damage': 10, 'Vulnerable': 3, 'Info': 'Deal Σ10 damage. Apply 3 <debuff>Vulnerable</debuff>'}},
 
     'Anger': {'Name': 'Anger', 'Damage': 6, 'Energy': 0,  'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ6 damage. Add a copy of this card to your discard pile.', 'Effects+': {'Damage': 8, 'Info': 'Deal Σ8 damage. Add a copy of this card to your discard pile.'}, 'Function': use_anger},
 
@@ -982,6 +1004,7 @@ cards = {
     "Through Violence": {"Name": "Through Violence", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.ATTACK, "Energy": 0, "Info": "Retain. Deal 20(30) damage. Exhaust. (Obtained from Reach Heaven).", "Exhaust": True, "Target": TargetType.ENEMY},
 }
 
+# Need to convert this to a method once I do the potions to eliminate this global variable.
 sacred_multi: int = 1
 def activate_sacred_bark():
     global sacred_multi
