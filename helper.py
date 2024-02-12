@@ -6,7 +6,7 @@ from os import system
 from copy import deepcopy
 from ansi_tags import ansiprint, strip
 from typing import Callable
-from definitions import CombatTier, Rarity, PlayerClass, CardType
+from definitions import CombatTier, Rarity, PlayerClass, CardType, EnemyState
 from message_bus_tools import bus, Message
 
 active_enemies = []
@@ -83,7 +83,7 @@ class Displayer():
         if combat is True:
             counter = 1
             ansiprint("\n<bold>Enemies:</bold>")
-            for enemy in enemies:
+            for enemy in (enemy for enemy in enemies if enemy.state in (EnemyState.ALIVE, EnemyState.INTANGIBLE)):
                 ansiprint(f"{counter}: " + repr(enemy))
                 counter += 1
             ansiprint("\n" + repr(entity))

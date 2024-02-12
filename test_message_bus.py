@@ -33,7 +33,7 @@ def test_message_bus():
   bus.publish(Message.BEFORE_ATTACK, "data")
 
   # Unsubscribe
-  del bus.subscribers[Message.BEFORE_ATTACK][111]
+  bus.unsubscribe(Message.BEFORE_ATTACK, 111)
 
   # No callback
   bus.publish(Message.BEFORE_ATTACK, "data")

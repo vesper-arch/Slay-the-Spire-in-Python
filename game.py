@@ -99,8 +99,10 @@ class Combat:
             sleep(1.2)
             view.clear()
         bus.publish(Message.END_OF_COMBAT, (self.tier, self.player))
+        player.unsubscribe()
 
     def start_combat(self, combat_tier: CombatTier):
+        player.register(bus=bus)
         act1_normal_encounters  = create_act1_normal_encounters()
         act1_elites = create_act1_elites()
         act1_boss = create_act1_boss()
@@ -109,8 +111,9 @@ class Combat:
             CombatTier.ELITE: act1_elites,
             CombatTier.BOSS: act1_boss
         }
-        encounter_enemies = encounter_types[combat_tier][0]
+        encounter_enemies: list[Enemy] = encounter_types[combat_tier][0]
         for enemy in encounter_enemies:
+            enemy.register(bus=bus)
             active_enemies.append(enemy)
         bus.publish(Message.START_OF_COMBAT, (combat_tier, player))
         return act1_boss[0].name

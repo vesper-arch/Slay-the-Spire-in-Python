@@ -34,6 +34,11 @@ class MessageBus():
         self.subscribers[event_type][uid] = callback
         if self.debug:
             ansiprint(f"<basic>MESSAGEBUS</basic>: <blue>{event_type}</blue> | Subscribed <bold>{callback.__qualname__}</bold>")
+    
+    def unsubscribe(self, event_type, uid):
+        if self.debug:
+            ansiprint(f"<basic>MESSAGEBUS</basic>: Unsubscribed <bold>{self.subscribers[event_type][uid].__qualname__}</bold> from {', '.join(event_type).replace(', ', '')}")
+        del self.subscribers[event_type][uid]
 
     def publish(self, event_type: Message, data):
         if event_type in self.subscribers:
@@ -48,6 +53,13 @@ class Registerable():
     def register(self, bus):
         for message in self.registers:
             bus.subscribe(message, self.callback, self.uid)
+    
+    def unsubscribe(self, event_types: list[Message]=None):
+        '''Unsubscribes the object from certain events. Unsubscribes from all registers by default.'''
+        if not event_types:
+            event_types = self.registers
+        for message in event_types:
+            bus.unsubscribe(message, self.uid)
 
 class Effect(Registerable):
     def __init__(self, stack_type, info, amount=0):

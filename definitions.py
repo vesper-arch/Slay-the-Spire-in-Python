@@ -55,3 +55,9 @@ class CardCategory(StrEnum):
     CARD = 'Card'
     POTION = 'Potion'
     RELIC = 'Relic'
+
+class EnemyState(StrEnum):
+    ALIVE = 'alive'
+    DEAD = 'dead'
+    ESCAPED = 'escaped'
+    INTANGIBLE = 'intangible' # Enemies that revive have a period where they cannot be attacked and have no intent.

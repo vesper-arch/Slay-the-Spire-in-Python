@@ -7,7 +7,7 @@ from ast import literal_eval
 from copy import deepcopy
 from ansi_tags import ansiprint
 from helper import active_enemies, view, gen, ei
-from definitions import CombatTier, CardType, Rarity, PlayerClass
+from definitions import CombatTier, CardType, Rarity, PlayerClass, EnemyState
 from message_bus_tools import bus, Message, Registerable, Card
 from uuid import uuid4
 
@@ -33,7 +33,6 @@ class Player(Registerable):
 
     def __init__(self, health: int, block: int, max_energy: int, deck: list[Card], powers: dict=None):
         self.uid = uuid4()
-        self.register(bus=bus)
         if not powers:
             powers = {}
         self.health: int = health
@@ -583,6 +582,7 @@ class Enemy(Registerable):
         self.past_moves = ['place'] * 3
         self.intent: str = ''
         self.next_move: list[tuple[str, str, tuple] | tuple[str, tuple]] = ''
+        self.state = 'Alive'
         self.buffs = ei.init_effects("Enemy Buffs") | powers
         self.debuffs = ei.init_effects("Enemy Debuffs")
         self.stolen_gold = 0
@@ -684,7 +684,7 @@ class Enemy(Registerable):
         sleep(0.6)
         if func_name == 'Cowardly':
             ansiprint("<italic>Hehe. Thanks for the money.<italic>")
-            active_enemies.remove(self)
+            self.state = EnemyState.ESCAPED
             ansiprint(f"<italic><red>{self.name} has escaped</red></italic>")
         elif func_name == 'Sleeping':
             sleeptalk = parameters[0]
@@ -726,13 +726,10 @@ class Enemy(Registerable):
         Dies.
         """
         print(f"{self.name} has died.")
-        if items.relics['Gremlin Horn'] in player.items.relics:
+        if relics['Gremlin Horn'] in player.relics:
             player.energy += 1
             player.draw_cards(True, 1)
-        try:
-            active_enemies.remove(self)
-        except ValueError:
-            raise Exception(f"{self.name} is not in the active enemies list.")
+        self.state = EnemyState.DEAD
 
     def debuff_and_buff_check(self):
         """
