@@ -569,6 +569,9 @@ class Player(Registerable):
 
 
 class Enemy(Registerable):
+
+    registers = [Message.START_OF_TURN, Message.END_OF_TURN, Message.ON_DEATH_OR_ESCAPE]
+
     def __init__(self, health_range: list, block: int, name: str, powers: dict=None):
         self.uid = uuid4()
         if not powers:
@@ -834,6 +837,9 @@ class Enemy(Registerable):
         elif message == Message.END_OF_TURN:
             self.execute_move()
             # Needs to be expanded at some point
+        elif message == Message.ON_DEATH_OR_ESCAPE:
+            event, bus = data
+            bus.death_messages.append(event)
 
 
 

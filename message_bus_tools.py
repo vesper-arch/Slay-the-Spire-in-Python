@@ -19,6 +19,7 @@ class Message(StrEnum):
     ON_EXHAUST = 'on_exhaust'
     ON_CARD_PLAY = 'on_card_play'
     ON_CARD_ADD = 'on_card_add'
+    ON_DEATH_OR_ESCAPE = 'on_death_or_escape'
 
 class MessageBus():
     '''This is a Pub/Sub, or Publish/Subscribe, message bus. It allows components to subscribe to messages,
@@ -27,6 +28,7 @@ class MessageBus():
     def __init__(self, debug=True):
         self.subscribers = dict(dict())
         self.debug = debug
+        self.death_messages = []
 
     def subscribe(self, event_type: Message, callback, uid):
         if event_type not in self.subscribers:

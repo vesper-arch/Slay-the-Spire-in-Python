@@ -25,6 +25,7 @@ class Combat:
     player: Player
     tier: CombatTier
     active_enemies: list[Enemy] = None # Used to hardcode enemy encounters
+    bus = bus
     turn: int = 1
 
     def combat(self, current_map) -> None:
@@ -100,8 +101,11 @@ class Combat:
             view.clear()
         bus.publish(Message.END_OF_COMBAT, (self.tier, self.player))
         player.unsubscribe()
+        for enemy in self.active_enemies:
+            enemy.unsubscribe()
 
     def start_combat(self, combat_tier: CombatTier):
+        self.active_enemies = []
         player.register(bus=bus)
         act1_normal_encounters  = create_act1_normal_encounters()
         act1_elites = create_act1_elites()
@@ -114,7 +118,7 @@ class Combat:
         encounter_enemies: list[Enemy] = encounter_types[combat_tier][0]
         for enemy in encounter_enemies:
             enemy.register(bus=bus)
-            active_enemies.append(enemy)
+            self.active_enemies.append(enemy)
         bus.publish(Message.START_OF_COMBAT, (combat_tier, player))
         return act1_boss[0].name
 
