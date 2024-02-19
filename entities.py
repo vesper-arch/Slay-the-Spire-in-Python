@@ -11,10 +11,6 @@ from definitions import CombatTier, CardType, Rarity, PlayerClass, EnemyState
 from message_bus_tools import bus, Message, Registerable, Card
 from uuid import uuid4
 
-relics = items.relics
-cards = items.cards
-potions = items.potions
-
 class Player(Registerable):
     """
     Attributes:::
@@ -77,7 +73,7 @@ class Player(Registerable):
         self.nunckaku_attacks: int = 0
         self.starting_strength: int = 0  # Used for the Red Skull and Vajra relic
         self.golden_bark: bool = False  # Used for the Golden Bark relic
-        # Used for the Molten, Toxic, and Frozen Egg items.relics
+        # Used for the Molten, Toxic, and Frozen Egg relics
         self.upgrade_attacks = False
         self.upgrade_skills = False
         self.upgrade_powers = False
@@ -202,7 +198,7 @@ class Player(Registerable):
         elif relic['Name'] == 'Calling Bell':
             gen.card_rewards(CombatTier.NORMAL, False, self, None, [items.cards['Call of the Bell']])
             for _ in range(3):
-                gen.claim_items.relics(True, self, 3)
+                gen.claim_relics(True, self, 3)
         elif relic['Name'] == 'Empty Cage':
             view.view_piles(self.deck, self, False, 'Removable')
             backup_counter = 2 # Used to account for wrong or invalid inputs
@@ -273,15 +269,15 @@ class Player(Registerable):
             ansiprint('<bold>Bird-Faced Urn</bold> activated: ', end='')
             self.health_actions(2, 'Heal')
         if items.relics['Velvet Choker'] in self.relics:
-            self.choker_items.cards_played += 1
+            self.choker_cards_played += 1
 
     def draw_cards(self, middle_of_turn: bool, draw_cards: int = 0):
-        '''Draws [draw_cards] items.cards.'''
+        '''Draws [draw_cards] cards.'''
         if draw_cards == 0:
             draw_cards = self.draw_strength
         while True:
             if self.debuffs["No Draw"] is True:
-                print("You can't draw any more items.cards")
+                print("You can't draw any more cards")
                 break
             if middle_of_turn is False:
                 draw_cards += self.buffs["Draw Up"]
@@ -302,7 +298,7 @@ class Player(Registerable):
             self.hand.extend(player.draw_pile[-draw_cards:])
             # Removes those cards
             player.draw_pile = player.draw_pile[:-draw_cards]
-            print(f"Drew {draw_cards} items.cards.")
+            print(f"Drew {draw_cards} cards.")
             # bus.publish(Message.ON_DRAW, (pl))
             break
 
@@ -341,7 +337,7 @@ class Player(Registerable):
             if action == "Remove":
                 del subject_card
             elif action == 'Transform':
-                # Curse items.cards can only be transformed into other Curses
+                # Curse cards can only be transformed into other Curses
                 ansiprint(f"{subject_card['Name']} was <bold>transformed</bold> into ", end='')
                 if subject_card.get('Type') == 'Curse':
                     options = [valid_card for valid_card in items.cards.values() if valid_card.get('Type') == 'Curse' and valid_card.get('Rarity') != 'Special']
@@ -519,7 +515,7 @@ class Player(Registerable):
         if items.relics['Burning Blood'] in self.relics:
             ansiprint("<bold>Burning Blood</bold> activated.")
             self.health_actions(6, 'Heal')
-        elif items.relics['Black Blood'] in player.items.relics:
+        elif items.relics['Black Blood'] in player.relics:
             ansiprint("<bold>Black Blood</bold> activated.")
             self.health_actions(12, 'Heal')
         if self.buffs['Repair'] > 0:
@@ -729,7 +725,7 @@ class Enemy(Registerable):
         Dies.
         """
         print(f"{self.name} has died.")
-        if relics['Gremlin Horn'] in player.relics:
+        if items.relics['Gremlin Horn'] in player.relics:
             player.energy += 1
             player.draw_cards(True, 1)
         self.state = EnemyState.DEAD

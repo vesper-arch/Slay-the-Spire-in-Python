@@ -32,20 +32,20 @@ class Combat:
         """There's too much to say here."""
         boss_name = self.start_combat(self.tier)
         # Combat automatically ends when all enemies are dead.
-        while len(active_enemies) > 0:
+        while len(self.active_enemies) > 0:
             # Draws cards, removes block, ticks debuffs, and activates start-of-turn buffs, debuffs, and relics.
             bus.publish(Message.START_OF_TURN, (self.turn, ))
             while True:
-                if len(active_enemies) == 0:
-                    self.end_combat(self.tier, killed_enemies=True)
+                if len(self.active_enemies) == 0:
+                    self.end_combat(killed_enemies=True)
                     break
-                if all((getattr(enemy, 'escaped', False) for enemy in active_enemies)):
-                    self.end_combat(self.tier, robbed=True)
+                if all((getattr(enemy, 'escaped', False) for enemy in self.active_enemies)):
+                    self.end_combat(robbed=True)
                     break
                 print(f"Turn {self.turn}: ")
                 _ = player.draw_cards(True, 1) if len(player.hand) == 0 and relics['Unceasing Top'] in player.relics else None # Assigned to _ so my linter shuts up
                 # Shows the player's potions, cards(in hand), amount of cards in discard and draw pile, and shows the status for you and the enemies.
-                view.display_ui(player, active_enemies)
+                view.display_ui(player, self.active_enemies)
                 print("1-0: Play card, P: Play Potion, M: View Map, D: View Deck, A: View Draw Pile, S: View Discard Pile, X: View Exhaust Pile, E: End Turn, F: View Debuffs and Buffs")
                 action = input("> ").lower()
                 other_options = {'d': lambda: view.view_piles(player.deck, end=True), 'a': lambda: view.view_piles(player.draw_pile, shuffle=True, end=True),
@@ -86,14 +86,13 @@ class Combat:
             sleep(1.5)
             view.clear()
         elif escaped is True:
-            active_enemies.clear()
+            # active_enemies.clear() Don't need this since combat instances are one-use
             print("Escaped...")
             sleep(0.8)
             print("You recieve nothing.")
             sleep(1.5)
             view.clear()
         elif robbed:
-            active_enemies.clear()
             print("Robbed...")
             sleep(0.8)
             print("You recieve nothing.")
