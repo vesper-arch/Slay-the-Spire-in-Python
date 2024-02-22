@@ -522,6 +522,7 @@ class EffectInterface():
         return initialized_effects
 
     def apply_effect(self, target, user, effect_name: str,  amount=0, recursion_tag=False) -> None:
+        '''recurstion_tag is only meant for internal use to stop infinite loops with Champion Belt.'''
         assert effect_name in self.ALL_EFFECTS, f"{effect_name} is not a valid debuff or buff."
         champion_belt_activated = False
         current_relic_pool = [relic.get('Name') for relic in user.relics] if getattr(user, 'player_class', 'placehold') in str(user) else []

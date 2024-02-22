@@ -365,8 +365,9 @@ class Player(Registerable):
         if items.cards['Burn'] in self.relics:
             self.take_sourceless_dmg(2)
 
-    def attack(self, dmg,  target: 'Enemy', card=None, ignore_block=False):
+    def attack(self, target: 'Enemy', card=None, dmg=-1, ignore_block=False):
         # Check if already dead and skip if so
+        dmg == card.damage if card else dmg
         if target.health <= 0:
             return
         if card is not None and card.type not in (CardType.STATUS, CardType.CURSE):

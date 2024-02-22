@@ -123,4 +123,21 @@ class Card(Registerable):
             ansiprint(f"{self.name} got its energy set to {amount}.")
         if one_turn:
             self.reset_energy_next_turn = True
+    
+    def modify_damage(self, amount, context: str, permanent=False):
+        if permanent:
+            self.base_damage += amount
+        else:
+            self.damage += amount
+        self.damage_affected_by.append(context)
+    
+    def modify_block(self, amount, context: str, permanent=False):
+        if permanent:
+            self.base_block += amount
+        else:
+            self.block += amount
+        self.block_affected_by.append(context)
+
+    def is_upgradeadble(self) -> bool:
+        return not self.upgraded and (self.name == "Burn" or self.type not in (CardType.STATUS, CardType.CURSE))
 bus = MessageBus(debug=True)
