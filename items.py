@@ -15,12 +15,12 @@ class IroncladStrike(Card):
         self.damage = self.base_damage
         self.damage_affected_by = [f"Strike({self.damage} dmg)"]
         self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Deal <green>9</green> damage.</yellow>"
-    
+
     def upgrade(self):
         self.upgrade_markers()
         self.base_damage, self.damage = 9
         self.info = 'Deal 9 damage.'
-    
+
     def apply(self, origin, target):
         origin.attack(target, self)
 
@@ -31,12 +31,12 @@ class IroncladDefend(Card):
         self.block = self.base_block
         self.block_affected_by = [f"Defend({self.block} block)"]
         self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Gain <green>8</green> <keyword>Block</keyword>.</yellow>"
-    
+
     def upgrade(self):
         self.upgrade_markers()
         self.base_block, self.block = 8
         self.info = "Gain 8 <keyword>Block</keyword>."
-    
+
     def apply(self, origin):
         origin.blocking(self)
 
@@ -48,13 +48,13 @@ class Bash(Card):
         self.damage_affected_by = [f"Bash({self.damage} dmg)"]
         self.vulnerable = 2
         self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Deal <green>10</green> damage. Apply <green>3</green> <debuff>Vulnerable</debuff>.</yellow>"
-    
+
     def upgrade(self):
         self.upgrade_markers()
         self.base_damage, self.damage = 10
         self.vulnerable = 3
         self.info = "Deal 10 damage. Apply 3 <debuff>Vulnerable</debuff>."
-    
+
     def apply(self, origin, target):
         origin.attack(target, self)
         ei.apply_effect(target, origin, 'Vulnerable', self.vulnerable)
@@ -66,12 +66,12 @@ class Anger(Card):
         self.damage = self.base_damage
         self.damage_affected_by = [f"Anger({self.damage} dmg)"]
         self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Deal <green>8</green> damage. Add a copy of this card to your discard pile.</yellow>"
-    
+
     def upgrade(self):
         self.upgrade_markers()
         self.base_damage, self.damage = 8
         self.info = "Deal 8 damage. Add a copy of this card to your discard pile."
-    
+
     def apply(self, origin, target):
         origin.attack(target, self)
         origin.discard_pile.append(deepcopy(self))
@@ -83,11 +83,11 @@ class Armaments(Card):
         self.block = self.base_block
         self.block_affected_by = [f"Armaments({self.block} block)"]
         self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Gain 5 <keyword>Block</keyword>. Upgrade <green>ALL cards</green> in your hand for the rest of combat."
-    
+
     def upgrade(self):
         self.upgrade_markers()
         self.info = "Gain 5 <keyword>Block</keyword>. Upgrade ALL cards in your hand for the rest of combat."
-    
+
     def apply(self, origin):
         if not self.upgraded:
             chosen_card = view.list_input("Choose a card to upgrade", origin.hand, view.view_piles, lambda card: card.is_upgradeable(), "That card is not upgradeable.")
@@ -103,11 +103,11 @@ class BodySlam(Card):
         self.damage = self.base_damage
         self.damage_affected_by = [f"Body Slam({self.damage} dmg)"]
         self.upgrade_preview += f"<light-red>{self.energy_cost} Energy</light-red> -> <light-red>0 Energy</light-red>"
-    
+
     def upgrade(self):
         self.upgrade_markers()
         self.energy_cost = 0
-    
+
     def apply(self, origin, target):
         origin.attack(target, self)
 
@@ -118,12 +118,12 @@ class Clash(Card):
         self.damage = self.base_damage
         self.damage_affected_by = [f"Clash({self.damage} dmg)"]
         self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Can only be played if every card in your hand is an <keyword>Attack</keyword>. Deal <green>18</green> damage.</yellow>"
-    
+
     def upgrade(self):
         self.upgrade_markers()
         self.base_damage, self.damage = 18
         self.info = "Can only be played if every card in your hand is an <keyword>Attack</keyword>. Deal 18 damage."
-    
+
     def apply(self, origin, target):
         if not all((card for card in origin.hand if card.type == CardType.ATTACK)):
             print("You have non-Attack cards in your hand.")
@@ -137,12 +137,12 @@ class Cleave(Card):
         self.damage = self.base_damage
         self.damage_affected_by = [f"Cleave({self.damage} dmg)"]
         self.upgrade_preview = f"<yellow>{self.info}</yellow> -> <yellow>Deal <green>11</green> damage to ALL enemies.</yellow>"
-    
+
     def upgrade(self):
         self.upgrade_markers()
         self.base_damage, self.damage = 11
         self.info = "Deal 11 damage to ALL enemies."
-    
+
     def apply(self, origin, enemies):
         for enemy in enemies:
             origin.attack(enemy, self)
@@ -155,13 +155,13 @@ class Clothesline(Card):
         self.damage_affected_by = [f"Clothesline({self.damage} dmg)"]
         self.weak = 2
         self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Deal <green>14</green> damage. Apply <green>3</green> <debuff>Weak</debuff>.</yellow>"
-    
+
     def upgrade(self):
         self.upgrade_markers()
         self.base_damage, self.damage = 14
         self.weak = 3
         self.info = "Deal 14 damage. Apply 3 <debuff>Weak</debuff>."
-    
+
     def apply(self, origin, target):
         origin.attack(target, self)
         ei.apply_effect(target, origin, "Weak", self.weak)
@@ -171,12 +171,12 @@ class Flex(Card):
         super().__init__("Flex", "Gain 2 <buff>Strength</buff>. At the end of your turn, lose 2 <buff>Strength</buff>.", Rarity.COMMON, PlayerClass.IRONCLAD, CardType.SKILL, target=TargetType.PLAYER, energy_cost=0)
         self.strength = 2
         self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Gain <green>4</green> <buff>Strength</buff>. At the end of your turn, lose <green>4</green> <buff>Strength</buff>.</yellow>"
-    
+
     def upgrade(self):
         self.upgrade_markers()
         self.strength = 4
         self.info = "Gain 4 <buff>Strength</buff>. At the end of your turn, lose 4 <buff>Strength</buff>."
-    
+
     def apply(self, origin):
         ei.apply_effect(origin, None, "Strength", self.strength)
         ei.apply_effect(origin, None, "Strength Down", self.strength)
@@ -190,15 +190,15 @@ class PerfectedStrike(Card):
         self.damage_affected_by = [f"Perfected Strike({self.damage} dmg)"]
         self.dmg_per_strike = 2
         self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Deal 6 damage. Deals <green>3</green> additional damage for ALL your cards containing <italic>\"Strike\"</italic>.</yellow>"
-    
+
     def upgrade(self):
         self.upgrade_markers()
         self.dmg_per_strike = 3
         self.info = "Deal 6 damage. Deals 3 additional damage for ALL your cards containing <italic>\"Strike\"</italic>."
-    
+
     def apply(self, origin, target):
         origin.attack(target, self)
-    
+
     def callback(self, message, data):
         if message == Message.BEFORE_ATTACK:
             player = data
@@ -214,7 +214,7 @@ class PommelStrike(Card):
         self.damage_affected_by = [f"Pommel Strike({self.damage} dmg)"]
         self.cards = 1
         self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Deal <green>10</green> damage. Draw <green>2</green> cards.</yellow>"
-    
+
     def upgrade(self):
         self.upgrade_markers()
         self.base_damage, self.damage = 10
@@ -873,7 +873,7 @@ cards_old = {
     'Clash': {'Name': 'Clash', 'Damage': 14, 'Energy': 0, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Can only be played is every card in your hand is an <keyword>Attack</keyword>. Deal Σ18 damage.',
               'Effects+': {'Damage': 18, 'Info': 'Can only be played if every card in your hand is an <keyword>Attack</keyword>. Deal Σ18 damage.'}},
 
-    'Cleave': {'Name': 'Cleave', 'Damage': 8, 'Target': 'Any', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ8 damage to ALL enemies', 'Effects+': {'Damage': 11, 'Info': 'Deal Σ11 damage to ALL enemies.'}, 'Function': use_cleave},
+    # 'Cleave': {'Name': 'Cleave', 'Damage': 8, 'Target': 'Any', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ8 damage to ALL enemies', 'Effects+': {'Damage': 11, 'Info': 'Deal Σ11 damage to ALL enemies.'}, 'Function': use_cleave},
 
     'Clothesline': {'Name': 'Clothesline', 'Energy': 2, 'Damage': 12, 'Weak': 2, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ12 damage. Apply 2 <debuff>Weak</debuff>', 'Effects+': {'Damage': 14, 'Weak': 3, 'Info': 'Deal Σ14 damage. Apply 3 <debuff>Weak</debuff>.'}, 'Function': use_clothesline},
 
@@ -885,13 +885,13 @@ cards_old = {
     'Headbutt': {'Name': 'Headbutt', 'Damage': 9, 'Energy': 1, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ9 damage. Place a card from your discard pile on top of your draw pile.',
                  'Effects+': {'Damage': 12, 'Info': 'Deal Σ12 damage. Place a card from your discard pile on top of your draw pile.'}, 'Function': use_headbutt},
 
-    'Heavy Blade': {'Name': 'Heavy Blade', 'Damage': 14, 'Strength Multi': 3, 'Energy': 2, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ14 damage. <buff>Strength</buff> affects this card 3 times.',
-                    'Effects+': {'Damage': 18, 'Strength Multi': 5, 'Info': 'Deal Σ14 damage. <buff>Strength</buff> affects this card 3 times.'}, 'Function': use_heavyblade},
+    # 'Heavy Blade': {'Name': 'Heavy Blade', 'Damage': 14, 'Strength Multi': 3, 'Energy': 2, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ14 damage. <buff>Strength</buff> affects this card 3 times.',
+                    # 'Effects+': {'Damage': 18, 'Strength Multi': 5, 'Info': 'Deal Σ14 damage. <buff>Strength</buff> affects this card 3 times.'}, 'Function': use_heavyblade},
 
     'Iron Wave': {'Name': 'Iron Wave', 'Damage': 5, 'Block': 5, 'Energy': 1, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Gain Ω5 <keyword>Block</keyword>. Deal Σ5 damage.', 'Effects+': {'Damage': 7, 'Block': 7, 'Info': 'Gain Ω7 <keyword>Block</keyword>. Deal Σ7 damage.'}, 'Function': use_ironwave},
 
-    'Perfected Strike': {'Name': 'Perfected Strike', 'Damage Per "Strike"': 2, 'Energy': 2, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ6 damage. Deals 2 additional damage for ALL your cards containing <italic>"Strike"</italic>.',
-                         'Effects+': {'Damage Per "Strike"': 3, 'Info': 'Deal Σ6 damage. Deals 3 additional damage for ALL your cards containing <italic>"Strike"</italic>.'}, 'Function': use_perfectedstrike},
+    # 'Perfected Strike': {'Name': 'Perfected Strike', 'Damage Per "Strike"': 2, 'Energy': 2, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ6 damage. Deals 2 additional damage for ALL your cards containing <italic>"Strike"</italic>.',
+                        #  'Effects+': {'Damage Per "Strike"': 3, 'Info': 'Deal Σ6 damage. Deals 3 additional damage for ALL your cards containing <italic>"Strike"</italic>.'}, 'Function': use_perfectedstrike},
 
     'Pommel Strike': {'Name': 'Pommel Strike', 'Damage': 9, 'Cards': 1, 'Energy': 1, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ9 damage. Draw 1 card.', 'Effects+': {'Damage': 10, 'Cards': 2, 'Info': 'Deal Σ10 damage. Draw 2 cards.'}, 'Function': use_pommelstrike},
 
@@ -1067,11 +1067,11 @@ cards_old = {
 
     # Colorless Cards
     "Bandage Up": {"Name": "Bandage Up", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Heal 4(6) HP. Exhaust.", "Exhaust": True, "Target": TargetType.YOURSELF, "Function": use_bandageup},
-    "Blind": {"Name": "Blind", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Apply 2 Weak (to ALL enemies).", "Target": TargetType.AREA, "Function": use_blind},
+    # "Blind": {"Name": "Blind", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Apply 2 Weak (to ALL enemies).", "Target": TargetType.AREA, "Function": use_blind},
     "Dark Shackles": {"Name": "Dark Shackles", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Enemy loses 9(15) Strength for the rest of this turn. Exhaust.", "Exhaust": True, "Target": TargetType.ENEMY, "Function": use_darkshackles, "Magic Number": 9},
     "Deep Breath": {"Name": "Deep Breath", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Shuffle your discard pile into your draw pile. Draw 1(2) card(s).", "Target": TargetType.NOTHING, "Function": use_deepbreath, "Cards": 1},
     # "Discovery": {"Name": "Discovery", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 1, "Info": "Choose 1 of 3 random cards to add to your hand. It costs 0 this turn. Exhaust. (Don't Exhaust.)", "Exhaust": True, "Target": TargetType.YOURSELF, "Function": use_discovery},
-    "Dramatic Entrance": {"Name": "Dramatic Entrance", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.ATTACK, "Energy": 0, "Info": "Innate. Deal 8(12) damage to ALL enemies. Exhaust.", "Exhaust": True, "Target": TargetType.AREA, "Function": use_dramaticentrance, "Damage": 8},
+    # "Dramatic Entrance": {"Name": "Dramatic Entrance", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.ATTACK, "Energy": 0, "Info": "Innate. Deal 8(12) damage to ALL enemies. Exhaust.", "Exhaust": True, "Target": TargetType.AREA, "Function": use_dramaticentrance, "Damage": 8},
     # "Enlightenment": {"Name": "Enlightenment", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Reduce the cost of cards in your hand to 1 this turn(combat)."},
     # "Finesse": {"Name": "Finesse", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Gain 2(4) Block. Draw 1 card."},
     # "Flash of Steel": {"Name": "Flash of Steel", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.ATTACK, "Energy": 0, "Info": "Deal 3(6) damage. Draw 1 card."},

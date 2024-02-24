@@ -83,7 +83,8 @@ class Displayer():
         if combat is True:
             counter = 1
             ansiprint("\n<bold>Enemies:</bold>")
-            for enemy in (enemy for enemy in enemies if enemy.state in (EnemyState.ALIVE, EnemyState.INTANGIBLE)):
+            viewable_enemies = [enemy for enemy in enemies if enemy.state in (EnemyState.ALIVE, EnemyState.INTANGIBLE)]
+            for enemy in viewable_enemies:
                 ansiprint(f"{counter}: " + repr(enemy))
                 counter += 1
             ansiprint("\n" + repr(entity))
@@ -167,7 +168,7 @@ class Displayer():
         return string, affected_by
 
     def clear(self):
-        system('clear')
+        system('cls' if os.name == 'nt' else 'clear')
 
 class Generators():
     '''Generates relic_pool, potions, and cards'''

@@ -13,7 +13,7 @@ from enemy_catalog import (
 )
 from entities import Enemy, Player, player
 from events import choose_event
-from helper import active_enemies, ei, gen, view
+from helper import ei, gen, view
 from items import activate_sacred_bark, cards, potions, relics
 from message_bus_tools import Message, bus
 from shop import Shop
@@ -155,8 +155,12 @@ class Combat:
             view.clear()
             return
 
-        target = self.select_target()
-        player.use_card(card, active_enemies[target], False, player.hand)
+        if card.target == 'Single':
+            target = self.select_target()
+            player.use_card(card, target=self.active_enemies[target], exhaust=False, pile=player.hand)
+        else:
+            player.use_card(card, target=self.active_enemies, exhaust=False, pile=player.hand)
+
 
 def rest_site():
     """

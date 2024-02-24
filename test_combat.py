@@ -33,9 +33,9 @@ def test_new_combat_basic(monkeypatch):
     game_map = Mock()
 
     # Patch the input
-    responses = iter("d\na\ns\nx\nf\n11\n")
+    responses = iter("11\n11\n2\n")
     with monkeypatch.context() as m:
-        # m.setattr('builtins.input', lambda *a, **kw: next(responses))
+        m.setattr('builtins.input', lambda *a, **kw: next(responses))
         m.setattr(helper, 'sleep', lambda _: None)
         m.setattr(entities, 'sleep', lambda _: None)
         m.setattr(items, 'sleep', lambda _: None)

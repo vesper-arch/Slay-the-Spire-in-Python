@@ -124,11 +124,11 @@ class Player(Registerable):
             ansiprint("<red>This card is not playable. This message shouldn't appear outside of tests.</red>")
             return
         if card.target == 'Single':
-            card.apply(self, target)
+            card.apply(origin=self, target=target)
         elif card.target == 'Area':
-            card.apply(self, active_enemies)
+            card.apply(origin=self, enemies=active_enemies)
         elif card.target == 'Player':
-            card.apply(self)
+            card.apply(origin=self)
         bus.publish(Message.ON_CARD_PLAY, (self, card, target))
         if self.buffs['Corruption']:
             exhaust = True
@@ -144,7 +144,7 @@ class Player(Registerable):
             self.take_sourceless_dmg(1)
             exhaust = True
         if pile is not None:
-            if exhaust is True or getattr(card, 'exhaust') is True:
+            if exhaust is True or getattr(card, 'exhaust', False) is True:
                 ansiprint(f"{card['Name']} was <bold>Exhausted</bold>.")
                 self.move_card(card=card, move_to=self.exhaust_pile, from_location=pile, cost_energy=True)
             else:
@@ -367,7 +367,7 @@ class Player(Registerable):
 
     def attack(self, target: 'Enemy', card=None, dmg=-1, ignore_block=False):
         # Check if already dead and skip if so
-        dmg == card.damage if card else dmg
+        dmg = card.damage if card else dmg
         if target.health <= 0:
             return
         if card is not None and card.type not in (CardType.STATUS, CardType.CURSE):
@@ -582,7 +582,7 @@ class Enemy(Registerable):
         self.past_moves = ['place'] * 3
         self.intent: str = ''
         self.next_move: list[tuple[str, str, tuple] | tuple[str, tuple]] = ''
-        self.state = 'Alive'
+        self.state = EnemyState.ALIVE
         self.buffs = ei.init_effects("Enemy Buffs") | powers
         self.debuffs = ei.init_effects("Enemy Debuffs")
         self.stolen_gold = 0
@@ -818,7 +818,7 @@ class Enemy(Registerable):
         if self.buffs['Strength Up'] > 0:
             ansiprint('<light-cyan>Strength Up</light-cyan>: ', end='')
             ei.apply_effect(self, self, 'Strength', self.buffs['Strength Up'])
-    
+
     def callback(self, message, data):
         if message == Message.START_OF_TURN:
             ansiprint(f"<underline><bold>{self.name}</bold></underline>:")
