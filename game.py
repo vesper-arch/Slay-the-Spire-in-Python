@@ -1,22 +1,21 @@
 import math
 import random
-from time import sleep
-from copy import copy, deepcopy
-from ansi_tags import ansiprint
-from events import choose_event
-from items import relics, potions, cards, activate_sacred_bark
-from entities import player, Player, Enemy
-from definitions import CombatTier, EncounterType
-from message_bus_tools import Message, bus
 from dataclasses import dataclass
+from time import sleep
+
 import game_map
 from ansi_tags import ansiprint
+from definitions import CombatTier, EncounterType
 from enemy_catalog import (
     create_act1_boss,
     create_act1_elites,
     create_act1_normal_encounters,
 )
+from entities import Enemy, Player, player
+from events import choose_event
 from helper import active_enemies, ei, gen, view
+from items import activate_sacred_bark, cards, potions, relics
+from message_bus_tools import Message, bus
 from shop import Shop
 
 
@@ -30,7 +29,7 @@ class Combat:
 
     def combat(self, current_map) -> None:
         """There's too much to say here."""
-        boss_name = self.start_combat(self.tier)
+        self.start_combat()
         # Combat automatically ends when all enemies are dead.
         while len(self.active_enemies) > 0:
             # Draws cards, removes block, ticks debuffs, and activates start-of-turn buffs, debuffs, and relics.
@@ -42,8 +41,10 @@ class Combat:
                 if all((getattr(enemy, 'escaped', False) for enemy in self.active_enemies)):
                     self.end_combat(robbed=True)
                     break
-                print(f"Turn {self.turn}: ")
+                # Todo: Move this to the Unceasing Top Relic
                 _ = player.draw_cards(True, 1) if len(player.hand) == 0 and relics['Unceasing Top'] in player.relics else None # Assigned to _ so my linter shuts up
+
+                print(f"Turn {self.turn}: ")
                 # Shows the player's potions, cards(in hand), amount of cards in discard and draw pile, and shows the status for you and the enemies.
                 view.display_ui(player, self.active_enemies)
                 print("1-0: Play card, P: Play Potion, M: View Map, D: View Deck, A: View Draw Pile, S: View Discard Pile, X: View Exhaust Pile, E: End Turn, F: View Debuffs and Buffs")
@@ -54,7 +55,7 @@ class Combat:
                 if action.isdigit():
                     option = int(action) - 1
                     if option + 1 in range(len(player.hand) + 1):
-                        play_card(player.hand[option])
+                        self.play_new_card(player.hand[option])
                     else:
                         view.clear()
                         continue
@@ -103,9 +104,7 @@ class Combat:
         for enemy in self.active_enemies:
             enemy.unsubscribe()
 
-    def start_combat(self, combat_tier: CombatTier):
-        self.active_enemies = []
-        player.register(bus=bus)
+    def create_enemies_from_tier(self) -> list[Enemy]:
         act1_normal_encounters  = create_act1_normal_encounters()
         act1_elites = create_act1_elites()
         act1_boss = create_act1_boss()
@@ -114,12 +113,50 @@ class Combat:
             CombatTier.ELITE: act1_elites,
             CombatTier.BOSS: act1_boss
         }
-        encounter_enemies: list[Enemy] = encounter_types[combat_tier][0]
-        for enemy in encounter_enemies:
+        return encounter_types[self.tier][0]
+
+    def start_combat(self) -> list[Enemy]:
+        player.register(bus=bus)
+        if not self.active_enemies:
+            self.active_enemies = self.create_enemies_from_tier()
+
+        for enemy in self.active_enemies:
             enemy.register(bus=bus)
-            self.active_enemies.append(enemy)
-        bus.publish(Message.START_OF_COMBAT, (combat_tier, player))
-        return act1_boss[0].name
+
+        bus.publish(Message.START_OF_COMBAT, (self.tier, player))
+        return self.active_enemies
+
+    def select_target(self):
+        if len(self.active_enemies) == 1:
+            return 0
+        else:
+            while True:
+                try:
+                    target = int(input("Choose an enemy to target > ")) - 1
+                    _ = self.active_enemies[target]
+                except (IndexError, ValueError):
+                    ansiprint(f"\u001b[1A\u001b[100D<red>You have to enter a number between 1 and {len(self.active_enemies)}</red>", end='')
+                    sleep(1)
+                    print("\u001b[2K\u001b[100D", end='')
+                    continue
+                return target
+
+    def play_new_card(self, card):
+        # Prevents the player from using a card that they don't have enough energy for.
+        if card.energy_cost > player.energy:
+            ansiprint("<red>You don't have enough energy to use this card.</red>")
+            sleep(1)
+            view.clear()
+            return
+        # Todo: Move to Velvet Choker relic
+        if player.choker_cards_played == 6:
+            ansiprint("You have already played 6 cards this turn!")
+            sleep(1)
+            view.clear()
+            return
+
+        target = self.select_target()
+        player.use_card(card, active_enemies[target], False, player.hand)
 
 def rest_site():
     """
@@ -254,6 +291,8 @@ def play_potion():
         activate_sacred_bark()
     view.view_potions(player.potions, player.max_potions)
     input('This is currently not implemented. Press enter to leave > ')
+
+
 
 def play_card(card):
     while True:

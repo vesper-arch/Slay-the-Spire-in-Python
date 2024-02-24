@@ -15,16 +15,8 @@ def replacement_clear_screen():
     '''Replacement for game.view.clear() so that I can see the test output'''
     print("\n--------------------------\n")
 
-def patched_input(*args, **kwargs):
-    '''Patch for input() so that anytime we get asked a question, we just pick the first option'''
-    return "1"
-
-def stats(player, enemy):
-    ansiprint(f"<yellow>Player has {player.health} health, {player.block} block, {player.energy} energy, {len(player.hand)} cards in hand, {len(player.draw_pile)} cards in draw pile, {len(player.discard_pile)} cards in discard pile, {len(player.exhaust_pile)} cards in exhaust pile</yellow>")
-    ansiprint(f"<red>Enemy has {enemy.health} health, {enemy.block} block</red>")
-
 @pytest.mark.only
-def test_combat_basic(monkeypatch):
+def test_new_combat_basic(monkeypatch):
     entities.random.seed(123)
     all_cards = [c() for c in items.cards]
 
@@ -40,9 +32,10 @@ def test_combat_basic(monkeypatch):
 
     game_map = Mock()
 
-    # Patch some side effects
+    # Patch the input
+    responses = iter("d\na\ns\nx\nf\n11\n")
     with monkeypatch.context() as m:
-        m.setattr('builtins.input', patched_input)
+        # m.setattr('builtins.input', lambda *a, **kw: next(responses))
         m.setattr(helper, 'sleep', lambda _: None)
         m.setattr(entities, 'sleep', lambda _: None)
         m.setattr(items, 'sleep', lambda _: None)
