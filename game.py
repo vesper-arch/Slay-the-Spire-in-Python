@@ -79,9 +79,9 @@ class Combat:
             player.gain_gold(random.randint(10, 20) * 1 if relics['Golden Idol'] not in self.player.relics else 1.25)
             if potion_roll < self.player.potion_dropchance or relics['White Beast Statue'] in self.player.relics:
                 gen.claim_potions(True, 1, player, potions)
-                potion_dropchance -= 10
+                player.potion_dropchance -= 10
             else:
-                potion_dropchance += 10
+                player.potion_dropchance += 10
             for _ in range(int(relics['Prayer Wheel'] in self.player.relics) + 1):
                 gen.card_rewards(self.tier, True, self.player, cards)
             sleep(1.5)
@@ -295,38 +295,6 @@ def play_potion():
         activate_sacred_bark()
     view.view_potions(player.potions, player.max_potions)
     input('This is currently not implemented. Press enter to leave > ')
-
-
-
-def play_card(card):
-    while True:
-        # Prevents the player from using a card that they don't have enough energy for.
-        energy_cost = card.get("Energy", float('inf')) if card.get("Energy", float('inf')) != -1 else player.energy
-        if energy_cost > player.energy:
-            ansiprint("<red>You don't have enough energy to use this card.</red>")
-            sleep(1)
-            view.clear()
-            return
-        if player.choker_cards_played == 6:
-            ansiprint("You have already played 6 cards this turn!")
-            sleep(1)
-            view.clear()
-            return
-        if card.get("Target") == 'Single' and len(active_enemies) > 1:
-            try:
-                target = int(input("Choose an enemy to target > ")) - 1
-                _ = active_enemies[target]
-            except (IndexError, ValueError):
-                ansiprint(f"\u001b[1A\u001b[100D<red>You have to enter a number between 1 and {len(active_enemies)}</red>", end='')
-                sleep(1)
-                print("\u001b[2K\u001b[100D", end='')
-                continue
-        elif len(active_enemies) == 1:
-            target = 0
-        else:
-            target = 0
-        player.use_card(card, active_enemies[target], False, player.hand)
-        break
 
 def play(encounter: EncounterType, gm: game_map.GameMap):
     if encounter.type == EncounterType.START:

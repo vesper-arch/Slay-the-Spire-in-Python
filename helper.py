@@ -2,7 +2,7 @@ import math
 import random
 import re
 from copy import deepcopy
-from os import system
+from os import name, system
 from time import sleep
 from typing import Callable
 
@@ -169,7 +169,7 @@ class Displayer():
         return string, affected_by
 
     def clear(self):
-        system('cls' if os.name == 'nt' else 'clear')
+        system('cls' if name == 'nt' else 'clear')
 
 class Generators():
     '''Generates relic_pool, potions, and cards'''
@@ -190,9 +190,9 @@ class Generators():
         common_cards = [card() for card in card_pool if card.rarity == Rarity.COMMON and card.type not in (CardType.STATUS, CardType.CURSE) and card.player_class == entity.player_class]
         uncommon_cards = [card() for card in card_pool if card.rarity == Rarity.UNCOMMON and card.type not in (CardType.STATUS, CardType.CURSE) and card.player_class == entity.player_class]
         rare_cards = [card() for card in card_pool if card.rarity == Rarity.RARE and card.type not in (CardType.STATUS, CardType.CURSE) and card.player_class == entity.player_class]
-        assert len(common_cards) > 0, f"Common pool is empty."
-        assert len(uncommon_cards) > 0, f"Uncommon pool is empty."
-        assert len(rare_cards) > 0, f"Rare pool is empty."
+        assert len(common_cards) > 0, "Common pool is empty."
+        assert len(uncommon_cards) > 0, "Uncommon pool is empty."
+        assert len(rare_cards) > 0, "Rare pool is empty."
 
         rarities =  [common_cards, uncommon_cards, rare_cards]
         rewards = []
@@ -215,9 +215,9 @@ class Generators():
         common_potions: list[dict] = [potion() for potion in potion_pool if potion.rarity == Rarity.COMMON and (potion.player_class == PlayerClass.ANY or potion.player_class == entity.player_class)]
         uncommon_potions: list[dict] = [potion() for potion in potion_pool if potion.rarity == Rarity.UNCOMMON and (potion.player_class == PlayerClass.ANY or potion.player_class == entity.player_class)]
         rare_potions: list[dict] = [potion() for potion in potion_pool if potion.rarity == Rarity.RARE and (potion.player_class == PlayerClass.ANY or potion.player_class == entity.player_class)]
-        assert len(common_potions) > 0, f"Common potions pool is empty."
-        assert len(uncommon_potions) > 0, f"Uncommon potions pool is empty."
-        assert len(rare_potions) > 0, f"Rare potions pool is empty."
+        assert len(common_potions) > 0, "Common potions pool is empty."
+        assert len(uncommon_potions) > 0, "Uncommon potions pool is empty."
+        assert len(rare_potions) > 0, "Rare potions pool is empty."
 
         all_potions = common_potions + uncommon_potions + rare_potions
         rarities = [common_potions, uncommon_potions, rare_potions]
@@ -257,7 +257,7 @@ class Generators():
         return rewards
 
     def claim_relics(self, choice: bool, entity: object, relic_amount: int, relic_pool: dict=None, rewards: list=None, chance_based=True):
-        relic_pool = relic_pool if not relic_pool else relic_pool
+        relic_pool = relic_pool if relic_pool else relic_pool
         if not rewards:
             rewards = self.generate_relic_rewards('Other', relic_amount, entity, relic_pool, chance_based)
         if not choice:
@@ -325,11 +325,7 @@ class Generators():
             if choice:
                 chosen_reward = view.list_input('What card do you want? > ', rewards, view.view_piles)
                 # This could probably be condensed
-                if entity.upgrade_attacks and rewards[chosen_reward].type == 'Attack':
-                    rewards[chosen_reward].upgrade()
-                elif entity.upgrade_skills and rewards[chosen_reward].type == 'Skill':
-                    rewards[chosen_reward].upgrade()
-                elif entity.upgrade_powers and rewards[chosen_reward].type == 'Power':
+                if entity.upgrade_attacks and rewards[chosen_reward].type == 'Attack' or (entity.upgrade_skills and rewards[chosen_reward].type == 'Skill' or entity.upgrade_powers and rewards[chosen_reward].type == 'Power'):
                     rewards[chosen_reward].upgrade()
                 entity.deck.append(rewards[chosen_reward])
                 ansiprint(f"{entity.name} obtained <bold>{rewards[chosen_reward].name}</bold>")

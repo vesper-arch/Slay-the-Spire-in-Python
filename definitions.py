@@ -1,5 +1,6 @@
 from enum import StrEnum, auto
 
+
 class CombatTier(StrEnum):
     NORMAL = 'Normal'
     ELITE = 'Elite'

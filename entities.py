@@ -753,7 +753,6 @@ class Enemy(Registerable):
         return True
 
     def attack(self, dmg: int, times: int):
-        dmg_affected_by = ''
         for _ in range(times):
             bus.publish(Message.BEFORE_ATTACK, (self, dmg, player.block))
             if dmg <= player.block:
