@@ -506,7 +506,6 @@ class Generators:
                 chosen_reward = view.list_input(
                     "What card do you want? > ", rewards, view.view_piles
                 )
-                # This could probably be condensed
                 if (
                     entity.upgrade_attacks
                     and rewards[chosen_reward].type == "Attack"
