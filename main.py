@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-from game import main
 from argparse import ArgumentParser
+
+from game import main
 
 if __name__ == '__main__':
     args = ArgumentParser(description="Run a game of Slay the Spire")

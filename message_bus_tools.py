@@ -1,8 +1,10 @@
 from enum import StrEnum
 from typing import Any
-from ansi_tags import ansiprint
-from definitions import Rarity, CardType, PlayerClass
 from uuid import uuid4
+
+from ansi_tags import ansiprint
+from definitions import CardType, PlayerClass, Rarity
+
 
 class Message(StrEnum):
     '''Messages that can be sent to the message bus.'''

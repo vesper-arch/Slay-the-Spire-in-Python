@@ -1,7 +1,9 @@
-import random
 import math
-from helper import active_enemies
+import random
+
 from entities import Enemy, player
+from helper import active_enemies
+
 
 class AcidSlimeL(Enemy):
     def __init__(self):

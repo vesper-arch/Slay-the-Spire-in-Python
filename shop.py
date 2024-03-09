@@ -128,7 +128,7 @@ class SellableItem():
             # Unsure what to do with these. We'll set to some high bogus value for now.
             return 999
         else:
-            raise ValueError(f"Item rarity broken")
+            raise ValueError("Item rarity broken")
 
 class Shop():
     def __init__(self, player, items=None):

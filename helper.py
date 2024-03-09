@@ -1,13 +1,14 @@
+import math
 import random
 import re
-import math
-from time import sleep
-from os import system
 from copy import deepcopy
-from ansi_tags import ansiprint, strip
+from os import system
+from time import sleep
 from typing import Callable
-from definitions import CombatTier, Rarity, PlayerClass, CardType, EnemyState
-from message_bus_tools import bus, Message
+
+from ansi_tags import ansiprint, strip
+from definitions import CardType, CombatTier, EnemyState, PlayerClass, Rarity
+from message_bus_tools import Message, bus
 
 active_enemies = []
 
