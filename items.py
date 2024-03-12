@@ -221,6 +221,15 @@ class PommelStrike(Card):
         self.cards = 2
         self.info = "Deal 10 damage. Draw 2 cards."
 
+class Slimed(Card):
+    def __init__(self):
+        super().__init__("Slimed", "<keyword>Exhaust</keyword>.", Rarity.COMMON, PlayerClass.IRONCLAD, CardType.STATUS, target=TargetType.YOURSELF, energy_cost=1)
+        self.exhaust = True
+        self.upgradeable = False
+
+    def apply(self, _):
+        pass
+
 def use_apotheosis(using_card, entity):
     '''Upgrade ALL of your cards for the rest of combat. Exhaust.'''
     for card in entity.hand:
@@ -854,7 +863,7 @@ relics: dict[str: dict] = {
     # Circlet can only be obtained once you have gotten all other relics.
     'Circlet': {'Name': 'Circlet', 'Class': 'Any', 'Rarity': 'Special', 'Info': 'Looks pretty.', 'Flavor': 'You ran out of relics to find. Impressive!'}
 }
-cards = (IroncladStrike, IroncladDefend, Bash)
+cards = (card() for card in (IroncladStrike, IroncladDefend, Bash))
 cards_old = {
     # Ironclad cards
     'Strike': {'Name': 'Strike', 'Damage': 6, 'Energy': 1, 'Rarity': 'Basic', 'Target': 'Single', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ6 damage.', 'Effects+': {'Damage': 9, 'Info': 'Deal Σ9 damage.'}},

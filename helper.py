@@ -257,21 +257,21 @@ class Generators:
         Rare: 100% | Uncommon: 0% | Common: 0%
         """
         common_cards = [
-            card()
+            deepcopy(card)
             for card in card_pool
             if card.rarity == Rarity.COMMON
             and card.type not in (CardType.STATUS, CardType.CURSE)
             and card.player_class == entity.player_class
         ]
         uncommon_cards = [
-            card()
+            deepcopy(card)
             for card in card_pool
             if card.rarity == Rarity.UNCOMMON
             and card.type not in (CardType.STATUS, CardType.CURSE)
             and card.player_class == entity.player_class
         ]
         rare_cards = [
-            card()
+            deepcopy(card)
             for card in card_pool
             if card.rarity == Rarity.RARE
             and card.type not in (CardType.STATUS, CardType.CURSE)
@@ -291,7 +291,7 @@ class Generators:
             chances = [0, 0, 1]
         for _ in range(amount):
             chosen_pool = random.choices(rarities, chances, k=1)[0]
-            rewards.append(deepcopy(random.choice(chosen_pool)))
+            rewards.append(random.choice(chosen_pool))
         return rewards
 
     def generate_potion_rewards(
