@@ -10,7 +10,7 @@ from message_bus_tools import Card, Message
 
 class IroncladStrike(Card):
     def __init__(self):
-        super().__init__("Strike", "Deal 6 damage.", Rarity.BASIC, PlayerClass.IRONCLAD, CardType.ATTACK, target='Single', energy_cost=1)
+        super().__init__("Strike", "Deal 6 damage.", Rarity.BASIC, PlayerClass.IRONCLAD, CardType.ATTACK, target=TargetType.SINGLE, energy_cost=1)
         self.base_damage = 6
         self.damage = self.base_damage
         self.damage_affected_by = [f"Strike({self.damage} dmg)"]
@@ -26,7 +26,7 @@ class IroncladStrike(Card):
 
 class IroncladDefend(Card):
     def __init__(self):
-        super().__init__("Defend", "Gain 5 <keyword>Block</keyword>.", Rarity.BASIC, PlayerClass.IRONCLAD, CardType.SKILL, target='Player', energy_cost=1)
+        super().__init__("Defend", "Gain 5 <keyword>Block</keyword>.", Rarity.BASIC, PlayerClass.IRONCLAD, CardType.SKILL, target=TargetType.YOURSELF, energy_cost=1)
         self.base_block = 5
         self.block = self.base_block
         self.block_affected_by = [f"Defend({self.block} block)"]
@@ -42,7 +42,7 @@ class IroncladDefend(Card):
 
 class Bash(Card):
     def __init__(self):
-        super().__init__("Bash", "Deal 8 damage. Apply 2 <debuff>Vulnerable</debuff>.", Rarity.BASIC, PlayerClass.IRONCLAD, CardType.ATTACK, target='Single', energy_cost=2)
+        super().__init__("Bash", "Deal 8 damage. Apply 2 <debuff>Vulnerable</debuff>.", Rarity.BASIC, PlayerClass.IRONCLAD, CardType.ATTACK, target=TargetType.SINGLE, energy_cost=2)
         self.base_damage = 8
         self.damage = self.base_damage
         self.damage_affected_by = [f"Bash({self.damage} dmg)"]
@@ -78,7 +78,7 @@ class Anger(Card):
 
 class Armaments(Card):
     def __init__(self):
-        super().__init__("Armaments", "Gain 5 <keyword>Block</keyword>. Upgrade a card in your hand for the rest of combat.", Rarity.COMMON, PlayerClass.IRONCLAD, CardType.SKILL, target=TargetType.PLAYER, energy_cost=1)
+        super().__init__("Armaments", "Gain 5 <keyword>Block</keyword>. Upgrade a card in your hand for the rest of combat.", Rarity.COMMON, PlayerClass.IRONCLAD, CardType.SKILL, target=TargetType.YOURSELF, energy_cost=1)
         self.base_block = 5
         self.block = self.base_block
         self.block_affected_by = [f"Armaments({self.block} block)"]
@@ -168,7 +168,7 @@ class Clothesline(Card):
 
 class Flex(Card):
     def __init__(self):
-        super().__init__("Flex", "Gain 2 <buff>Strength</buff>. At the end of your turn, lose 2 <buff>Strength</buff>.", Rarity.COMMON, PlayerClass.IRONCLAD, CardType.SKILL, target=TargetType.PLAYER, energy_cost=0)
+        super().__init__("Flex", "Gain 2 <buff>Strength</buff>. At the end of your turn, lose 2 <buff>Strength</buff>.", Rarity.COMMON, PlayerClass.IRONCLAD, CardType.SKILL, target=TargetType.YOURSELF, energy_cost=0)
         self.strength = 2
         self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Gain <green>4</green> <buff>Strength</buff>. At the end of your turn, lose <green>4</green> <buff>Strength</buff>.</yellow>"
 
