@@ -1,3 +1,4 @@
+import inspect
 import math
 import random
 from time import sleep
@@ -558,7 +559,7 @@ global_events = [event_BonfireSpirits, event_TheDivineFountain, event_Duplicator
                  event_Purifier, event_Transmogrifier, event_UpgradeShrine, event_WeMeetAgain, event_TheWomanInBlue]
 act1_events = [event_FaceTrader, event_BigFish, event_TheCleric, event_GoldenIdol, ]
 
-def choose_event() -> Callable:
+def choose_event(game_map) -> Callable:
     while True:
         valid_events: list[Callable] = global_events
         valid_events.extend(act1_events)
@@ -569,4 +570,7 @@ def choose_event() -> Callable:
             continue
         if chosen_event == event_WeMeetAgain and player.gold < 50:
             continue
-        return chosen_event
+        # Should enable me to have events that need the game map for combat.
+        event_args = inspect.getfullargspec(chosen_event)
+        return lambda: chosen_event(game_map=game_map) if 'game_map' in event_args[0] else chosen_event
+

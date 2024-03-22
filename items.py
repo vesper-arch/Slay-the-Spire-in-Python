@@ -181,6 +181,86 @@ class Flex(Card):
         ei.apply_effect(origin, None, "Strength", self.strength)
         ei.apply_effect(origin, None, "Strength Down", self.strength)
 
+class Havoc(Card):
+    def __init__(self):
+        super().__init__("Havoc", "Play the top card of your draw pile and <keyword>Exhaust</keyword> it.", Rarity.COMMON, PlayerClass.IRONCLAD, CardType.SKILL, target=TargetType.ANY, energy_cost=1)
+        self.upgrade_preview += f"<light-red>{self.energy_cost} Energy</light-red> -> <light-red><green>0</green> Energy</light-red>"
+
+    def upgrade(self):
+        self.upgrade_markers()
+        self.energy_cost = 0
+
+    def apply(self, origin, enemies):
+        top_card = origin.draw_pile[-1]
+        if top_card.target in (TargetType.SINGLE, TargetType.YOURSELF):
+            origin.use_card(top_card, True, origin.draw_pile, random.choice(enemies))
+        elif top_card.target in (TargetType.AREA, TargetType.ANY):
+            origin.use_card(top_card, True, origin.draw_pile, enemies)
+        else:
+            origin.use_card(top_card, True, origin.draw_pile, random.choice(enemies))
+
+class Headbutt(Card):
+    def __init__(self):
+        super().__init__("Headbutt", "Deal 9 damage. Put a card from your discard pile on top of your draw pile.", Rarity.COMMON, PlayerClass.IRONCLAD, CardType.ATTACK, target=TargetType.SINGLE, energy_cost=1)
+        self.base_damage = 9
+        self.damage = self.base_damage
+        self.damage_affected_by = [f"Headbutt({self.damage} dmg)"]
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Deal <green>12</green> damage. Put a card from your discard pile on top of your draw pile."
+
+    def upgrade(self):
+        self.upgrade_markers()
+        self.base_damage, self.damage = 12
+        self.info = "Deal 12 damage. Put a card from your discard pile on top of your draw pile."
+
+    def apply(self, origin, target):
+        origin.attack(target, self)
+        chosen_card = view.list_input("Choose a card to put on top of your draw pile", origin.discard_pile, view.view_piles)
+        origin.draw_pile.append(origin.discard_pile.pop(chosen_card))
+
+class HeavyBlade(Card):
+    registers = [Message.BEFORE_ATTACK]
+    def __init__(self):
+        super().__init__("Heavy Blade", "Deal 14 damage. <buff>Strength</buff> affects this card 3 times.", Rarity.COMMON, PlayerClass.IRONCLAD, CardType.ATTACK, target=TargetType.SINGLE, energy_cost=2)
+        self.base_damage = 14
+        self.damage = self.base_damage
+        self.damage_affected_by = [f"Heavy Blade({self.damage} dmg)"]
+        self.strength_multi = 3
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Deal 14 damage. <buff>Strength</buff> affects this card <green>5</green> times.</yellow>"
+
+    def upgrade(self):
+        self.upgrade_markers()
+        self.strength_multi = 5
+        self.info = "Deal 14 damage. <buff>Strength</buff> affects this card 5 times."
+
+    def apply(self, origin, target):
+        origin.attack(target, self)
+
+    def callback(self, message, data):
+        if message == Message.BEFORE_ATTACK:
+            player, _, card = data
+            card.modify_damage(player.buffs['Strength'] * self.strength_multi, f"Heavy Blade(+{player.buffs['Strength'] * self.strength_multi} dmg)")
+
+class IronWave(Card):
+    def __init__(self):
+        super().__init__("Iron Wave", "Deal 5 damage. Gain 5 <keyword>Block</keyword>.", Rarity.COMMON, PlayerClass.IRONCLAD, CardType.ATTACK, target=TargetType.SINGLE, energy_cost=1)
+        self.base_damage = 5
+        self.damage = self.base_damage
+        self.damage_affected_by = [f"Iron Wave({self.damage} dmg)"]
+        self.base_block = 5
+        self.block = self.base_block
+        self.block_affected_by = [f"Iron Wave({self.block} block)"]
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Deal <green>7</green> damage. Gain <green>7</green> <keyword>Block</keyword>.</yellow>"
+
+    def upgrade(self):
+        self.upgrade_markers()
+        self.base_damage, self.damage = 7
+        self.base_block, self.block = 7
+        self.info = "Deal 7 damage. Gain 7 </keyword>Block</keyword>."
+
+    def apply(self, origin, target):
+        origin.attack(target, self)
+        origin.blocking(self)
+
 class PerfectedStrike(Card):
     registers = [Message.BEFORE_ATTACK]
     def __init__(self):
@@ -221,6 +301,134 @@ class PommelStrike(Card):
         self.cards = 2
         self.info = "Deal 10 damage. Draw 2 cards."
 
+    def apply(self, origin, target):
+        origin.attack(target, self)
+        origin.draw_cards(False, self.cards)
+
+class ShrugItOff(Card):
+    def __init__(self):
+        super().__init__("Shrug It Off", "Gain 8 <keyword>Block</keyword>. ", Rarity.COMMON, PlayerClass.IRONCLAD, CardType.SKILL, target=TargetType.YOURSELF, energy_cost=1)
+        self.base_block = 8
+        self.block = self.base_block
+        self.block_affected_by = [f"Shrug It Off({self.block} block)"]
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Gain <green>11</green> <keyword>Block</keyword>. Draw 1 card."
+    
+    def upgrade(self):
+        self.upgrade_markers()
+        self.block, self.base_block = 11
+        self.info = "Gain 11 <keyword>Block</keyword>. Draw 1 card."
+
+    def apply(self, origin):
+        origin.blocking(self)
+        origin.draw_cards(False, 1)
+
+class SwordBoomerang(Card):
+    def __init__(self):
+        super().__init__("Sword Boomerang", "Deal 3 damage to a random enemy 3 times.", Rarity.COMMON, PlayerClass.IRONCLAD, CardType.ATTACK, target=TargetType.AREA, energy_cost=1)
+        self.base_damage = 3
+        self.damage = self.base_damage
+        self.damage_affected_by = [f"Sword Boomerang({self.damage} dmg)"]
+        self.times = 3
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Deal 3 damage to a random enemy <green>4</green> times.</yellow>"
+
+    def upgrade(self):
+        self.upgrade_markers()
+        self.times = 4
+        self.info = "Deal 3 damage to a random enemy 4 times."
+
+    def apply(self, origin, enemies):
+        for enemy in enemies:
+            origin.attack(enemy, self)
+
+class Thunderclap(Card):
+    def __init__(self):
+        super().__init__("Thunderclap", "Deal 4 damage and apply 1 <debuff>Vulnerable</debuff> to ALL enemies.", Rarity.COMMON, PlayerClass.IRONCLAD, CardType.ATTACK, target=TargetType.AREA, energy_cost=1)
+        self.base_damage = 4
+        self.damage = self.base_damage
+        self.damage_affected_by = [f"Thunderclap({self.damage} dmg)"]
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Deal <green>7</green> damage and apply 1 <debuff>Vulnerable</debuff> to ALL enemies."
+
+    def upgrade(self):
+        self.upgrade_markers()
+        self.base_damage, self.damage = 7
+        self.info = "Deal 7 damage and apply 1 <debuff>Vulnerable</debuff> to ALL enemies."
+
+    def apply(self, origin, enemies):
+        for enemy in enemies:
+            origin.attack(enemy, self)
+
+class TrueGrit(Card):
+    def __init__(self):
+        super().__init__("True Grit", "Gain 7 <keyword>Block</keyword>. <keyword>Exhaust</keyword> a random card in your hand.", Rarity.COMMON, PlayerClass.IRONCLAD, CardType.SKILL, target=TargetType.YOURSELF, energy_cost=1)
+        self.base_block = 7
+        self.block = self.base_block
+        self.block_affected_by = [f"True Grit({self.block} block)"]
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Gain <green>9</green> <keyword>Block</keyword>. <keyword>Exhaust</keyword> a card in your hand."
+
+    def upgrade(self):
+        self.upgrade_markers()
+        self.base_block, self.block = 9
+        self.info = "Gain 9 <keyword>Block</keyword>. <keyword>Exhaust</keyword> a card in your hand."
+
+    def apply(self, origin):
+        origin.blocking(self)
+        if self.upgraded is True:
+            chosen_card = view.list_input("Choose a card to <keyword>Exhaust</keyword>", origin.hand, view.view_piles, lambda card: card.upgradeable is True and card.upgraded is False, "That card is either not upgradeable or is already upgraded.")
+            origin.move_card(origin.hand[chosen_card], origin.exhaust_pile, origin.hand, False)
+        else:
+            random_card = random.choice((card for card in origin.hand if card.upgradeable is True and card.upgraded is False))
+            origin.move_card(random_card, origin.exhaust_pile, origin.hand, False)
+
+class TwinStrike(Card):
+    def __init__(self):
+        super().__init__("Twin Strike", "Deal 5 damage twice.", Rarity.COMMON, PlayerClass.IRONCLAD, CardType.ATTACK, target=TargetType.SINGLE, energy_cost=1)
+        self.base_damage = 5
+        self.damage = self.base_damage
+        self.damage_affected_by = [f"Twin Strike({self.damage} dmg)"]
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Deal <green>7</green> damage twice.</yellow>"
+
+    def upgrade(self):
+        self.upgrade_markers()
+        self.base_damage, self.damage = 7
+        self.info = "Deal 7 damage twice."
+
+    def apply(self, origin, target):
+        origin.attack(target, self)
+
+class Warcry(Card):
+    def __init__(self):
+        super().__init__("Warcry", "Draw 1 card. Put a card from your hand on top of your draw pile. <keyword>Exhaust</keyword>.", Rarity.COMMON, PlayerClass.IRONCLAD, CardType.SKILL, target=TargetType.YOURSELF, energy_cost=0)
+        self.cards = 1
+        self.exhaust = True
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Draw <green>2 cards</green>. Put a card from your hand on top of your draw pile. <keyword>Exhaust</keyword>.</yellow>"
+
+    def upgrade(self):
+        self.upgrade_markers()
+        self.cards = 2
+        self.info = "Draw 2 cards. Put a card from your hand on top of your draw pile. <keyword>Exhaust</keyword>."
+
+    def apply(self, origin):
+        origin.draw_cards(False, self.cards)
+        chosen_card = view.list_input("Choose a card to put on top of your draw pile", origin.hand, view.view_piles)
+        origin.move_card(origin.hand[chosen_card], origin.draw_pile, origin.hand, False)
+
+class WildStrike(Card):
+    def __init__(self):
+        super().__init__("Wild Strike", "Deal 12 damage. Shuffle a <status>Wound</status> into your draw pile.", Rarity.COMMON, PlayerClass.IRONCLAD, CardType.ATTACK, target=TargetType.SINGLE, energy_cost=1)
+        self.base_damage = 12
+        self.damage = self.base_damage
+        self.damage_affected_by = [f"Wild Strike({self.damage} dmg)"]
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Deal <green>17</green> damage. Shuffle a <status>Wound</status> into your draw pile.</yellow>"
+
+    def upgrade(self):
+        self.upgrade_markers()
+        self.base_damage, self.damage = 17
+        self.info = "Deal 17 damage. Shuffle a <status>Wound</status> into your draw pile."
+
+    def apply(self, origin, target):
+        origin.attack(target, self)
+        origin.draw_pile.insert(Wound(), random.randint(len(origin.draw_pile) - 1))
+
 class Slimed(Card):
     def __init__(self):
         super().__init__("Slimed", "<keyword>Exhaust</keyword>.", Rarity.COMMON, PlayerClass.IRONCLAD, CardType.STATUS, target=TargetType.YOURSELF, energy_cost=1)
@@ -230,447 +438,11 @@ class Slimed(Card):
     def apply(self, _):
         pass
 
-def use_apotheosis(using_card, entity):
-    '''Upgrade ALL of your cards for the rest of combat. Exhaust.'''
-    for card in entity.hand:
-        card = entity.card_actions(card, 'Upgrade')
-        sleep(0.3)
+class Wound(Card):
+    def __init__(self):
+        super().__init__("Wound", "<keyword>Unplayable</keyword>.", Rarity.COMMON, PlayerClass.ANY, CardType.STATUS, TargetType.NOTHING)
+        self.playable = False
 
-def use_armaments(using_card, entity):
-    '''Gain 5 Block. Upgrade a(ALL) card(s) in your hand for the rest of combat.'''
-    entity.blocking(5, False)
-    if using_card.get('Upgraded'):
-        for card in entity.hand:
-            card = entity.card_actions(card, 'Upgrade')
-            sleep(0.3)
-    else:
-        while True:
-            option = view.list_input("Choose a card to upgrade > ", entity.hand, view.upgrade_preview, lambda card: not card.get("Upgraded") and (card['Name'] == "Burn" or card['Type'] not in ("Status", "Curse")), "That card is not upgradeable.")
-            entity.hand[option] = entity.card_actions(entity.hand[option], 'Upgrade')
-            break
-
-def use_clothesline(targeted_enemy, using_card, entity):
-    '''Deal 12(14) damage. Apply 2(3) Weak'''
-    entity.attack(using_card['Damage'], targeted_enemy, using_card)
-    ei.apply_effect(targeted_enemy, entity, 'Weak', using_card['Weak'])
-
-def use_havoc(enemies, using_card, entity):
-    '''Play the top card of your draw pile and Exhaust it.'''
-    _ = using_card
-    if len(entity.draw_pile) > 0:
-        entity.use_card(entity.draw_pile[-1], random.choice(enemies), True, entity.draw_pile)
-
-def use_flex(using_card, entity):
-    '''Gain 2(4) Strength. At the end of your turn, lose 2(4) Strength'''
-    ei.apply_effect(entity, entity, 'Strength', using_card['Strength'])
-    ei.apply_effect(entity, entity, 'Strength Down', using_card['Strength'])
-
-def use_headbutt(targeted_enemy, using_card, entity):
-    '''Deal 9(12) damage. Put a card from your discard pile on top of your draw pile.'''
-    entity.attack(using_card['Damage'], targeted_enemy, using_card)
-    while True:
-        view.view_piles(entity.discard_pile, entity)
-        choice = view.list_input('What card do you want to put on top of your draw pile? > ', entity.discard_pile, view.view_piles)
-        entity.move_card(card=entity.discard_pile[choice], move_to=entity.draw_pile, from_location=entity.discard_pile, cost_energy=False)
-        break
-
-def use_handofgreed(targeted_enemy, using_card, entity):
-    '''Deal 20(25) damage. If Fatal, gain 20(25) Gold.'''
-    entity.attack(using_card['Damage'], targeted_enemy, using_card)
-    if targeted_enemy.health <= 0:
-        entity.gold += using_card['Gold']
-        ansiprint(f"You gained {using_card['Gold']} <keyword>Gold</keyword>.")
-
-def use_shrugitoff(using_card, entity):
-    '''Gain 8(11) Block. Draw 1 card.'''
-    entity.blocking(using_card['Block'])
-    entity.draw_cards(True, 1)
-
-def use_swordboomerang(enemies, using_card, entity):
-    '''Deal 3 damage to a random enemy 3(4) times.'''
-    for _ in range(using_card['Times']):
-        entity.attack(3, random.choice(enemies), using_card)
-
-def use_thunderclap(enemies, using_card, entity):
-    '''Deal 4(7) damage and apply 1 Vulnerable to ALL enemies.'''
-    for enemy in enemies:
-        entity.attack(using_card['Damage'], enemy, using_card)
-        ei.apply_effect(enemy, entity, 'Vulnerable', 1, entity)
-    sleep(0.5)
-    view.clear()
-
-def use_ironwave(targeted_enemy, using_card, entity):
-    '''Gain 5(7) Block. Deal 5(7) damage.'''
-    entity.attack(using_card['Damage'], targeted_enemy, using_card)
-    entity.blocking(using_card['Block'])
-
-
-def use_pommelstrike(targeted_enemy, using_card, entity):
-    '''Deal 9(10) damage. Draw 1(2) cards.'''
-    entity.attack(using_card['Damage'], targeted_enemy, using_card)
-    entity.draw_cards(True, using_card['Cards'])
-
-def use_masterofstrategy(using_card, entity):
-    '''Draw 3(4) cards. Exhaust.'''
-    entity.draw_cards(True, using_card['Cards'])
-
-def use_truegrit(using_card, entity):
-    '''Gain 7(9) Block. Exhaust a random(not random) card in your hand.'''
-    entity.blocking(using_card['Block'])
-    if using_card.get('Upgraded'):
-        while True:
-            view.view_piles(entity.hand, entity)
-            option = view.list_input('Choose a card to <keyword>Exhaust</keyword>.', entity.hand, view.view_piles)
-            entity.move_card(card=entity.deck[option], move_to=entity.exhaust_pile, from_location=entity.hand, cost_energy=False)
-            break
-    else:
-        entity.move_card(card=random.choice(entity.hand), move_to=entity.exhaust_pile, from_location=entity.hand, cost_energy=False)
-
-def use_twinstrike(targeted_enemy, using_card, entity):
-    '''Deal 5(7) damage twice.'''
-    for _ in range(2):
-        entity.attack(using_card['Damage'], targeted_enemy, using_card)
-
-def use_warcry(using_card, entity):
-    '''Draw 1(2) cards. Put a card from your hand on top of your draw pile.'''
-    entity.draw_cards(True, using_card['Cards'])
-    while True:
-        view.view_piles(entity.hand, entity)
-        option = view.list_input('Choose a card to put on top of your draw pile.', entity.hand, view.view_piles)
-        entity.draw_pile.append(entity.hand[option])
-        del entity.hand[option]
-        break
-
-def use_wildstrike(targeted_enemy, using_card, entity):
-    '''Deal 12(17) damage. Shuffle a Wound into your draw pile.'''
-    entity.attack(using_card['Damage'], targeted_enemy, using_card)
-    if len(entity.draw_pile) > 0:
-        entity.draw_pile.insert(random.randint(0, len(entity.draw_pile) - 1), deepcopy(cards['Wound']))
-    else:
-        entity.draw_pile.append(deepcopy(cards['Wound']))
-    ansiprint("A <status>Wound</status> was shuffled into your draw pile.")
-
-def use_battletrance(using_card, entity):
-    '''Draw 3(4) cards. You cannot draw additonal cards this turn.'''
-    entity.draw_cards(True, using_card['Cards'])
-    ei.apply_effect(entity, entity, 'No Draw')
-
-def use_bloodforblood(targeted_enemy, using_card, entity):
-    '''Costs 1 less Energy for each time you lose HP this combat. Deal 18(22) damage.'''
-    entity.attack(using_card['Damage'], targeted_enemy, using_card)
-
-def use_bloodletting(using_card, entity):
-    '''Lose 2 HP. Gain 2(3) Energy.'''
-    entity.take_sourceless_dmg(2)
-    entity.energy += using_card['Energy Gain']
-    ansiprint(f"You gained {using_card['Energy Gain']} <keyword>Energy</keyword>.")
-
-def use_burningpact(using_card, entity):
-    '''Exhaust one card. Draw 1(2) cards.'''
-    while True:
-        option = view.list_input('Choose a card to <keyword>Exhaust</keyword> > ', entity.hand, view.view_piles)
-        entity.move_card(card=entity.hand[option], move_to=entity.exhaust_pile, from_location=entity.hand, cost_energy=False)
-        ansiprint(f"{entity.hand[option]['Name']} was <keyword>Exhausted</keyword>")
-        break
-    entity.draw_cards(True, using_card['Cards'])
-
-def use_carnage(targeted_enemy, using_card, entity):
-    '''Ethereal. Deal 20(28) damage.'''
-    entity.attack(using_card['Damage'], targeted_enemy, using_card)
-
-def use_combust(using_card, entity):
-    '''At the end of your turn, lose 1 HP and deal 5(7) damage to ALL enemies.'''
-    ei.apply_effect(entity, entity, 'Combust', using_card['Combust'])
-
-def use_darkembrace(using_card, entity):
-    '''Whenever a card is Exhausted, draw 1 card.'''
-    _ = using_card
-    ei.apply_effect(entity, entity, 'Dark Embrace', 1)
-
-def use_disarm(targeted_enemy, using_card, entity):
-    '''Enemy loses 2(3) Strength. Exhaust.'''
-    ei.apply_effect(targeted_enemy, entity, 'Strength', -using_card['Strength Loss'])
-
-def use_darkshackles(targeted_enemy, using_card, entity):
-    '''Enemy loses 9(15) Strength for the rest of this turn.'''
-    ei.apply_effect(targeted_enemy, entity, 'Strength', -using_card['Magic Number'])
-
-def use_dropkick(targeted_enemy, using_card, entity):
-    '''Deal 5(8) damage. If the enemy has Vulnerable, gain 1 Energy and draw 1 card.'''
-    entity.attack(using_card['Damage'], targeted_enemy, using_card)
-    if targeted_enemy.debuffs['Vulnerable'] > 0:
-        entity.energy += 1
-        ansiprint('You gained 1 <keyword>Energy</keyword>.')
-        entity.draw_cards(True, 1)
-
-def use_dualwield(using_card, entity):
-    '''Create a(2) copy(copies) of an Attack or Power card.'''
-    while True:
-        valid_cards = [(idx, card) for idx, card in enumerate(entity.hand) if card.get('Type') in ('Attack', 'Power')]
-        view_cards = [card[1] for card in valid_cards]
-        option = view.list_input(f"Choose a card to make {'a copy' if not using_card.get('Upgraded') else '2 copies'} of > ", view_cards, view.view_piles, lambda card: card['Type'] in ("Power", "Attack"), "That card is not a <keyword>Power</keyword> or an <keyword>Attack</keyword>.")
-        #convert option to index of entity.hand
-        option = valid_cards[option][0]
-        for _ in range(using_card['Copies']):
-            print("You made a copy of", entity.hand[option]['Name'])
-            entity.hand.insert(option, deepcopy(entity.hand[option]))
-        break
-
-def use_entrench(using_card, entity):
-    '''Double your Block'''
-    _ = using_card
-    entity.block *= 2
-    ansiprint(f"You now have <light-blue>{entity.block} Block</light-blue>.")
-
-def use_evolve(using_card, entity):
-    '''Whenever you draw a Status card, draw 1(2) card.'''
-    ei.apply_effect(entity, entity, 'Evolve', using_card['Evolve'])
-
-def use_feelnopain(using_card, entity):
-    '''Whenever a card is Exhausted, gain 3(4) Block.'''
-    ei.apply_effect(entity, entity, 'Feel No Pain', using_card['Feel No Pain'])
-
-def use_firebreathing(using_card, entity):
-    '''Whenever you draw a Status or Curse card, deal 6(10) damage to ALL enemies.'''
-    ei.apply_effect(entity, entity, 'Fire Breathing', using_card['Fire Breathing'])
-
-def use_flamebarrier(using_card, entity):
-    '''Gain 12(16) Block. Whenever you are attacked this turn, deal 4 damage back.'''
-    entity.blocking(using_card['Block'])
-    ei.apply_effect(entity, entity, 'Flame Barrier', 4)
-
-def use_ghostlyarmor(using_card, entity):
-    '''Ethereal. gain 10(13) Block.'''
-    entity.blocking(using_card['Block'])
-
-def use_hemokinesis(targeted_enemy, using_card, entity):
-    '''Lose 2 HP. Deal 15(20) damage.'''
-    entity.take_sourceless_dmg(2)
-    entity.attack(using_card['Damage'], targeted_enemy, using_card)
-
-def use_infernalblade(using_card, entity):
-    '''Add a random Attack into your hand. It costs 0 this turn. Exhaust.'''
-    _ = using_card
-    valid_cards = [card for card in cards.values() if card.get('Type') == 'Attack' and card.get('Class') == entity.player_class]
-    entity.hand.append(random.choice(valid_cards).modify_energy_cost(0, 'Set'))
-
-def use_chrysalis(using_card, entity):
-    '''Add 3(5) random Skills into your hand. They cost 0 this turn. Exhaust.'''
-    valid_cards = [card() for card in cards if card.type == CardType.SKILL and card.player_class == entity.player_class]
-    entity.hand.append(random.choice(valid_cards).modify_energy_cost(0, 'Set'))
-
-def use_discovery(using_card, entity):
-    '''Choose 1 of 3 random cards to add to your hand. It costs 0 this turn. Exhaust. (Don't Exhaust.)'''
-    raise NotImplementedError("Need to have a user interaction here")
-
-def use_inflame(using_card, entity):
-    '''Gain 2(3) Strength'''
-    ei.apply_effect(entity, entity, 'Strength', using_card['Strength'])
-
-def use_intimidate(enemies, using_card, entity):
-    '''Apply 1(2) Weak to ALL enemies. Exhaust.'''
-    for enemy in enemies:
-        ei.apply_effect(enemy, entity, 'Weak', using_card['Weak'])
-
-def use_metallicize(using_card, entity):
-    '''At the end of your turn, gain 3(4) Block'''
-    ei.apply_effect(entity, entity, 'Metallicize', using_card['Metallicize'])
-
-def use_powerthrough(using_card, entity):
-    '''Add 2 Wounds into your hand. Gain 15(20) Block.'''
-    for _ in range(2):
-        entity.hand.append(deepcopy(cards['Wound']))
-    ansiprint("2 <status>Wounds</status> have been added to your hand.")
-    entity.blocking(using_card['Block'])
-
-def use_pummel(targeted_enemy, using_card, entity):
-    '''Deal 2 damage 4(5) times. Exhaust.'''
-    for _ in range(using_card['Times']):
-        entity.attack(2, targeted_enemy, using_card)
-        sleep(0.5)
-
-def use_rage(using_card, entity):
-    '''Whenever you play an Attack this turn, gain 3(5) Block'''
-    ei.apply_effect(entity, entity, 'Rage', using_card['Rage'])
-
-def use_rampage(targeted_enemy, using_card, entity):
-    '''Deal 8 damage. Increase this card's damage by 5(8).'''
-    entity.attack(using_card['Damage'], targeted_enemy, using_card)
-    using_card['Damage'] += using_card['Damage+']
-
-def use_recklesscharge(targeted_enemy, using_card, entity):
-    '''Deal 7(10) damage. Shuffle a Dazed into your draw pile.'''
-    entity.attack(using_card['Damage'], targeted_enemy, using_card)
-    entity.draw_pile.insert(random.randint(0, len(entity.draw_pile) - 1), deepcopy(cards['Dazed']))
-    ansiprint("A <status>Dazed</status> was shuffled into your draw pile.")
-
-def use_deepbreath(using_card, entity):
-    '''Shuffle your discard pile into your draw pile. Draw 1(2) cards.'''
-    entity.draw_pile.extend(entity.discard_pile)
-    entity.discard_pile = []
-    entity.draw_cards(True, using_card['Cards'])
-
-def use_rupture(using_card, entity):
-    '''Whenever you lose HP from a card, gain 1(2) Strength.'''
-    ei.apply_effect(entity, entity, 'Rupture', using_card['Rupture'])
-
-def use_searingblow(targeted_enemy, using_card, entity):
-    '''Deal 12(16) damage. Can be upgraded any number of times.'''
-    entity.attack(using_card['Damage'], targeted_enemy, using_card)
-
-def use_secondwind(using_card, entity):
-    '''Exhaust all non-Attack cards in your hand and gain 5(7) Block for each card Exhausted.'''
-    cards_exhausted = 0
-    for card in entity.hand:
-        if card.get('Type') != 'Attack':
-            cards_exhausted += 1
-            entity.move_card(card=card, move_to=entity.exhaust_pile, from_location=entity.hand, cost_energy=False)
-            ansiprint(f"{card['Name']} was <keyword>Exhausted</keyword>.")
-            sleep(0.5)
-    entity.blocking(using_card['Block Per Card'] * cards_exhausted)
-
-def use_seeingred(using_card, entity):
-    '''Gain 2 Energy. Exhaust.'''
-    _ = using_card
-    entity.energy += 2
-    ansiprint('You gained 2 <keyword>Energy</keyword>.')
-
-def use_sentinel(using_card, entity):
-    '''Gain 5(8) Block. If this card is Exhausted, gain 2(3) Energy.'''
-    entity.blocking(using_card['Block'])
-
-def use_seversoul(targeted_enemy, using_card, entity):
-    '''Exhaust all non-Attack cards in your hand. Deal 16(22) damage.'''
-    for card in entity.hand:
-        if card['Type'] != 'Attack':
-            entity.move_card(card=card, move_to=entity.exhaust_pile, from_location=entity.hand, cost_energy=False)
-            ansiprint(f"{card['Name']} was exhausted.")
-            sleep(0.5)
-    entity.attack(using_card['Damage'], targeted_enemy, using_card)
-
-def use_shockwave(enemies, using_card, entity):
-    '''Apply 3(5) Weak and Vulnerable to ALL enemies. Exhaust.'''
-    for enemy in enemies:
-        ei.apply_effect(enemy, entity, 'Weak', using_card['Weak/Vulnerable'])
-        ei.apply_effect(enemy, entity, 'Vulnerable', using_card['Weak/Vulnerable'])
-
-def use_uppercut(targeted_enemy, using_card, entity):
-    '''Deal 10(13) damage. Apply 1(2) Weak. Apply 1(2) Vulnerable.'''
-    entity.attack(using_card['Damage'], targeted_enemy, using_card)
-    sleep(1)
-    ei.apply_effect(targeted_enemy, entity, 'Weak', using_card['Weak/Vulnerable'])
-    ei.apply_effect(targeted_enemy, entity, 'Vulnerable', using_card['Weak/Vulnerable'])
-
-def use_whirlwind(enemies, using_card, entity):
-    '''Deal 5(8) damage to ALL enemies X times.'''
-    for _ in range(entity.energy):
-        for enemy in enemies:
-            entity.attack(using_card['Damage'], enemy, using_card)
-            sleep(0.5)
-        sleep(1)
-        view.clear()
-
-def use_barricade(using_card, entity):
-    '''Block is not removed at the start of your turn.'''
-    _ = using_card
-    ei.apply_effect(entity, entity, 'Barricade')
-
-def use_berzerk(using_card, entity):
-    '''Gain 2(1) Vulnerable. At the start of your turn, gain 1 Energy.'''
-    ei.apply_effect(entity, entity, 'Vulnerable', using_card['Self Vulnerable'])
-    ei.apply_effect(entity, entity, 'Berzerk', 1)
-
-def use_bludgeon(targeted_enemy, using_card, entity):
-    '''Deal 32(42) damage.'''
-    entity.attack(using_card['Damage'], targeted_enemy, using_card)
-
-def use_brutality(using_card, entity):
-    '''At the start of your turn, lose 1 HP and draw 1 card.'''
-    _ = using_card
-    ei.apply_effect(entity, entity, 'Brutality', 1)
-
-def use_corruption(using_card, entity):
-    '''Skills cost 0. Whenever you play a Skill, Exhaust it.'''
-    _ = using_card
-    ei.apply_effect(entity, entity, "Corruption")
-
-def use_demonform(using_card, entity):
-    '''At the start of your turn, gain 2(3) Strength'''
-    ei.apply_effect(entity, entity, "Demon Form", using_card['Demon Form'])
-
-def use_doubletap(using_card, entity):
-    '''This turn, your next (2) Attack(s) is(are) played twice.'''
-    ei.apply_effect(entity, entity, "Double Tap", using_card['Charges'])
-
-def use_exhume(using_card, entity):
-    '''Put a card from your exhaust pile into your hand. Exhaust.'''
-    _ = using_card
-    while True:
-        view.view_piles(entity.exhaust_pile, entity)
-        option = view.list_input("Choose a card to return to your hand > ", entity.exhaust_pile, view.view_piles)
-        if option is None:
-            ansiprint('<red>The card you entered is invalid</red>')
-            sleep(1.5)
-            view.clear()
-            continue
-        entity.hand.append(entity.exhaust_pile[option])
-        del entity.exhaust_pile[option]
-        break
-
-def use_bandageup(using_card, entity):
-    '''Heal 4(6) HP. Exhaust.'''
-    entity.health_actions(4, 'Heal')
-
-def use_feed(targeted_enemy, using_card, entity):
-    '''Deal 10(12) damage. If Fatal, raise your Max HP by 3(4). Exhaust.'''
-    entity.attack(using_card['Damage'], targeted_enemy, using_card)
-    if targeted_enemy.health <= 0 and not targeted_enemy.buffs['Minion']:
-        ansiprint(f"You gained {using_card['Max HP']} <keyword>Max HP</keyword>.")
-        entity.health_actions(using_card['Max HP'], 'Max Health')
-
-def use_fiendfire(targeted_enemy, using_card, entity):
-    '''Exhaust all cards in your hand. Deal 7(10) damage for each card Exhausted. Exhaust.'''
-    for card in entity.hand:
-        if card != using_card:
-            entity.move_card(card=card, move_to=entity.exhaust_pile, from_location=entity.hand, cost_energy=False)
-            ansiprint(f"{card['Name']} was <keyword>Exhausted</keyword>.")
-            entity.attack(using_card['Damage'], targeted_enemy, using_card)
-
-def use_immolate(enemies, using_card, entity):
-    '''Deal 21(28) damage to ALL enemies. Add a Burn to your discard pile.'''
-    for enemy in enemies:
-        entity.attack(using_card['Damage'], enemy, using_card)
-        sleep(0.5)
-    entity.discard_pile.append(deepcopy(cards['Burn']))
-
-def use_impervious(using_card, entity):
-    '''Gain 30(40) Block. Exhaust.'''
-    entity.blocking(using_card['Block'])
-
-def use_juggernaut(using_card, entity):
-    '''Whenever you gain Block, deal 5(7) damage to a random enemy.'''
-    ei.apply_effect(target=entity, user=entity, effect_name='Juggernaut', amount=using_card['Dmg On Block'])
-
-def use_limitbreak(using_card, entity):
-    '''Double your Strength. Exhaust.'''
-    _ = using_card
-    entity.buffs['Strength'] *= 2
-    ansiprint(f"You now have {entity.buffs['Strength']} <buff>Strength</buff>.\n" if entity.buffs['Strength'] > 0 else '', end='')
-
-def use_offering(using_card, entity):
-    '''Lose 6 HP. Gain 2 Energy, Draw 3(5) cards. Exhaust.'''
-    entity.take_sourceless_dmg(6)
-    entity.energy += 2
-    ansiprint("You gained 2 <keyword>Energy</keyword>.")
-    entity.draw_cards(True, using_card['Cards'])
-
-def use_reaper(enemies, using_card, entity):
-    '''Deal 4(5) damage to ALL enemies. Heal HP equal to unblocked damage. Exhaust.'''
-    for enemy in enemies:
-        entity.attack(using_card['Damage'], enemy, using_card)
-        sleep(0.5)
-    sleep(1)
-    view.clear()
 
 relics: dict[str: dict] = {
     # Starter Relics
@@ -863,267 +635,267 @@ relics: dict[str: dict] = {
     # Circlet can only be obtained once you have gotten all other relics.
     'Circlet': {'Name': 'Circlet', 'Class': 'Any', 'Rarity': 'Special', 'Info': 'Looks pretty.', 'Flavor': 'You ran out of relics to find. Impressive!'}
 }
-cards = (card() for card in (IroncladStrike, IroncladDefend, Bash))
+cards = (card() for card in (IroncladStrike, IroncladDefend, Bash, Anger, Armaments, BodySlam, Clash, Cleave, Clothesline, Flex, Havoc,
+                             Headbutt, HeavyBlade, IronWave, PerfectedStrike, PommelStrike, ShrugItOff, SwordBoomerang, Thunderclap, TrueGrit, TwinStrike, Warcry, WildStrike))
 cards_old = {
     # Ironclad cards
-    'Strike': {'Name': 'Strike', 'Damage': 6, 'Energy': 1, 'Rarity': 'Basic', 'Target': 'Single', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ6 damage.', 'Effects+': {'Damage': 9, 'Info': 'Deal Σ9 damage.'}},
+    #'Strike': {'Name': 'Strike', 'Damage': 6, 'Energy': 1, 'Rarity': 'Basic', 'Target': 'Single', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ6 damage.', 'Effects+': {'Damage': 9, 'Info': 'Deal Σ9 damage.'}},
 
-    'Defend': {'Name': 'Defend', 'Block': 5, 'Energy': 1, 'Target': 'Yourself', 'Rarity': 'Basic', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Gain Ω5 <keyword>Block</keyword>.', 'Effects+': {'Block': 8, 'Info': 'Gain Ω8 <keyword>Block</keyword>'}},
+    #'Defend': {'Name': 'Defend', 'Block': 5, 'Energy': 1, 'Target': 'Yourself', 'Rarity': 'Basic', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Gain Ω5 <keyword>Block</keyword>.', 'Effects+': {'Block': 8, 'Info': 'Gain Ω8 <keyword>Block</keyword>'}},
 
-    'Bash': {'Name': 'Bash', 'Damage': 8, 'Vulnerable': 2, 'Energy': 2, 'Target': 'Single', 'Rarity': 'Basic', 'Class': 'Ironclad', 'Type': 'Attack', 'Info': 'Deal Σ8 damage. Apply 2 <debuff>Vulnerable</debuff>', 'Effects+': {'Damage': 10, 'Vulnerable': 3, 'Info': 'Deal Σ10 damage. Apply 3 <debuff>Vulnerable</debuff>'}},
+    #'Bash': {'Name': 'Bash', 'Damage': 8, 'Vulnerable': 2, 'Energy': 2, 'Target': 'Single', 'Rarity': 'Basic', 'Class': 'Ironclad', 'Type': 'Attack', 'Info': 'Deal Σ8 damage. Apply 2 <debuff>Vulnerable</debuff>', 'Effects+': {'Damage': 10, 'Vulnerable': 3, 'Info': 'Deal Σ10 damage. Apply 3 <debuff>Vulnerable</debuff>'}},
 
-    'Anger': {'Name': 'Anger', 'Damage': 6, 'Energy': 0,  'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ6 damage. Add a copy of this card to your discard pile.', 'Effects+': {'Damage': 8, 'Info': 'Deal Σ8 damage. Add a copy of this card to your discard pile.'}},
+    #'Anger': {'Name': 'Anger', 'Damage': 6, 'Energy': 0,  'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ6 damage. Add a copy of this card to your discard pile.', 'Effects+': {'Damage': 8, 'Info': 'Deal Σ8 damage. Add a copy of this card to your discard pile.'}},
 
-    'Armaments': {'Name': 'Armaments', 'Target': 'Yourself', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Gain Ω5 <keyword>Block</keyword>. <keyword>Upgrade</keyword> a card in your hand for the rest of combat.',
-                  'Effects+': {'Info': 'Gain Ω5 <keyword>Block</keyword>. <keyword>Upgrade</keyword> ALL cards in your hand for the rest of combat.'}},
+    #'Armaments': {'Name': 'Armaments', 'Target': 'Yourself', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Gain Ω5 <keyword>Block</keyword>. <keyword>Upgrade</keyword> a card in your hand for the rest of combat.',
+    #              'Effects+': {'Info': 'Gain Ω5 <keyword>Block</keyword>. <keyword>Upgrade</keyword> ALL cards in your hand for the rest of combat.'}},
 
-    'Body Slam': {'Name': 'Body Slam', 'Energy': 1, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal damage equal to your <keyword>Block</keyword>(Σ0)', 'Effects+': {'Energy': 0}},
+    #'Body Slam': {'Name': 'Body Slam', 'Energy': 1, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal damage equal to your <keyword>Block</keyword>(Σ0)', 'Effects+': {'Energy': 0}},
 
-    'Clash': {'Name': 'Clash', 'Damage': 14, 'Energy': 0, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Can only be played is every card in your hand is an <keyword>Attack</keyword>. Deal Σ18 damage.',
-              'Effects+': {'Damage': 18, 'Info': 'Can only be played if every card in your hand is an <keyword>Attack</keyword>. Deal Σ18 damage.'}},
+    #'Clash': {'Name': 'Clash', 'Damage': 14, 'Energy': 0, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Can only be played is every card in your hand is an <keyword>Attack</keyword>. Deal Σ18 damage.',
+    #          'Effects+': {'Damage': 18, 'Info': 'Can only be played if every card in your hand is an <keyword>Attack</keyword>. Deal Σ18 damage.'}},
 
     # 'Cleave': {'Name': 'Cleave', 'Damage': 8, 'Target': 'Any', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ8 damage to ALL enemies', 'Effects+': {'Damage': 11, 'Info': 'Deal Σ11 damage to ALL enemies.'}, 'Function': use_cleave},
 
-    'Clothesline': {'Name': 'Clothesline', 'Energy': 2, 'Damage': 12, 'Weak': 2, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ12 damage. Apply 2 <debuff>Weak</debuff>', 'Effects+': {'Damage': 14, 'Weak': 3, 'Info': 'Deal Σ14 damage. Apply 3 <debuff>Weak</debuff>.'}, 'Function': use_clothesline},
+    #'Clothesline': {'Name': 'Clothesline', 'Energy': 2, 'Damage': 12, 'Weak': 2, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ12 damage. Apply 2 <debuff>Weak</debuff>', 'Effects+': {'Damage': 14, 'Weak': 3, 'Info': 'Deal Σ14 damage. Apply 3 <debuff>Weak</debuff>.'}},
 
-    'Flex': {'Name': 'Flex', 'Strength': 2, 'Energy': 0, 'Target': 'Yourself', 'Rarity': 'Common', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Gain 2 <buff>Strength</buff>. At the end of your turn, lose 2 <buff>Strength</buff>',
-             'Effects+': {'Strength': 4, 'Info': 'Gain 4 <buff>Strength</buff>. At the end of your turn, lose 4 <buff>Strength</buff>.'}, 'Function': use_flex},
+    #'Flex': {'Name': 'Flex', 'Strength': 2, 'Energy': 0, 'Target': 'Yourself', 'Rarity': 'Common', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Gain 2 <buff>Strength</buff>. At the end of your turn, lose 2 <buff>Strength</buff>',
+    #         'Effects+': {'Strength': 4, 'Info': 'Gain 4 <buff>Strength</buff>. At the end of your turn, lose 4 <buff>Strength</buff>.'}},
 
-    'Havoc': {'Name': 'Havoc', 'Energy': 1, 'Target': 'Area', 'Rarity': 'Common', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Play the top card of your draw pile and <keyword>Exhaust</keyword> it.', 'Effects+': {'Energy': 0}, 'Function': use_havoc},
+    #'Havoc': {'Name': 'Havoc', 'Energy': 1, 'Target': 'Area', 'Rarity': 'Common', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Play the top card of your draw pile and <keyword>Exhaust</keyword> it.', 'Effects+': {'Energy': 0}},
+    #'Headbutt': {'Name': 'Headbutt', 'Damage': 9, 'Energy': 1, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ9 damage. Place a card from your discard pile on top of your draw pile.',
+    #             'Effects+': {'Damage': 12, 'Info': 'Deal Σ12 damage. Place a card from your discard pile on top of your draw pile.'}},
 
-    'Headbutt': {'Name': 'Headbutt', 'Damage': 9, 'Energy': 1, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ9 damage. Place a card from your discard pile on top of your draw pile.',
-                 'Effects+': {'Damage': 12, 'Info': 'Deal Σ12 damage. Place a card from your discard pile on top of your draw pile.'}, 'Function': use_headbutt},
+    ## 'Heavy Blade': {'Name': 'Heavy Blade', 'Damage': 14, 'Strength Multi': 3, 'Energy': 2, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ14 damage. <buff>Strength</buff> affects this card 3 times.',
+    #                # 'Effects+': {'Damage': 18, 'Strength Multi': 5, 'Info': 'Deal Σ14 damage. <buff>Strength</buff> affects this card 3 times.'}, 'Function': use_heavyblade},
 
-    # 'Heavy Blade': {'Name': 'Heavy Blade', 'Damage': 14, 'Strength Multi': 3, 'Energy': 2, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ14 damage. <buff>Strength</buff> affects this card 3 times.',
-                    # 'Effects+': {'Damage': 18, 'Strength Multi': 5, 'Info': 'Deal Σ14 damage. <buff>Strength</buff> affects this card 3 times.'}, 'Function': use_heavyblade},
+    #'Iron Wave': {'Name': 'Iron Wave', 'Damage': 5, 'Block': 5, 'Energy': 1, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Gain Ω5 <keyword>Block</keyword>. Deal Σ5 damage.', 'Effects+': {'Damage': 7, 'Block': 7, 'Info': 'Gain Ω7 <keyword>Block</keyword>. Deal Σ7 damage.'}, 'Function': use_ironwave},
 
-    'Iron Wave': {'Name': 'Iron Wave', 'Damage': 5, 'Block': 5, 'Energy': 1, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Gain Ω5 <keyword>Block</keyword>. Deal Σ5 damage.', 'Effects+': {'Damage': 7, 'Block': 7, 'Info': 'Gain Ω7 <keyword>Block</keyword>. Deal Σ7 damage.'}, 'Function': use_ironwave},
+    ## 'Perfected Strike': {'Name': 'Perfected Strike', 'Damage Per "Strike"': 2, 'Energy': 2, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ6 damage. Deals 2 additional damage for ALL your cards containing <italic>"Strike"</italic>.',
+    #                    #  'Effects+': {'Damage Per "Strike"': 3, 'Info': 'Deal Σ6 damage. Deals 3 additional damage for ALL your cards containing <italic>"Strike"</italic>.'}, 'Function': use_perfectedstrike},
 
-    # 'Perfected Strike': {'Name': 'Perfected Strike', 'Damage Per "Strike"': 2, 'Energy': 2, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ6 damage. Deals 2 additional damage for ALL your cards containing <italic>"Strike"</italic>.',
-                        #  'Effects+': {'Damage Per "Strike"': 3, 'Info': 'Deal Σ6 damage. Deals 3 additional damage for ALL your cards containing <italic>"Strike"</italic>.'}, 'Function': use_perfectedstrike},
+    #'Pommel Strike': {'Name': 'Pommel Strike', 'Damage': 9, 'Cards': 1, 'Energy': 1, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ9 damage. Draw 1 card.', 'Effects+': {'Damage': 10, 'Cards': 2, 'Info': 'Deal Σ10 damage. Draw 2 cards.'}, 'Function': use_pommelstrike},
 
-    'Pommel Strike': {'Name': 'Pommel Strike', 'Damage': 9, 'Cards': 1, 'Energy': 1, 'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ9 damage. Draw 1 card.', 'Effects+': {'Damage': 10, 'Cards': 2, 'Info': 'Deal Σ10 damage. Draw 2 cards.'}, 'Function': use_pommelstrike},
+    #'Shrug it Off': {'Name': 'Shrug it Off', 'Block': 8, 'Cards': 1, 'Energy': 1, 'Rarity': 'Common', 'Target': 'Yourself', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Gain Ω8 <keyword>Block</keyword>. Draw 1 card.', 'Effects+': {'Block': 11, 'Info': 'Gain Ω11 <keyword>Block</keyword>. Draw 1 card.'}, 'Function': use_shrugitoff},
 
-    'Shrug it Off': {'Name': 'Shrug it Off', 'Block': 8, 'Cards': 1, 'Energy': 1, 'Rarity': 'Common', 'Target': 'Yourself', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Gain Ω8 <keyword>Block</keyword>. Draw 1 card.', 'Effects+': {'Block': 11, 'Info': 'Gain Ω11 <keyword>Block</keyword>. Draw 1 card.'}, 'Function': use_shrugitoff},
+    #'Sword Boomerang': {'Name': 'Sword Boomerang', 'Times': 3, 'Target': 'Random', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ3 damage to a random enemy 3 times.', 'Effects+': {'Times': 4, 'Info': 'Deal Σ3 damage to a random enemy 4 times.'}, 'Function': use_swordboomerang},
 
-    'Sword Boomerang': {'Name': 'Sword Boomerang', 'Times': 3, 'Target': 'Random', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ3 damage to a random enemy 3 times.', 'Effects+': {'Times': 4, 'Info': 'Deal Σ3 damage to a random enemy 4 times.'}, 'Function': use_swordboomerang},
+    #'Thunderclap': {'Name': 'Thunderclap', 'Damage': 4, 'Target': 'Any', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ4 damage and apply 1 <debuff>Vulnerable</debuff> to ALL enemies.',
+    #                'Effects+': {'Damage': 7, 'Info': 'Deal Σ7 damage and apply 1 <debuff>Vulnerable</debuff> to ALL enemies.'}, 'Function': use_thunderclap},
 
-    'Thunderclap': {'Name': 'Thunderclap', 'Damage': 4, 'Target': 'Any', 'Energy': 1, 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ4 damage and apply 1 <debuff>Vulnerable</debuff> to ALL enemies.',
-                    'Effects+': {'Damage': 7, 'Info': 'Deal Σ7 damage and apply 1 <debuff>Vulnerable</debuff> to ALL enemies.'}, 'Function': use_thunderclap},
+    #'True Grit': {'Name': 'True Grit', 'Class': 'Ironclad', 'Rarity': 'Common', 'Target': 'Yourself', 'Type': 'Skill', 'Block': 7, 'Energy': 1, 'Info': 'Gain Ω7 <keyword>Block</keyword>. <keyword>Exhaust</keyword> a random card in your hand.',
+    #              'Effects+': {'Block': 9, 'Info': 'Gain Ω9 <keyword>Block</keyword>. <keyword>Exhaust</keyword> a card in your hand.'}, 'Function': use_truegrit},
 
-    'True Grit': {'Name': 'True Grit', 'Class': 'Ironclad', 'Rarity': 'Common', 'Target': 'Yourself', 'Type': 'Skill', 'Block': 7, 'Energy': 1, 'Info': 'Gain Ω7 <keyword>Block</keyword>. <keyword>Exhaust</keyword> a random card in your hand.',
-                  'Effects+': {'Block': 9, 'Info': 'Gain Ω9 <keyword>Block</keyword>. <keyword>Exhaust</keyword> a card in your hand.'}, 'Function': use_truegrit},
+    #'Twin Strike': {'Name': 'Twin Strike', 'Class': 'Ironclad', 'Rarity': 'Common', 'Type': 'Attack', 'Target': 'Single', 'Damage': 5, 'Energy': 1, 'Info': 'Deal Σ5 damage twice.', 'Effects+': {'Damage': 7, 'Info': 'Deal Σ7 damage twice.'}, 'Function': use_twinstrike},
 
-    'Twin Strike': {'Name': 'Twin Strike', 'Class': 'Ironclad', 'Rarity': 'Common', 'Type': 'Attack', 'Target': 'Single', 'Damage': 5, 'Energy': 1, 'Info': 'Deal Σ5 damage twice.', 'Effects+': {'Damage': 7, 'Info': 'Deal Σ7 damage twice.'}, 'Function': use_twinstrike},
+    #'Warcry': {'Name': 'Warcry', 'Class': 'Ironclad', 'Rarity': 'Common', 'Target': 'Yourself', 'Type': 'Skill', 'Exhaust': True, 'Cards': 1, 'Energy': 0, 'Info': 'Draw 1 card. Put a card from your hand on top of your draw pile. <keyword>Exhaust</keyword>.',
+    #           'Effects+': {'Cards': 2, 'Info': 'Draw 2 cards. Put a card from your hand on top of your draw pile. <keyword>Exhaust</keyword>.'}, 'Function': use_warcry},
 
-    'Warcry': {'Name': 'Warcry', 'Class': 'Ironclad', 'Rarity': 'Common', 'Target': 'Yourself', 'Type': 'Skill', 'Exhaust': True, 'Cards': 1, 'Energy': 0, 'Info': 'Draw 1 card. Put a card from your hand on top of your draw pile. <keyword>Exhaust</keyword>.',
-               'Effects+': {'Cards': 2, 'Info': 'Draw 2 cards. Put a card from your hand on top of your draw pile. <keyword>Exhaust</keyword>.'}, 'Function': use_warcry},
+    #'Wild Strike': {'Name': 'Wild Strike', 'Class': 'Ironclad', 'Rarity': 'Common', 'Type': 'Attack', 'Target': 'Single', 'Damage': 12, 'Energy': 1, 'Info': 'Deal Σ12 damage. Shuffle a <status>Wound</status> into your draw pile.',
+    #                'Effects+': {'Damage': 17, 'Info': 'Deal Σ17 damage. Shuffle a <status>Wound</status> into your draw pile.'}, 'Function': use_wildstrike},
 
-    'Wild Strike': {'Name': 'Wild Strike', 'Class': 'Ironclad', 'Rarity': 'Common', 'Type': 'Attack', 'Target': 'Single', 'Damage': 12, 'Energy': 1, 'Info': 'Deal Σ12 damage. Shuffle a <status>Wound</status> into your draw pile.',
-                    'Effects+': {'Damage': 17, 'Info': 'Deal Σ17 damage. Shuffle a <status>Wound</status> into your draw pile.'}, 'Function': use_wildstrike},
+    ## Uncommon cards
+    #'Battle Trance': {'Name': 'Battle Trance', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Cards': 3, 'Energy': 0, 'Info': "Draw 3 cards. You can't draw additional cards this turn.", 'Effects+': {'Cards': 4, 'Info': "Draw 4 cards. You can't draw additional cards this turn."}, 'Function': use_battletrance},
 
-    # Uncommon cards
-    'Battle Trance': {'Name': 'Battle Trance', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Cards': 3, 'Energy': 0, 'Info': "Draw 3 cards. You can't draw additional cards this turn.", 'Effects+': {'Cards': 4, 'Info': "Draw 4 cards. You can't draw additional cards this turn."}, 'Function': use_battletrance},
+    #'Blood for Blood': {'Name': 'Blood for Blood', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Attack', 'Target': 'Single', 'Damage': 18, 'Energy': 4, 'Info': 'Costs 1 less <keyword>Energy</keyword> for each time you lose HP this combat. Deal Σ18 damage.',
+    #                    'Effects+': {'Damage': 22, 'Info': 'Costs 1 less <keyword>Energy</keyword> for each time you lose HP this combat. Deal Σ22 damage.'}, 'Function': use_bloodforblood},
 
-    'Blood for Blood': {'Name': 'Blood for Blood', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Attack', 'Target': 'Single', 'Damage': 18, 'Energy': 4, 'Info': 'Costs 1 less <keyword>Energy</keyword> for each time you lose HP this combat. Deal Σ18 damage.',
-                        'Effects+': {'Damage': 22, 'Info': 'Costs 1 less <keyword>Energy</keyword> for each time you lose HP this combat. Deal Σ22 damage.'}, 'Function': use_bloodforblood},
+    #'Bloodletting': {'Name': 'Bloodletting', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Energy Gain': 2, 'Energy': 0, 'Info': 'Lose 3 HP. Gain 2 <keyword>Energy</keyword>.', 'Effects+': {'Energy Gain': 3, 'Info': 'Lose 3 HP. Gain 3 <keyword>Energy</keyword>.'}, 'Function': use_bloodletting},
 
-    'Bloodletting': {'Name': 'Bloodletting', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Energy Gain': 2, 'Energy': 0, 'Info': 'Lose 3 HP. Gain 2 <keyword>Energy</keyword>.', 'Effects+': {'Energy Gain': 3, 'Info': 'Lose 3 HP. Gain 3 <keyword>Energy</keyword>.'}, 'Function': use_bloodletting},
+    #'Burning Pact': {'Name': 'Burning Pact', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Cards': 2, 'Energy': 1, 'Info': '<keyword>Exhaust</keyword> 1 card. Draw 2 cards.', 'Effects+': {'Cards': 3, 'Info': '<keyword>Exhaust</keyword> 1 card. Draw 3 cards.'}, 'Function': use_burningpact},
 
-    'Burning Pact': {'Name': 'Burning Pact', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Cards': 2, 'Energy': 1, 'Info': '<keyword>Exhaust</keyword> 1 card. Draw 2 cards.', 'Effects+': {'Cards': 3, 'Info': '<keyword>Exhaust</keyword> 1 card. Draw 3 cards.'}, 'Function': use_burningpact},
+    #'Carnage': {'Name': 'Carnage', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Target': 'Single', 'Type': 'Attack', 'Ethereal': True, 'Damage': 20, 'Energy': 2, 'Info': '<keyword>Ethereal.</keyword> Deal Σ20 damage.', 'Effects+': {'Damage': 28, 'Info': '<keyword>Ethereal.</keyword> Deal Σ28 damage.'}, 'Function': use_carnage},
 
-    'Carnage': {'Name': 'Carnage', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Target': 'Single', 'Type': 'Attack', 'Ethereal': True, 'Damage': 20, 'Energy': 2, 'Info': '<keyword>Ethereal.</keyword> Deal Σ20 damage.', 'Effects+': {'Damage': 28, 'Info': '<keyword>Ethereal.</keyword> Deal Σ28 damage.'}, 'Function': use_carnage},
+    #'Combust': {'Name': 'Combust', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Target': 'Yourself', 'Type': 'Power', 'Combust': 5, 'Energy': 1, 'Info': 'At the end of your turn, lose 1 HP and deal 5 damage to ALL enemies.', 'Effects+': {'Combust': 7, 'Info': 'At the end of your turn, lose 1 HP and deal 7 damage to ALL enemies'}, 'Function': use_combust},
 
-    'Combust': {'Name': 'Combust', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Target': 'Yourself', 'Type': 'Power', 'Combust': 5, 'Energy': 1, 'Info': 'At the end of your turn, lose 1 HP and deal 5 damage to ALL enemies.', 'Effects+': {'Combust': 7, 'Info': 'At the end of your turn, lose 1 HP and deal 7 damage to ALL enemies'}, 'Function': use_combust},
+    #'Dark Embrace': {'Name': 'Dark Embrace', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Target': 'Yourself', 'Type': 'Power', 'Energy': 2, 'Info': 'Whenever a card is <keyword>Exhausted</keyword>, draw 1 card.', 'Effects+': {'Energy': 1}, 'Function': use_darkembrace},
 
-    'Dark Embrace': {'Name': 'Dark Embrace', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Target': 'Yourself', 'Type': 'Power', 'Energy': 2, 'Info': 'Whenever a card is <keyword>Exhausted</keyword>, draw 1 card.', 'Effects+': {'Energy': 1}, 'Function': use_darkembrace},
+    #'Disarm': {'Name': 'Disarm', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Single', 'Exhaust': True, 'Strength Loss': 2, 'Energy': 1, 'Info': 'Enemy loses 2 <buff>Strength</buff>. <keyword>Exhaust.</keyword>',
+    #           'Effects+': {'Strength Loss': 3, 'Info': 'Enemy loses 3 <buff>Strength</buff>. <keyword>Exhaust</keyword>.'}, 'Function': use_disarm},
 
-    'Disarm': {'Name': 'Disarm', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Single', 'Exhaust': True, 'Strength Loss': 2, 'Energy': 1, 'Info': 'Enemy loses 2 <buff>Strength</buff>. <keyword>Exhaust.</keyword>',
-               'Effects+': {'Strength Loss': 3, 'Info': 'Enemy loses 3 <buff>Strength</buff>. <keyword>Exhaust</keyword>.'}, 'Function': use_disarm},
+    #'Dropkick': {'Name': 'Dropkick', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Attack', 'Target': 'Single', 'Damage': 5, 'Energy': 1, 'Info': 'Deal Σ5 damage. If the enemy has <debuff>Vulnerable</debuff>, gain 1 <keyword>Energy</keyword> and draw 1 card.',
+    #             'Effects+': {'Damage': 8, 'Info': 'Deal Σ8 damage. If the enemy has <debuff>Vulnerable</debuff>, gain 1 <keyword>Energy</keyword> and draw 1 card.'}, 'Function': use_dropkick},
 
-    'Dropkick': {'Name': 'Dropkick', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Attack', 'Target': 'Single', 'Damage': 5, 'Energy': 1, 'Info': 'Deal Σ5 damage. If the enemy has <debuff>Vulnerable</debuff>, gain 1 <keyword>Energy</keyword> and draw 1 card.',
-                 'Effects+': {'Damage': 8, 'Info': 'Deal Σ8 damage. If the enemy has <debuff>Vulnerable</debuff>, gain 1 <keyword>Energy</keyword> and draw 1 card.'}, 'Function': use_dropkick},
+    #'Dual Wield': {'Name': 'Dual Wield', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Copies': 1, 'Energy': 1, 'Info': 'Create a copy of an <keyword>Attack</keyword> or <keyword>Power</keyword> card in your hand.',
+    #               'Effects+': {'Copies': 2, 'Info': 'Create 2 copies of an <keyword>Attack</keyword> or <keyword>Power</keyword> card in your hand'}, 'Function': use_dualwield},
 
-    'Dual Wield': {'Name': 'Dual Wield', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Copies': 1, 'Energy': 1, 'Info': 'Create a copy of an <keyword>Attack</keyword> or <keyword>Power</keyword> card in your hand.',
-                   'Effects+': {'Copies': 2, 'Info': 'Create 2 copies of an <keyword>Attack</keyword> or <keyword>Power</keyword> card in your hand'}, 'Function': use_dualwield},
+    #'Entrench': {'Name': 'Entrench', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Energy': 2, 'Info': 'Double your <keyword>Block</keyword>.', 'Effects+': {'Energy': 1}, 'Function': use_entrench},
 
-    'Entrench': {'Name': 'Entrench', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Energy': 2, 'Info': 'Double your <keyword>Block</keyword>.', 'Effects+': {'Energy': 1}, 'Function': use_entrench},
+    #'Evolve': {'Name': 'Evolve', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Power', 'Target': 'Yourself', 'Evolve': 1, 'Energy': 1, 'Info': 'Whenever you draw a <status>Status</status> card, draw 1 card.', 'Effects+': {'Evolve': 2, 'Info': 'Whenever you draw a <status>Status</status> cards, draw 2 cards.'}, 'Function': use_evolve},
 
-    'Evolve': {'Name': 'Evolve', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Power', 'Target': 'Yourself', 'Evolve': 1, 'Energy': 1, 'Info': 'Whenever you draw a <status>Status</status> card, draw 1 card.', 'Effects+': {'Evolve': 2, 'Info': 'Whenever you draw a <status>Status</status> cards, draw 2 cards.'}, 'Function': use_evolve},
+    #'Fire Breathing': {'Name': 'Fire Breathing', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Power', 'Target': 'Yourself', 'Fire Breathing': 6, 'Energy': 1, 'Info': 'Whenever you draw a <status>Status</status> or <keyword>Curse</keyword>, deal 6 damage to ALL enemies.',
+    #                   'Effects+': {'Fire Breathing': 10, 'Info': 'Whenever you draw a <status>Status</status> or <keyword>Curse</keyword> card, deal 10 damage to ALL enemies.'}, 'Function': use_firebreathing},
 
-    'Fire Breathing': {'Name': 'Fire Breathing', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Power', 'Target': 'Yourself', 'Fire Breathing': 6, 'Energy': 1, 'Info': 'Whenever you draw a <status>Status</status> or <keyword>Curse</keyword>, deal 6 damage to ALL enemies.',
-                       'Effects+': {'Fire Breathing': 10, 'Info': 'Whenever you draw a <status>Status</status> or <keyword>Curse</keyword> card, deal 10 damage to ALL enemies.'}, 'Function': use_firebreathing},
+    #'Flame Barrier': {'Name': 'Flame Barrier', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Block': 12, 'Energy': 2, 'Info': "Gain Ω12 <keyword>Block</keyword>. Whenever you're attacked this turn, deal 4 damage back.",
+    #                  'Effects+': {'Block': 16, 'Info': "Gain Ω16 <keyword>Block</keyword>. Whenever you're attacked this turn, deal 4 damage back."}, 'Function': use_flamebarrier},
 
-    'Flame Barrier': {'Name': 'Flame Barrier', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Block': 12, 'Energy': 2, 'Info': "Gain Ω12 <keyword>Block</keyword>. Whenever you're attacked this turn, deal 4 damage back.",
-                      'Effects+': {'Block': 16, 'Info': "Gain Ω16 <keyword>Block</keyword>. Whenever you're attacked this turn, deal 4 damage back."}, 'Function': use_flamebarrier},
+    #'Ghostly Armor': {'Name': 'Ghostly Armor', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Ethereal': True, 'Block': 10, 'Energy': 1, 'Info': '<keyword>Ethereal.</keyword> Gain Ω10 <keyword>Block</keyword>.',
+    #                  'Effects+': {'Block': 13, 'Info': '<keyword>Ethereal.</keyword> Gain Ω13 <keyword>Block</keyword>.'}, 'Function': use_ghostlyarmor},
 
-    'Ghostly Armor': {'Name': 'Ghostly Armor', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Ethereal': True, 'Block': 10, 'Energy': 1, 'Info': '<keyword>Ethereal.</keyword> Gain Ω10 <keyword>Block</keyword>.',
-                      'Effects+': {'Block': 13, 'Info': '<keyword>Ethereal.</keyword> Gain Ω13 <keyword>Block</keyword>.'}, 'Function': use_ghostlyarmor},
+    #'Hemokinesis': {'Name': 'Hemokinesis', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Attack', 'Target': 'Single', 'Damage': 15, 'Energy': 1, 'Info': 'Lose 2 HP. Deal Σ15 damage.', 'Effects+': {'Damage': 20, 'Info': 'Lose 2 HP. Deal Σ20 damage.'}, 'Function': use_hemokinesis},
 
-    'Hemokinesis': {'Name': 'Hemokinesis', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Attack', 'Target': 'Single', 'Damage': 15, 'Energy': 1, 'Info': 'Lose 2 HP. Deal Σ15 damage.', 'Effects+': {'Damage': 20, 'Info': 'Lose 2 HP. Deal Σ20 damage.'}, 'Function': use_hemokinesis},
+    #'Infernal Blade': {'Name': 'Infernal Blade', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Energy': 1, 'Info': 'Add a random <keyword>Attack</keyword> into your hand. It costs 0 this turn. <keyword>Exhaust.</keyword>', 'Effects+': {'Energy': 0}, 'Function': use_infernalblade},
 
-    'Infernal Blade': {'Name': 'Infernal Blade', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Energy': 1, 'Info': 'Add a random <keyword>Attack</keyword> into your hand. It costs 0 this turn. <keyword>Exhaust.</keyword>', 'Effects+': {'Energy': 0}, 'Function': use_infernalblade},
+    #'Inflame': {'Name': 'Inflame', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Power', 'Target': 'Yourself', 'Strength': 2, 'Energy': 1, 'Info': 'Gain 2 <buff>Strength</buff>.', 'Effects+': {'Strength': 3, 'Info': 'Gain 3 <buff>Strength</buff>.'}, 'Function': use_inflame},
 
-    'Inflame': {'Name': 'Inflame', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Power', 'Target': 'Yourself', 'Strength': 2, 'Energy': 1, 'Info': 'Gain 2 <buff>Strength</buff>.', 'Effects+': {'Strength': 3, 'Info': 'Gain 3 <buff>Strength</buff>.'}, 'Function': use_inflame},
+    #'Intimidate': {'Name': 'Intimidate', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Area', 'Exhaust': True, 'Weak': 1, 'Energy': 0, 'Info': 'Apply 1 <debuff>Weak</debuff> to ALL enemies. <keyword>Exhaust</keyword>.',
+    #               'Effects+': {'Weak': 2, 'Info': 'Apply 2 <debuff>Weak</debuff> to ALL enemies. <keyword>Exhaust</keyword>.'}, 'Function': use_intimidate},
 
-    'Intimidate': {'Name': 'Intimidate', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Area', 'Exhaust': True, 'Weak': 1, 'Energy': 0, 'Info': 'Apply 1 <debuff>Weak</debuff> to ALL enemies. <keyword>Exhaust</keyword>.',
-                   'Effects+': {'Weak': 2, 'Info': 'Apply 2 <debuff>Weak</debuff> to ALL enemies. <keyword>Exhaust</keyword>.'}, 'Function': use_intimidate},
+    #'Metallicize': {'Name': 'Metallicize', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Power', 'Target': 'Yourself', 'Metallicize': 3, 'Energy': 1, 'Info': 'At the end of your turn, gain 3 <keyword>Block</keyword>.',
+    #                'Effects+': {'Metallicize': 4, 'Info': 'At the end of your turn, gain 4 <keyword>Block</keyword>.'}, 'Function': use_metallicize},
 
-    'Metallicize': {'Name': 'Metallicize', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Power', 'Target': 'Yourself', 'Metallicize': 3, 'Energy': 1, 'Info': 'At the end of your turn, gain 3 <keyword>Block</keyword>.',
-                    'Effects+': {'Metallicize': 4, 'Info': 'At the end of your turn, gain 4 <keyword>Block</keyword>.'}, 'Function': use_metallicize},
+    #'Power Through': {'Name': 'Power Through', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Block': 15, 'Energy': 1, 'Info': 'Add 2 <status>Wounds</status> to your hand. Gain Ω15 <keyword>Block</keyword>.',
+    #                  'Effects+': {'Block': 20, 'Info': 'Add 2 <status>Wounds</status> to your hand. Gain Ω20 <keyword>Block</keyword>'}, 'Function': use_powerthrough},
 
-    'Power Through': {'Name': 'Power Through', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Block': 15, 'Energy': 1, 'Info': 'Add 2 <status>Wounds</status> to your hand. Gain Ω15 <keyword>Block</keyword>.',
-                      'Effects+': {'Block': 20, 'Info': 'Add 2 <status>Wounds</status> to your hand. Gain Ω20 <keyword>Block</keyword>'}, 'Function': use_powerthrough},
+    #'Pummel': {'Name': 'Pummel', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Attack', 'Target': 'Single', 'Exhaust': True, 'Times': 4, 'Energy': 1, 'Info': 'Deal Σ2 damage 4 times.', 'Effects+': {'Times': 5, 'Info': 'Deal Σ2 damage 5 times.'}, 'Function': use_pummel},
 
-    'Pummel': {'Name': 'Pummel', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Attack', 'Target': 'Single', 'Exhaust': True, 'Times': 4, 'Energy': 1, 'Info': 'Deal Σ2 damage 4 times.', 'Effects+': {'Times': 5, 'Info': 'Deal Σ2 damage 5 times.'}, 'Function': use_pummel},
+    #'Rage': {'Name': 'Rage', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Rage': 3, 'Energy': 0, 'Info': 'Whenever you play an <keyword>Attack</keyword>, gain 3 <keyword>block</keyword>.',
+    #         'Effects+': {'Rage': 5, 'Info': 'Whenever you play an <keyword>Attack</keyword>, gain 5 <keyword>Block</keyword>.'}, 'Function': use_rage},
 
-    'Rage': {'Name': 'Rage', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Rage': 3, 'Energy': 0, 'Info': 'Whenever you play an <keyword>Attack</keyword>, gain 3 <keyword>block</keyword>.',
-             'Effects+': {'Rage': 5, 'Info': 'Whenever you play an <keyword>Attack</keyword>, gain 5 <keyword>Block</keyword>.'}, 'Function': use_rage},
+    #'Rampage': {'Name': 'Rampage', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Attack', 'Target': 'Single', 'Damage+': 5, 'Damage': 8, 'Energy': 1, 'Info': "Deal Σ8 damage. Increase this card's damage by 5 this combat.",
+    #            'Effects+': {'Damage+': 8, 'Info': "Deal Σ8 damage. Increase this card's damage by 8 this combat."}, 'Function': use_rampage},
 
-    'Rampage': {'Name': 'Rampage', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Attack', 'Target': 'Single', 'Damage+': 5, 'Damage': 8, 'Energy': 1, 'Info': "Deal Σ8 damage. Increase this card's damage by 5 this combat.",
-                'Effects+': {'Damage+': 8, 'Info': "Deal Σ8 damage. Increase this card's damage by 8 this combat."}, 'Function': use_rampage},
+    #'Reckless Charge': {'Name': 'Reckless Charge', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Attack', 'Target': 'Single', 'Damage': 7, 'Energy': 0, 'Info': 'Deal Σ7 damage. Shuffle a <status>Dazed</status> into your draw pile.',
+    #                    'Effects+': {'Damage': 10, 'Info': 'Deal Σ10 damage. Shuffle a <status>Dazed</status> into your draw pile.'}, 'Function': use_recklesscharge},
 
-    'Reckless Charge': {'Name': 'Reckless Charge', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Attack', 'Target': 'Single', 'Damage': 7, 'Energy': 0, 'Info': 'Deal Σ7 damage. Shuffle a <status>Dazed</status> into your draw pile.',
-                        'Effects+': {'Damage': 10, 'Info': 'Deal Σ10 damage. Shuffle a <status>Dazed</status> into your draw pile.'}, 'Function': use_recklesscharge},
+    #'Rupture': {'Name': 'Rupture', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Power', 'Target': 'Yourself', 'Rupture': 1, 'Energy': 1, 'Info': 'Whenever you lose HP from a card, gain 1 <buff>Strength</buff>.',
+    #            'Effects+': {'Rupture': 2, 'Info': 'Whenever you lose HP from a card, gain 2 <buff>Strength</buff>.'}, 'Function': use_rupture},
 
-    'Rupture': {'Name': 'Rupture', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Power', 'Target': 'Yourself', 'Rupture': 1, 'Energy': 1, 'Info': 'Whenever you lose HP from a card, gain 1 <buff>Strength</buff>.',
-                'Effects+': {'Rupture': 2, 'Info': 'Whenever you lose HP from a card, gain 2 <buff>Strength</buff>.'}, 'Function': use_rupture},
+    #'Searing Blow': {'Name': 'Searing Blow', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Attack', 'Target': 'Single', 'Damage': 12, 'Upgrade Count': 0, 'Energy': 2, 'Info': 'Deal Σ12 damage. Can be <keyword>upgraded</keyword> any number of times.', 'Function': use_searingblow},
 
-    'Searing Blow': {'Name': 'Searing Blow', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Attack', 'Target': 'Single', 'Damage': 12, 'Upgrade Count': 0, 'Energy': 2, 'Info': 'Deal Σ12 damage. Can be <keyword>upgraded</keyword> any number of times.', 'Function': use_searingblow},
+    #'Second Wind': {'Name': 'Second Wind', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Block Per Card': 5, 'Energy': 1, 'Info': '<keyword>Exhaust</keyword> all non-<keyword>Attack</keyword> cards in your hand and gain 5 <keyword>Block</keyword> for each card <keyword>Exhausted</keyword>.',
+    #                'Effects+': {'Block Per Card': 7, 'Info': '<keyword>Exhaust</keyword> all non-<keyword>Attack</keyword> cards in your hand and gain 7 <keyword>Block</keyword> for each card <keyword>Exhausted</keyword>.'}, 'Function': use_secondwind},
 
-    'Second Wind': {'Name': 'Second Wind', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Block Per Card': 5, 'Energy': 1, 'Info': '<keyword>Exhaust</keyword> all non-<keyword>Attack</keyword> cards in your hand and gain 5 <keyword>Block</keyword> for each card <keyword>Exhausted</keyword>.',
-                    'Effects+': {'Block Per Card': 7, 'Info': '<keyword>Exhaust</keyword> all non-<keyword>Attack</keyword> cards in your hand and gain 7 <keyword>Block</keyword> for each card <keyword>Exhausted</keyword>.'}, 'Function': use_secondwind},
+    #'Seeing Red': {'Name': 'Seeing Red', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Exhaust': True, 'Energy': 1, 'Info': 'Gain 2 <keyword>Energy</keyword>. <keyword>Exhaust</keyword>.', 'Effects+': {'Energy': 0}, 'Function': use_seeingred},
 
-    'Seeing Red': {'Name': 'Seeing Red', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Exhaust': True, 'Energy': 1, 'Info': 'Gain 2 <keyword>Energy</keyword>. <keyword>Exhaust</keyword>.', 'Effects+': {'Energy': 0}, 'Function': use_seeingred},
+    #'Sentinel': {'Name': 'Sentinel', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Block': 5, 'Energy Gain': 2, 'Energy': 1, 'Info': 'Gain Ω5 <keyword>Block</keyword>. If this card is <keyword>Exhausted</keyword>, gain 2 <keyword>Energy</keyword>',
+    #             'Effects+': {'Block': 8, 'Energy Gain': 3, 'Info': 'Gain Ω8 <keyword>Block</keyword>. If this card is <keyword>Exhausted</keyword>, gain 3 <keyword>Energy</keyword>.'}, 'Function': use_sentinel},
 
-    'Sentinel': {'Name': 'Sentinel', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Yourself', 'Block': 5, 'Energy Gain': 2, 'Energy': 1, 'Info': 'Gain Ω5 <keyword>Block</keyword>. If this card is <keyword>Exhausted</keyword>, gain 2 <keyword>Energy</keyword>',
-                 'Effects+': {'Block': 8, 'Energy Gain': 3, 'Info': 'Gain Ω8 <keyword>Block</keyword>. If this card is <keyword>Exhausted</keyword>, gain 3 <keyword>Energy</keyword>.'}, 'Function': use_sentinel},
+    #'Sever Soul': {'Name': 'Sever Soul', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Attack', 'Target': 'Single', 'Damage': 16, 'Energy': 2, 'Info': '<keyword>Exhaust</keyword> all non-<keyword>Attack</keyword> cards in your hand. Deal Σ16 damage.',
+    #               'Effects+': {'Damage': 22, 'Info': '<keyword>Exhaust</keyword> all non-<keyword>Attack</keyword> cards in your hand. Deal Σ22 damage.'}, 'Function': use_seversoul},
 
-    'Sever Soul': {'Name': 'Sever Soul', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Attack', 'Target': 'Single', 'Damage': 16, 'Energy': 2, 'Info': '<keyword>Exhaust</keyword> all non-<keyword>Attack</keyword> cards in your hand. Deal Σ16 damage.',
-                   'Effects+': {'Damage': 22, 'Info': '<keyword>Exhaust</keyword> all non-<keyword>Attack</keyword> cards in your hand. Deal Σ22 damage.'}, 'Function': use_seversoul},
-
-    'Shockwave': {'Name': 'Shockwave', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Area', 'Exhaust': True, 'Weak/Vulnerable': 3, 'Energy': 2, 'Info': 'Apply 3 <debuff>Weak</debuff> and <debuff>Vulnerable</debuff> to ALL enemies. <keyword>Exhaust</keyword>.',
-                  'Effects+': {'Weak/Vulnerable': 5, 'Info': 'Apply 5 <debuff>Weak</debuff> and <debuff>Vulnerable</debuff> to ALL enemies. <keyword>Exhaust</keyword>.'}, 'Function': use_shockwave},
-
-    # Ignore Spot Weakness because intent doesn't exist yet
-
-    'Uppercut': {'Name': 'Uppercut', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Attack', 'Target': 'Single', 'Damage': 13, 'Weak/Vulnerable': 1, 'Energy': 2, 'Info': 'Deal Σ13 damage. Apply 1 <debuff>Weak</debuff>. Apply 1 <debuff>Vulnerable</debuff>.',
-                 'Effects+': {'Weak/Vulnerable': 2, 'Info': 'Deal Σ13 damage. Apply 2 <debuff>Weak</debuff>. Apply 2 <debuff>Vulnerable</debuff>.'}, 'Function': use_uppercut},
-
-    'Whirlwind': {'Name': 'Whirlwind', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Attack', 'Target': 'Area', 'Damage': 5, 'Energy': -1, 'Info': 'Deal Σ5 damage X times.', 'Effects+': {'Damage': 8, 'Info': 'Deal Σ8 damage X times.'}, 'Function': use_whirlwind},
-
-    # Rare Cards
-    'Barricade': {'Name': 'Barricade', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Power', 'Target': 'Yourself', 'Energy': 3, 'Info': '<keyword>Block</keyword> is not removed at the start of your turn.', 'Effects+': {'Energy': 2}, 'Function': use_barricade},
-
-    'Berzerk': {'Name': 'Berzerk', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Power', 'Target': 'Yourself', 'Self Vulnerable': 2, 'Energy': 0, 'Info': 'Gain 2 <debuff>Vulnerable</debuff>. At the start of your turn, gain 1 <keyword>Energy</keyword>.',
-                'Effects+': {'Self Vulnerable': 1, 'Info': 'Gain 1 <debuff>Vulnerable</debuff>. At the start of your turn, gain 1 <keyword>Energy</keyword>.'}, 'Function': use_berzerk},
-
-    'Bludgeon': {'Name': 'Bludgeon', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Attack', 'Target': 'Single', 'Damage': 32, 'Energy': 3, 'Info': 'Deal Σ32 damage.', 'Effects+': {'Damage': 42, 'Info': 'Deal Σ42 damage.'}, 'Function': use_bludgeon},
-
-    'Brutality': {'Name': 'Brutality', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Power', 'Target': 'Yourself', 'Energy': 0, 'Info': 'At the start of your turn, lose 1 HP and draw 1 card.', 'Effects+': {'Innate': True, 'Info': '<keyword>Innate</keyword>. At the start of your turn, lose 1 HP and draw 1 card'}, 'Function': use_brutality},
-
-    'Corruption': {'Name': 'Corruption', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Power', 'Target': 'Yourself', 'Energy': 3, 'Info': '<keyword>Skills</keyword> cost 0. Whenever you play a <keyword>Skill</keyword>, <keyword>Exhaust</keyword> it.', 'Effects+': {'Energy': 2}, 'Function': use_corruption},
-
-    'Demon Form': {'Name': 'Demon Form', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Power', 'Target': 'Yourself', 'Demon Form': 2, 'Energy': 3, 'Info': 'At the start of your turn, gain 2 <buff>Strength</buff>.', 'Effects+': {'Demon Form': 3, 'Info': 'At the start of your turn, gain 3 <buff>Strength</buff>.'}, 'Function': use_demonform},
-
-    'Double Tap': {'Name': 'Double Tap', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Skill', 'Target': 'Yourself', 'Charges': 1, 'Energy': 1, 'Info': 'This turn, your next <keyword>Attack</keyword> is played twice.', 'Effects+': {'Charges': 2, 'Info': 'This turn, your next 2 <keyword>Attacks</keyword> are played twice'}, 'Function': use_doubletap},
-
-    'Exhume': {'Name': 'Exhume', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Skill', 'Target': 'Yourself', 'Energy': 1, 'Info': 'Put a card from your exhaust pile into your hand. <keyword>Exhaust</keyword>.', 'Effects+': {'Energy': 0}, 'Function': use_exhume},
-
-    'Feed': {'Name': 'Feed', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Attack', 'Target': 'Single', 'Exhaust': True, 'Damage': 10, 'Max HP': 3, 'Energy': 1, 'Info': 'Deal Σ10 damage. If <keyword>Fatal</keyword>, raise your Max HP by 3. <keyword>Exhaust</keyword>.',
-             'Effects+': {'Damage': 12, 'Max HP': 4, 'Info': 'Deal Σ12 damage. If <keyword>Fatal</keyword>, raise your Max HP by 4. <keyword>Exhaust</keyword>.'}, 'Function': use_feed},
-
-    'Fiend Fire': {'Name': 'Fiend Fire', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Attack', 'Target': 'Single', 'Energy': 2, 'Exhaust': True, 'Damage': 7, 'Info': '<keyword>Exhaust</keyword> all cards in your hand. Deal Σ7 damage for each <keyword>Exhausted</keyword>. <keyword>Exhaust</keyword>.',
-                   'Effects+': {'Damage': 10, 'Info': '<keyword>Exhaust</keyword> all cards in your hand. Deal Σ10 damage for each card <keyword>Exhausted</keyword>. <keyword>Exhaust</keyword>.'}, 'Function': use_fiendfire},
-
-    'Immolate': {'Name': 'Immolate', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Attack', 'Target': 'Area', 'Damage': 21, 'Energy': 2, 'Info': 'Deal Σ21 damage to ALL enemies. Add a <status>Burn</status> to your discard pile',
-                 'Effects+': {'Damage': 28, 'Info': 'Deal Σ28 damage to ALL enemies. Add a <status>Burn</status> to your discard pile.'}, 'Function': use_immolate},
-
-    'Impervious': {'Name': 'Impervious', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Skill', 'Target': 'Yourself', 'Block': 30, 'Energy': 2, 'Info': 'Gain Ω30 <keyword>Block</keyword>.', 'Effects+': {'Block': 40, 'Info': 'Gain Ω40 <keyword>Block</keyword>.'}, 'Function': use_impervious},
-
-    'Juggernaut': {'Name': 'Juggernaut', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Power', 'Target': 'Yourself', 'Dmg On Block': 5, 'Energy': 2, 'Info': 'Whenever you gain <keyword>Block</keyword>, deal 5 damage to a random enemy.',
-                   'Effects+': {'Dmg On Block': 7, 'Info': 'Whenever you gain <keyword>Block</keyword>, deal 7 damage to a random enemy.'}, 'Function': use_juggernaut},
-
-    'Limit Break': {'Name': 'Limit Break', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Skill', 'Target': 'Yourself', 'Exhaust': True, 'Energy': 1, 'Info': 'Double your <buff>Strength</buff>. <keyword>Exhaust</keyword>.', 'Effects+': {'Exhaust': False}, 'Function': use_limitbreak},
-
-    'Offering': {'Name': 'Offering', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Skill', 'Target': 'Yourself', 'Exhaust': True, 'Cards': 3, 'Energy': 0, 'Info': 'Lose 6 HP. Gain 2 <keyword>Energy</keyword>. Draw 3 cards. <keyword>Exhaust</keyword>.',
-                 'Effects+': {'Cards': 5, 'Info': 'Lose 6 HP. Gain 2 <keyword>Exhaust</keyword>. Draw 5 cards. <keyword>Exhaust</keyword>.'}, 'Function': use_offering},
-
-    'Reaper': {'Name': 'Reaper', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Attack', 'Target': 'Area', 'Exhaust': True, 'Damage': 4, 'Energy': 2, 'Info': 'Deal 4 damage to ALL enemies. Heal HP equal to unblocked damage. <keyword>Exhaust</keyword>.',
-               'Effects+': {'Damage': 5, 'Info': 'Deal 5 damage to ALL enemies. Heal HP equal to unblocked damage. <keyword>Exhaust</keyword>.'}, 'Function': use_reaper},
-    # Status cards
-    'Slimed': {'Name': 'Slimed', 'Energy': 1, 'Target': 'Nothing', 'Rarity': 'Common', 'Type': 'Status', 'Info': '<keyword>Exhaust</keyword>'},
-    'Burn': {'Name': 'Burn', 'Playable': False, 'Damage': 2, 'Rarity': 'Common', 'Type': 'Status', 'Info': '<keyword>Unplayable.</keyword> At the end of your turn, take 2 damage.', 'Effects+': {'Damage': 4, 'Info': '<keyword>Unplayable.</keyword> At the end of your turn, take 4 damage.'}},
-    'Dazed': {'Name': 'Dazed', 'Playable': False, 'Ethereal': True, 'Rarity': 'Common', 'Type': 'Status', 'Info': '<keyword>Unplayable. Ethereal.</keyword>'},
-    'Wound': {'Name': 'Wound', 'Playable': False, 'Rarity': 'Common', 'Type': 'Status', 'Info': '<keyword>Unplayable.</keyword>'},
-    'Void': {'Name': 'Void', 'Playable': False, 'Ethereal': True, 'Energy Loss': 1, 'Rarity': 'Common', 'Type': 'Status', 'Info': '<keyword>Unplayable. Ethereal.</keyword> When this card is drawn, lose 1 Energy.'},
-
-    # Curses
-    'Regret': {'Name': 'Regret', 'Playable': False, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable</keyword>. At the end of your turn, lose 1 HP for each card in your hand.'},
-    "Ascender's Bane": {'Name': "Ascender's Bane", 'Playable': False, 'Ethereal': True, 'Removable': False, 'Rarity': 'Special', 'Type': 'Curse', 'Info': '<keyword>Unplayable. Ethereal.</keyword> Cannot be removed from your deck'},
-    'Clumsy': {'Name': 'Clumsy', 'Playable': False, 'Ethereal': True, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable. Ethereal.</keyword>'},
-    'Curse of the Bell': {'Name': 'Curse of the Bell', 'Playable': False, 'Removable': False, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable.</keyword> Cannot be removed from your deck.'},
-    'Decay': {'Name': 'Decay', 'Playable': False, 'Damage': 2, 'Type': 'Curse', 'Rarity': 'Curse', 'Info': '<keyword>Unplayable.</keyword> At the end of your turn, take 2 damage.'},
-    'Doubt': {'Name': 'Doubt', 'Playable': False, 'Weak': 1, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable.</keyword> At the end of your turn, gain 1 <debuff>Weak</debuff>.'},
-    'Injury': {'Name': 'Injury', 'Playable': False, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable.</keyword>'},
-    'Necronomicurse': {'Name': 'Necronomicurse', 'Playable': False, 'Exhaustable': False, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable.</keyword> There is no escape from this <fg 141>Curse</fg 141>.'},
-    'Normality': {'Name': 'Normality', 'Playable': False, 'Cards Limit': 3, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable.</keyword> You cannot play more than 3 cards this turn.'},
-    'Pain': {'Name': 'Pain', 'Playable': False, 'Damage': 1, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable</keyword>. While in hand, lose 1 HP when other cards are played.'},
-    'Parasite': {'Name': 'Parasite', 'Playable': False, 'Max Hp Loss': 3, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable.</keyword> If transformed or removed from your deck, lose 3 Max HP.'},
-    'Pride': {'Name': 'Pride', 'Innate': True, 'Exhaust': True, 'Energy': 1, 'Rarity': 'Special', 'Type': 'Curse', 'Info': '<keyword>Innate.</keyword> At the end of your turn, put a copy of this card on top of your draw pile. <keyword>Exhaust.</keyword>'},
-    'Shame': {'Name': 'Shame', 'Playable': False, 'Frail': 1, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable.</keyword> At the end of your turn, gain 1 <red>Frail</red>.'},
-    'Writhe': {'Name': 'Writhe', 'Playable': False, 'Innate': True, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable. Innate.</keyword>'},
-
-    # Colorless Cards
-    "Bandage Up": {"Name": "Bandage Up", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Heal 4(6) HP. Exhaust.", "Exhaust": True, "Target": TargetType.YOURSELF, "Function": use_bandageup},
-    # "Blind": {"Name": "Blind", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Apply 2 Weak (to ALL enemies).", "Target": TargetType.AREA, "Function": use_blind},
-    "Dark Shackles": {"Name": "Dark Shackles", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Enemy loses 9(15) Strength for the rest of this turn. Exhaust.", "Exhaust": True, "Target": TargetType.ENEMY, "Function": use_darkshackles, "Magic Number": 9},
-    "Deep Breath": {"Name": "Deep Breath", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Shuffle your discard pile into your draw pile. Draw 1(2) card(s).", "Target": TargetType.NOTHING, "Function": use_deepbreath, "Cards": 1},
-    # "Discovery": {"Name": "Discovery", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 1, "Info": "Choose 1 of 3 random cards to add to your hand. It costs 0 this turn. Exhaust. (Don't Exhaust.)", "Exhaust": True, "Target": TargetType.YOURSELF, "Function": use_discovery},
-    # "Dramatic Entrance": {"Name": "Dramatic Entrance", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.ATTACK, "Energy": 0, "Info": "Innate. Deal 8(12) damage to ALL enemies. Exhaust.", "Exhaust": True, "Target": TargetType.AREA, "Function": use_dramaticentrance, "Damage": 8},
-    # "Enlightenment": {"Name": "Enlightenment", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Reduce the cost of cards in your hand to 1 this turn(combat)."},
-    # "Finesse": {"Name": "Finesse", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Gain 2(4) Block. Draw 1 card."},
-    # "Flash of Steel": {"Name": "Flash of Steel", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.ATTACK, "Energy": 0, "Info": "Deal 3(6) damage. Draw 1 card."},
-    # "Forethought": {"Name": "Forethought", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Place a card(any number of cards) from your hand on the bottom of your draw pile. It (They) costs 0 until played."},
-    # "Good Instincts": {"Name": "Good Instincts", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Gain 6(9) Block."},
-    # "Impatience": {"Name": "Impatience", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "If you have no Attack cards in your hand, draw 2(3) cards."},
-    # "Jack Of All Trades": {"Name": "Jack Of All Trades", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Add 1(2) random Colorless card(s) to your hand. Exhaust.", "Exhaust": True},
-    # "Madness": {"Name": "Madness", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 1, "Energy+": 0, "Info": "A random card in your hand costs 0 for the rest of combat. Exhaust.", "Exhaust": True},
-    # "Mind Blast": {"Name": "Mind Blast", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.ATTACK, "Energy": 2, "Energy+": 1, "Info": "Innate. Deal damage equal to the number of cards in your draw pile."},
-    # "Panacea": {"Name": "Panacea", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Gain 1(2) Artifact. Exhaust.", "Exhaust": True},
-    # "Panic Button": {"Name": "Panic Button", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Gain 30(40) Block. You cannot gain Block from cards for the next 2 turns. Exhaust.", "Exhaust": True},
-    # "Purity": {"Name": "Purity", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Choose and Exhaust 3(5) cards in your hand. Exhaust.", "Exhaust": True},
-    # "Swift Strike": {"Name": "Swift Strike", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.ATTACK, "Energy": 0, "Info": "Deal 7(10) damage."},
-    # "Trip": {"Name": "Trip", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Apply 2 Vulnerable (to ALL enemies)."},
-
-    "Apotheosis": {"Name": "Apotheosis", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 2, "Energy+": 1, "Info": "Upgrade ALL of your cards for the rest of combat. Exhaust.", "Exhaust": True, "Target": TargetType.YOURSELF, "Function": use_apotheosis},
-    "Chrysalis": {"Name": "Chrysalis", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 2, "Info": "Add 3(5) random Skills into your Draw Pile. They cost 0 this combat. Exhaust.", "Exhaust": True, "Target": TargetType.YOURSELF, "Function": use_chrysalis},
-    "Hand of Greed": {"Name": "Hand of Greed", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.ATTACK, "Energy": 2, "Info": "Deal 20(25) damage. If this kills a non-minion enemy, gain 20(25) Gold.", "Damage": 20, "Gold": 20, "Target": TargetType.ENEMY, "Function": use_handofgreed},
-    # "Magnetism": {"Name": "Magnetism", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.POWER, "Energy": 2, "Energy+": 1, "Info": "At the start of each turn, add a random colorless card to your hand."},
-    "Master Of Strategy": {"Name": "Master Of Strategy", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 0, "Info": "Draw 3(4) cards. Exhaust.", "Exhaust": True, "Cards": 3, "Target": TargetType.YOURSELF, "Function": use_masterofstrategy},
-    # "Mayhem": {"Name": "Mayhem", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.POWER, "Energy": 2, "Energy+": 1, "Info": "At the start of your turn, play the top card of your draw pile."},
-    # "Metamorphosis": {"Name": "Metamorphosis", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 2, "Info": "Add 3(5) random Attacks into your Draw Pile. They cost 0 this combat. Exhaust.", "Exhaust": True},
-    # "Panache": {"Name": "Panache", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.POWER, "Energy": 0, "Info": "Every time you play 5 cards in a single turn, deal 10(14) damage to ALL enemies."},
-    # "Sadistic Nature": {"Name": "Sadistic Nature", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.POWER, "Energy": 0, "Info": "Whenever you apply a Debuff to an enemy, they take 5(7) damage."},
-    # "Secret Technique": {"Name": "Secret Technique", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 0, "Info": "Choose a Skill from your draw pile and place it into your hand. Exhaust. (Don't Exhaust)", "Exhaust": True},
-    # "Secret Weapon": {"Name": "Secret Weapon", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 0, "Info": "Choose an Attack from your draw pile and place it into your hand. Exhaust. (Don't Exhaust)", "Exhaust": True},
-    # "The Bomb": {"Name": "The Bomb", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 2, "Info": "At the end of 3 turns, deal 40(50) damage to ALL enemies."},
-    # "Thinking Ahead": {"Name": "Thinking Ahead", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 0, "Info": "Draw 2 cards. Place a card from your hand on top of your draw pile. Exhaust. (Don't Exhaust.)", "Exhaust": True},
-    # "Transmutation": {"Name": "Transmutation", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": -1, "Info": "Add X random (Upgraded) colorless cards into your hand. They cost 0 this turn. Exhaust.", "Exhaust": True},
-    # "Violence": {"Name": "Violence", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 0, "Info": "Place 3(4) random Attack cards from your draw pile into your hand. Exhaust.", "Exhaust": True},
-    # "Apparition": {"Name": "Apparition", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.SKILL, "Energy": 1, "Info": "Gain 1 Intangible. Exhaust. Ethereal. (no longer Ethereal.) (Obtained from event: Council of Ghosts).", "Exhaust": True},
-    # "Beta": {"Name": "Beta", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.SKILL, "Energy": 2, "Energy+": 1, "Info": "Shuffle an Omega into your draw pile. Exhaust.  (Obtained from Alpha).", "Exhaust": True},
-    # "Bite": {"Name": "Bite", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.ATTACK, "Energy": 1, "Info": "Deal 7(8) damage. Heal 2(3) HP. (Obtained from event: Vampires(?))."},
-    # "Expunger": {"Name": "Expunger", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.ATTACK, "Energy": 1, "Info": "Deal 9(15) damage X times. (Obtained from Conjure Blade)."},
-    # "Insight": {"Name": "Insight", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.SKILL, "Energy": 0, "Info": "Retain. Draw 2(3) cards. Exhaust. (Obtained from Evaluate, Pray and Study).", "Exhaust": True},
-    # "J.A.X.": {"Name": "J.A.X.", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.SKILL, "Energy": 0, "Info": "Lose 3 HP.  Gain 2(3) Strength. (Obtained from event: Augmenter)."},
-    # "Miracle": {"Name": "Miracle", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.SKILL, "Energy": 0, "Info": "Retain. Gain (2) Energy. Exhaust. (Obtained from Collect, Deus Ex Machina, PureWater-0 Pure Water, and Holy water Holy Water).", "Exhaust": True},
-    # "Omega": {"Name": "Omega", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.POWER, "Energy": 3, "Info": "At the end of your turn deal 50(60) damage to ALL enemies. (Obtained from Beta)."},
-    # "Ritual Dagger": {"Name": "Ritual Dagger", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.ATTACK, "Energy": 1, "Info": "Deal 15 damage. If this kills an enemy then permanently increase this card's damage by 3(5). Exhaust. (Obtained during event: The Nest)", "Exhaust": True},
-    # "Safety": {"Name": "Safety", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.SKILL, "Energy": 1, "Info": "Retain. Gain 12(16) Block. Exhaust. (Obtained from Deceive Reality).", "Exhaust": True},
-    # "Shiv": {"Name": "Shiv", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.ATTACK, "Energy": 0, "Info": "Deal 4(6) damage. Exhaust. (Obtained from Blade Dance, Cloak and Dagger, Infinite Blades, Storm of Steel, and NinjaScroll Ninja Scroll).", "Exhaust": True},
-    # "Smite": {"Name": "Smite", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.ATTACK, "Energy": 1, "Info": "Retain. Deal 12(16) damage. Exhaust. (Obtained from Carve Reality and Battle Hymn).", "Exhaust": True},
-    "Through Violence": {"Name": "Through Violence", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.ATTACK, "Energy": 0, "Info": "Retain. Deal 20(30) damage. Exhaust. (Obtained from Reach Heaven).", "Exhaust": True, "Target": TargetType.ENEMY},
+    #'Shockwave': {'Name': 'Shockwave', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Skill', 'Target': 'Area', 'Exhaust': True, 'Weak/Vulnerable': 3, 'Energy': 2, 'Info': 'Apply 3 <debuff>Weak</debuff> and <debuff>Vulnerable</debuff> to ALL enemies. <keyword>Exhaust</keyword>.',
+    #              'Effects+': {'Weak/Vulnerable': 5, 'Info': 'Apply 5 <debuff>Weak</debuff> and <debuff>Vulnerable</debuff> to ALL enemies. <keyword>Exhaust</keyword>.'}, 'Function': use_shockwave},
+
+    ## Ignore Spot Weakness because intent doesn't exist yet
+
+    #'Uppercut': {'Name': 'Uppercut', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Attack', 'Target': 'Single', 'Damage': 13, 'Weak/Vulnerable': 1, 'Energy': 2, 'Info': 'Deal Σ13 damage. Apply 1 <debuff>Weak</debuff>. Apply 1 <debuff>Vulnerable</debuff>.',
+    #             'Effects+': {'Weak/Vulnerable': 2, 'Info': 'Deal Σ13 damage. Apply 2 <debuff>Weak</debuff>. Apply 2 <debuff>Vulnerable</debuff>.'}, 'Function': use_uppercut},
+
+    #'Whirlwind': {'Name': 'Whirlwind', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Type': 'Attack', 'Target': 'Area', 'Damage': 5, 'Energy': -1, 'Info': 'Deal Σ5 damage X times.', 'Effects+': {'Damage': 8, 'Info': 'Deal Σ8 damage X times.'}, 'Function': use_whirlwind},
+
+    ## Rare Cards
+    #'Barricade': {'Name': 'Barricade', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Power', 'Target': 'Yourself', 'Energy': 3, 'Info': '<keyword>Block</keyword> is not removed at the start of your turn.', 'Effects+': {'Energy': 2}, 'Function': use_barricade},
+
+    #'Berzerk': {'Name': 'Berzerk', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Power', 'Target': 'Yourself', 'Self Vulnerable': 2, 'Energy': 0, 'Info': 'Gain 2 <debuff>Vulnerable</debuff>. At the start of your turn, gain 1 <keyword>Energy</keyword>.',
+    #            'Effects+': {'Self Vulnerable': 1, 'Info': 'Gain 1 <debuff>Vulnerable</debuff>. At the start of your turn, gain 1 <keyword>Energy</keyword>.'}, 'Function': use_berzerk},
+
+    #'Bludgeon': {'Name': 'Bludgeon', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Attack', 'Target': 'Single', 'Damage': 32, 'Energy': 3, 'Info': 'Deal Σ32 damage.', 'Effects+': {'Damage': 42, 'Info': 'Deal Σ42 damage.'}, 'Function': use_bludgeon},
+
+    #'Brutality': {'Name': 'Brutality', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Power', 'Target': 'Yourself', 'Energy': 0, 'Info': 'At the start of your turn, lose 1 HP and draw 1 card.', 'Effects+': {'Innate': True, 'Info': '<keyword>Innate</keyword>. At the start of your turn, lose 1 HP and draw 1 card'}, 'Function': use_brutality},
+
+    #'Corruption': {'Name': 'Corruption', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Power', 'Target': 'Yourself', 'Energy': 3, 'Info': '<keyword>Skills</keyword> cost 0. Whenever you play a <keyword>Skill</keyword>, <keyword>Exhaust</keyword> it.', 'Effects+': {'Energy': 2}, 'Function': use_corruption},
+
+    #'Demon Form': {'Name': 'Demon Form', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Power', 'Target': 'Yourself', 'Demon Form': 2, 'Energy': 3, 'Info': 'At the start of your turn, gain 2 <buff>Strength</buff>.', 'Effects+': {'Demon Form': 3, 'Info': 'At the start of your turn, gain 3 <buff>Strength</buff>.'}, 'Function': use_demonform},
+
+    #'Double Tap': {'Name': 'Double Tap', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Skill', 'Target': 'Yourself', 'Charges': 1, 'Energy': 1, 'Info': 'This turn, your next <keyword>Attack</keyword> is played twice.', 'Effects+': {'Charges': 2, 'Info': 'This turn, your next 2 <keyword>Attacks</keyword> are played twice'}, 'Function': use_doubletap},
+
+    #'Exhume': {'Name': 'Exhume', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Skill', 'Target': 'Yourself', 'Energy': 1, 'Info': 'Put a card from your exhaust pile into your hand. <keyword>Exhaust</keyword>.', 'Effects+': {'Energy': 0}, 'Function': use_exhume},
+
+    #'Feed': {'Name': 'Feed', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Attack', 'Target': 'Single', 'Exhaust': True, 'Damage': 10, 'Max HP': 3, 'Energy': 1, 'Info': 'Deal Σ10 damage. If <keyword>Fatal</keyword>, raise your Max HP by 3. <keyword>Exhaust</keyword>.',
+    #         'Effects+': {'Damage': 12, 'Max HP': 4, 'Info': 'Deal Σ12 damage. If <keyword>Fatal</keyword>, raise your Max HP by 4. <keyword>Exhaust</keyword>.'}, 'Function': use_feed},
+
+    #'Fiend Fire': {'Name': 'Fiend Fire', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Attack', 'Target': 'Single', 'Energy': 2, 'Exhaust': True, 'Damage': 7, 'Info': '<keyword>Exhaust</keyword> all cards in your hand. Deal Σ7 damage for each <keyword>Exhausted</keyword>. <keyword>Exhaust</keyword>.',
+    #               'Effects+': {'Damage': 10, 'Info': '<keyword>Exhaust</keyword> all cards in your hand. Deal Σ10 damage for each card <keyword>Exhausted</keyword>. <keyword>Exhaust</keyword>.'}, 'Function': use_fiendfire},
+
+    #'Immolate': {'Name': 'Immolate', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Attack', 'Target': 'Area', 'Damage': 21, 'Energy': 2, 'Info': 'Deal Σ21 damage to ALL enemies. Add a <status>Burn</status> to your discard pile',
+    #             'Effects+': {'Damage': 28, 'Info': 'Deal Σ28 damage to ALL enemies. Add a <status>Burn</status> to your discard pile.'}, 'Function': use_immolate},
+
+    #'Impervious': {'Name': 'Impervious', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Skill', 'Target': 'Yourself', 'Block': 30, 'Energy': 2, 'Info': 'Gain Ω30 <keyword>Block</keyword>.', 'Effects+': {'Block': 40, 'Info': 'Gain Ω40 <keyword>Block</keyword>.'}, 'Function': use_impervious},
+
+    #'Juggernaut': {'Name': 'Juggernaut', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Power', 'Target': 'Yourself', 'Dmg On Block': 5, 'Energy': 2, 'Info': 'Whenever you gain <keyword>Block</keyword>, deal 5 damage to a random enemy.',
+    #               'Effects+': {'Dmg On Block': 7, 'Info': 'Whenever you gain <keyword>Block</keyword>, deal 7 damage to a random enemy.'}, 'Function': use_juggernaut},
+
+    #'Limit Break': {'Name': 'Limit Break', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Skill', 'Target': 'Yourself', 'Exhaust': True, 'Energy': 1, 'Info': 'Double your <buff>Strength</buff>. <keyword>Exhaust</keyword>.', 'Effects+': {'Exhaust': False}, 'Function': use_limitbreak},
+
+    #'Offering': {'Name': 'Offering', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Skill', 'Target': 'Yourself', 'Exhaust': True, 'Cards': 3, 'Energy': 0, 'Info': 'Lose 6 HP. Gain 2 <keyword>Energy</keyword>. Draw 3 cards. <keyword>Exhaust</keyword>.',
+    #             'Effects+': {'Cards': 5, 'Info': 'Lose 6 HP. Gain 2 <keyword>Exhaust</keyword>. Draw 5 cards. <keyword>Exhaust</keyword>.'}, 'Function': use_offering},
+
+    #'Reaper': {'Name': 'Reaper', 'Class': 'Ironclad', 'Rarity': 'Rare', 'Type': 'Attack', 'Target': 'Area', 'Exhaust': True, 'Damage': 4, 'Energy': 2, 'Info': 'Deal 4 damage to ALL enemies. Heal HP equal to unblocked damage. <keyword>Exhaust</keyword>.',
+    #           'Effects+': {'Damage': 5, 'Info': 'Deal 5 damage to ALL enemies. Heal HP equal to unblocked damage. <keyword>Exhaust</keyword>.'}, 'Function': use_reaper},
+    ## Status cards
+    #'Slimed': {'Name': 'Slimed', 'Energy': 1, 'Target': 'Nothing', 'Rarity': 'Common', 'Type': 'Status', 'Info': '<keyword>Exhaust</keyword>'},
+    #'Burn': {'Name': 'Burn', 'Playable': False, 'Damage': 2, 'Rarity': 'Common', 'Type': 'Status', 'Info': '<keyword>Unplayable.</keyword> At the end of your turn, take 2 damage.', 'Effects+': {'Damage': 4, 'Info': '<keyword>Unplayable.</keyword> At the end of your turn, take 4 damage.'}},
+    #'Dazed': {'Name': 'Dazed', 'Playable': False, 'Ethereal': True, 'Rarity': 'Common', 'Type': 'Status', 'Info': '<keyword>Unplayable. Ethereal.</keyword>'},
+    #'Wound': {'Name': 'Wound', 'Playable': False, 'Rarity': 'Common', 'Type': 'Status', 'Info': '<keyword>Unplayable.</keyword>'},
+    #'Void': {'Name': 'Void', 'Playable': False, 'Ethereal': True, 'Energy Loss': 1, 'Rarity': 'Common', 'Type': 'Status', 'Info': '<keyword>Unplayable. Ethereal.</keyword> When this card is drawn, lose 1 Energy.'},
+
+    ## Curses
+    #'Regret': {'Name': 'Regret', 'Playable': False, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable</keyword>. At the end of your turn, lose 1 HP for each card in your hand.'},
+    #"Ascender's Bane": {'Name': "Ascender's Bane", 'Playable': False, 'Ethereal': True, 'Removable': False, 'Rarity': 'Special', 'Type': 'Curse', 'Info': '<keyword>Unplayable. Ethereal.</keyword> Cannot be removed from your deck'},
+    #'Clumsy': {'Name': 'Clumsy', 'Playable': False, 'Ethereal': True, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable. Ethereal.</keyword>'},
+    #'Curse of the Bell': {'Name': 'Curse of the Bell', 'Playable': False, 'Removable': False, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable.</keyword> Cannot be removed from your deck.'},
+    #'Decay': {'Name': 'Decay', 'Playable': False, 'Damage': 2, 'Type': 'Curse', 'Rarity': 'Curse', 'Info': '<keyword>Unplayable.</keyword> At the end of your turn, take 2 damage.'},
+    #'Doubt': {'Name': 'Doubt', 'Playable': False, 'Weak': 1, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable.</keyword> At the end of your turn, gain 1 <debuff>Weak</debuff>.'},
+    #'Injury': {'Name': 'Injury', 'Playable': False, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable.</keyword>'},
+    #'Necronomicurse': {'Name': 'Necronomicurse', 'Playable': False, 'Exhaustable': False, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable.</keyword> There is no escape from this <fg 141>Curse</fg 141>.'},
+    #'Normality': {'Name': 'Normality', 'Playable': False, 'Cards Limit': 3, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable.</keyword> You cannot play more than 3 cards this turn.'},
+    #'Pain': {'Name': 'Pain', 'Playable': False, 'Damage': 1, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable</keyword>. While in hand, lose 1 HP when other cards are played.'},
+    #'Parasite': {'Name': 'Parasite', 'Playable': False, 'Max Hp Loss': 3, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable.</keyword> If transformed or removed from your deck, lose 3 Max HP.'},
+    #'Pride': {'Name': 'Pride', 'Innate': True, 'Exhaust': True, 'Energy': 1, 'Rarity': 'Special', 'Type': 'Curse', 'Info': '<keyword>Innate.</keyword> At the end of your turn, put a copy of this card on top of your draw pile. <keyword>Exhaust.</keyword>'},
+    #'Shame': {'Name': 'Shame', 'Playable': False, 'Frail': 1, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable.</keyword> At the end of your turn, gain 1 <red>Frail</red>.'},
+    #'Writhe': {'Name': 'Writhe', 'Playable': False, 'Innate': True, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable. Innate.</keyword>'},
+
+    ## Colorless Cards
+    #"Bandage Up": {"Name": "Bandage Up", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Heal 4(6) HP. Exhaust.", "Exhaust": True, "Target": TargetType.YOURSELF, "Function": use_bandageup},
+    ## "Blind": {"Name": "Blind", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Apply 2 Weak (to ALL enemies).", "Target": TargetType.AREA, "Function": use_blind},
+    #"Dark Shackles": {"Name": "Dark Shackles", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Enemy loses 9(15) Strength for the rest of this turn. Exhaust.", "Exhaust": True, "Target": TargetType.ENEMY, "Function": use_darkshackles, "Magic Number": 9},
+    #"Deep Breath": {"Name": "Deep Breath", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Shuffle your discard pile into your draw pile. Draw 1(2) card(s).", "Target": TargetType.NOTHING, "Function": use_deepbreath, "Cards": 1},
+    ## "Discovery": {"Name": "Discovery", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 1, "Info": "Choose 1 of 3 random cards to add to your hand. It costs 0 this turn. Exhaust. (Don't Exhaust.)", "Exhaust": True, "Target": TargetType.YOURSELF, "Function": use_discovery},
+    ## "Dramatic Entrance": {"Name": "Dramatic Entrance", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.ATTACK, "Energy": 0, "Info": "Innate. Deal 8(12) damage to ALL enemies. Exhaust.", "Exhaust": True, "Target": TargetType.AREA, "Function": use_dramaticentrance, "Damage": 8},
+    ## "Enlightenment": {"Name": "Enlightenment", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Reduce the cost of cards in your hand to 1 this turn(combat)."},
+    ## "Finesse": {"Name": "Finesse", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Gain 2(4) Block. Draw 1 card."},
+    ## "Flash of Steel": {"Name": "Flash of Steel", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.ATTACK, "Energy": 0, "Info": "Deal 3(6) damage. Draw 1 card."},
+    ## "Forethought": {"Name": "Forethought", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Place a card(any number of cards) from your hand on the bottom of your draw pile. It (They) costs 0 until played."},
+    ## "Good Instincts": {"Name": "Good Instincts", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Gain 6(9) Block."},
+    ## "Impatience": {"Name": "Impatience", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "If you have no Attack cards in your hand, draw 2(3) cards."},
+    ## "Jack Of All Trades": {"Name": "Jack Of All Trades", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Add 1(2) random Colorless card(s) to your hand. Exhaust.", "Exhaust": True},
+    ## "Madness": {"Name": "Madness", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 1, "Energy+": 0, "Info": "A random card in your hand costs 0 for the rest of combat. Exhaust.", "Exhaust": True},
+    ## "Mind Blast": {"Name": "Mind Blast", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.ATTACK, "Energy": 2, "Energy+": 1, "Info": "Innate. Deal damage equal to the number of cards in your draw pile."},
+    ## "Panacea": {"Name": "Panacea", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Gain 1(2) Artifact. Exhaust.", "Exhaust": True},
+    ## "Panic Button": {"Name": "Panic Button", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Gain 30(40) Block. You cannot gain Block from cards for the next 2 turns. Exhaust.", "Exhaust": True},
+    ## "Purity": {"Name": "Purity", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Choose and Exhaust 3(5) cards in your hand. Exhaust.", "Exhaust": True},
+    ## "Swift Strike": {"Name": "Swift Strike", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.ATTACK, "Energy": 0, "Info": "Deal 7(10) damage."},
+    ## "Trip": {"Name": "Trip", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Apply 2 Vulnerable (to ALL enemies)."},
+
+    #"Apotheosis": {"Name": "Apotheosis", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 2, "Energy+": 1, "Info": "Upgrade ALL of your cards for the rest of combat. Exhaust.", "Exhaust": True, "Target": TargetType.YOURSELF, "Function": use_apotheosis},
+    #"Chrysalis": {"Name": "Chrysalis", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 2, "Info": "Add 3(5) random Skills into your Draw Pile. They cost 0 this combat. Exhaust.", "Exhaust": True, "Target": TargetType.YOURSELF, "Function": use_chrysalis},
+    #"Hand of Greed": {"Name": "Hand of Greed", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.ATTACK, "Energy": 2, "Info": "Deal 20(25) damage. If this kills a non-minion enemy, gain 20(25) Gold.", "Damage": 20, "Gold": 20, "Target": TargetType.ENEMY, "Function": use_handofgreed},
+    ## "Magnetism": {"Name": "Magnetism", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.POWER, "Energy": 2, "Energy+": 1, "Info": "At the start of each turn, add a random colorless card to your hand."},
+    #"Master Of Strategy": {"Name": "Master Of Strategy", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 0, "Info": "Draw 3(4) cards. Exhaust.", "Exhaust": True, "Cards": 3, "Target": TargetType.YOURSELF, "Function": use_masterofstrategy},
+    ## "Mayhem": {"Name": "Mayhem", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.POWER, "Energy": 2, "Energy+": 1, "Info": "At the start of your turn, play the top card of your draw pile."},
+    ## "Metamorphosis": {"Name": "Metamorphosis", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 2, "Info": "Add 3(5) random Attacks into your Draw Pile. They cost 0 this combat. Exhaust.", "Exhaust": True},
+    ## "Panache": {"Name": "Panache", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.POWER, "Energy": 0, "Info": "Every time you play 5 cards in a single turn, deal 10(14) damage to ALL enemies."},
+    ## "Sadistic Nature": {"Name": "Sadistic Nature", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.POWER, "Energy": 0, "Info": "Whenever you apply a Debuff to an enemy, they take 5(7) damage."},
+    ## "Secret Technique": {"Name": "Secret Technique", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 0, "Info": "Choose a Skill from your draw pile and place it into your hand. Exhaust. (Don't Exhaust)", "Exhaust": True},
+    ## "Secret Weapon": {"Name": "Secret Weapon", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 0, "Info": "Choose an Attack from your draw pile and place it into your hand. Exhaust. (Don't Exhaust)", "Exhaust": True},
+    ## "The Bomb": {"Name": "The Bomb", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 2, "Info": "At the end of 3 turns, deal 40(50) damage to ALL enemies."},
+    ## "Thinking Ahead": {"Name": "Thinking Ahead", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 0, "Info": "Draw 2 cards. Place a card from your hand on top of your draw pile. Exhaust. (Don't Exhaust.)", "Exhaust": True},
+    ## "Transmutation": {"Name": "Transmutation", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": -1, "Info": "Add X random (Upgraded) colorless cards into your hand. They cost 0 this turn. Exhaust.", "Exhaust": True},
+    ## "Violence": {"Name": "Violence", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 0, "Info": "Place 3(4) random Attack cards from your draw pile into your hand. Exhaust.", "Exhaust": True},
+    ## "Apparition": {"Name": "Apparition", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.SKILL, "Energy": 1, "Info": "Gain 1 Intangible. Exhaust. Ethereal. (no longer Ethereal.) (Obtained from event: Council of Ghosts).", "Exhaust": True},
+    ## "Beta": {"Name": "Beta", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.SKILL, "Energy": 2, "Energy+": 1, "Info": "Shuffle an Omega into your draw pile. Exhaust.  (Obtained from Alpha).", "Exhaust": True},
+    ## "Bite": {"Name": "Bite", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.ATTACK, "Energy": 1, "Info": "Deal 7(8) damage. Heal 2(3) HP. (Obtained from event: Vampires(?))."},
+    ## "Expunger": {"Name": "Expunger", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.ATTACK, "Energy": 1, "Info": "Deal 9(15) damage X times. (Obtained from Conjure Blade)."},
+    ## "Insight": {"Name": "Insight", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.SKILL, "Energy": 0, "Info": "Retain. Draw 2(3) cards. Exhaust. (Obtained from Evaluate, Pray and Study).", "Exhaust": True},
+    ## "J.A.X.": {"Name": "J.A.X.", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.SKILL, "Energy": 0, "Info": "Lose 3 HP.  Gain 2(3) Strength. (Obtained from event: Augmenter)."},
+    ## "Miracle": {"Name": "Miracle", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.SKILL, "Energy": 0, "Info": "Retain. Gain (2) Energy. Exhaust. (Obtained from Collect, Deus Ex Machina, PureWater-0 Pure Water, and Holy water Holy Water).", "Exhaust": True},
+    ## "Omega": {"Name": "Omega", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.POWER, "Energy": 3, "Info": "At the end of your turn deal 50(60) damage to ALL enemies. (Obtained from Beta)."},
+    ## "Ritual Dagger": {"Name": "Ritual Dagger", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.ATTACK, "Energy": 1, "Info": "Deal 15 damage. If this kills an enemy then permanently increase this card's damage by 3(5). Exhaust. (Obtained during event: The Nest)", "Exhaust": True},
+    ## "Safety": {"Name": "Safety", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.SKILL, "Energy": 1, "Info": "Retain. Gain 12(16) Block. Exhaust. (Obtained from Deceive Reality).", "Exhaust": True},
+    ## "Shiv": {"Name": "Shiv", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.ATTACK, "Energy": 0, "Info": "Deal 4(6) damage. Exhaust. (Obtained from Blade Dance, Cloak and Dagger, Infinite Blades, Storm of Steel, and NinjaScroll Ninja Scroll).", "Exhaust": True},
+    ## "Smite": {"Name": "Smite", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.ATTACK, "Energy": 1, "Info": "Retain. Deal 12(16) damage. Exhaust. (Obtained from Carve Reality and Battle Hymn).", "Exhaust": True},
+    #"Through Violence": {"Name": "Through Violence", "Class": "Colorless", "Rarity": Rarity.SPECIAL, "Type": CardType.ATTACK, "Energy": 0, "Info": "Retain. Deal 20(30) damage. Exhaust. (Obtained from Reach Heaven).", "Exhaust": True, "Target": TargetType.ENEMY},
 }
 
 # Need to convert this to a method once I do the potions to eliminate this global variable.

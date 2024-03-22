@@ -92,7 +92,7 @@ class Relic(Registerable):
         return f"<{self.rarity}>{self.name}</{self.rarity}> | <yellow>{self.info}</yellow> | <italic><dark-blue>{self.flavor_text}</dark-blue></italic>"
     
 class Card(Registerable):
-    def __init__(self, name: str, info: str, rarity: Rarity, player_class: PlayerClass, card_type: CardType, target='Nothing', energy_cost=-1):
+    def __init__(self, name: str, info: str, rarity: Rarity, player_class: PlayerClass, card_type: CardType, target='Nothing', energy_cost=-1, upgradeable=True):
         self.uid = uuid4()
         self.register(bus=bus)
         self.name = name
@@ -105,6 +105,7 @@ class Card(Registerable):
         self.reset_energy_next_turn = False
         self.target = target
         self.upgrade = False
+        self.upgradeable = upgradeable
         self.upgrade_preview = f"{self.name} -> <green>{self.name + '+'}</green> | "
 
     def pretty_print(self):

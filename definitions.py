@@ -45,10 +45,9 @@ class PlayerClass(StrEnum):
 
 class TargetType(StrEnum):
     ANY = 'Any'
-    AREA = 'Area'
-    ENEMY = 'Enemy'
+    AREA = 'Area' # Also use for cards that target a random enemy
+    ENEMY = 'Enemy' # Only for use in enemy moves when the enemy targets another enemy
     NOTHING = 'Nothing'
-    RANDOM = 'Random'
     SINGLE = 'Single'
     YOURSELF = 'Yourself'
 

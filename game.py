@@ -18,15 +18,48 @@ from message_bus_tools import Message, bus
 from shop import Shop
 
 
+class Game:
+    def __init__(self, seed=None):
+        self.bus = bus
+        self.seed = seed
+        self.game_map: list = None
+
+    def start(self):
+        if self.seed is not None:
+            random.seed(self.seed)
+        self.game_map = game_map.create_first_map()
+        self.game_map.pretty_print()
+        for encounter in self.game_map:
+            self.play(encounter, self.game_map)
+            player.floors += 1
+            self.game_map.pretty_print()
+
+    def play(self, encounter: EncounterType, game_map: game_map.GameMap):
+        if encounter.type == EncounterType.START:
+            pass
+        elif encounter.type == EncounterType.REST_SITE:
+            return rest_site()
+        elif encounter.type == EncounterType.UNKNOWN:
+            return unknown(self.game_map)
+        elif encounter.type == EncounterType.BOSS:
+            return Combat(tier=CombatTier.BOSS, player=player, game_map=self.game_map).combat(game_map)
+        elif encounter.type == EncounterType.ELITE:
+            return Combat(tier=CombatTier.ELITE, player=player, game_map=self.game_map).combat(game_map)
+        elif encounter.type == EncounterType.NORMAL:
+            return Combat(tier=CombatTier.NORMAL, player=player, game_map=self.game_map).combat(game_map)
+        elif encounter.type == EncounterType.SHOP:
+            return Shop(player).loop()
+        else:
+            raise game_map.MapError(f"Encounter type {encounter} is not valid.")
+
 class Combat:
-    def __init__(self, tier: CombatTier, player: Player, all_enemies: list[Enemy] = None):
+    def __init__(self, tier: CombatTier, player: Player, game_map, all_enemies: list[Enemy] = None):
         self.tier = tier
         self.player = player
         self.all_enemies = all_enemies if all_enemies else []
-        self.active_enemies = [
-            enemy for enemy in self.all_enemies if enemy.state == EnemyState.ALIVE
-        ]
+        self.active_enemies = [enemy for enemy in self.all_enemies if enemy.state == EnemyState.ALIVE]
         self.turn = 1
+        self.game_map = game_map
 
     def combat(self, current_map) -> None:
         """There's too much to say here."""
@@ -185,16 +218,9 @@ class Combat:
 
         if card.target == "Single":
             target = self.select_target()
-            player.use_card(
-                card,
-                target=self.active_enemies[target],
-                exhaust=False,
-                pile=player.hand,
-            )
+            player.use_card(card, target=self.active_enemies[target], exhaust=False, pile=player.hand)
         else:
-            player.use_card(
-                card, target=self.active_enemies, exhaust=False, pile=player.hand
-            )
+            player.use_card(card, target=self.active_enemies, exhaust=False, pile=player.hand)
 
 
 def rest_site():
@@ -206,8 +232,9 @@ def rest_site():
     Toke: Remove 1 card from your deck(Requires Peace Pipe)*
     Dig: Obtain 1 random Relic(Requires Shovel)*
     Recall: Obtain the Ruby Key(Max 1 use, availible in normal runs when Act 4 is unlocked)*
-    **Not finished
+    *Not finished*
     """
+    # God I hate how long this is. Reminding myself to rewrite this later.
     valid_inputs = ["rest", "smith"]
     if relics["Ancient Tea Set"] in player.relics and not player.ancient_tea_set:
         player.ancient_tea_set = True
@@ -218,15 +245,8 @@ def rest_site():
         if relics["Eternal Feather"] in player.relics:
             player.health_actions(len(player.deck) // 5 * 3, "Heal")
         sleep(1)
-        ansiprint(
-            f"<bold>[Rest]</bold> <green>Heal for 30% of your <light-blue>Max HP</light-blue>({math.floor(player.max_health * 0.30 + 15 if relics['Regal Pillow'] in player.relics else 0)})</green> \n<bold>[Smith]</bold> <green><keyword>Upgrade</keyword> a card in your deck</green> "
-        )
-        ansiprint(
-            "+15 from <bold>Regal Pillow</bold>\n"
-            if relics["Regal Pillow"] in player.relics
-            else "",
-            end="",
-        )
+        ansiprint(f"<bold>[Rest]</bold> <green>Heal for 30% of your <light-blue>Max HP</light-blue>({math.floor(player.max_health * 0.30 + 15 if relics['Regal Pillow'] in player.relics else 0)})</green> \n<bold>[Smith]</bold> <green><keyword>Upgrade</keyword> a card in your deck</green> ")
+        ansiprint("+15 from <bold>Regal Pillow</bold>\n" if relics["Regal Pillow"] in player.relics else "", end="",)
         relic_actions = {
             "Girya": (
                 "lift",
@@ -331,12 +351,11 @@ def rest_site():
         view.clear()
 
 
-def unknown() -> None:
+def unknown(game_map) -> None:
     # Chances
     normal_combat: float = 0.1
     treasure_room: float = 0.02
     merchant: float = 0.03
-    # Event chance is equal to 1 minus all the previous chances
     random_number = random.random()
 
     if random_number < treasure_room:
@@ -353,8 +372,9 @@ def unknown() -> None:
         merchant += 0.03
         Combat(player, CombatTier.NORMAL).combat()
     else:
+        # Chooses an event if nothing else is chosen
         ansiprint(player)
-        chosen_event = choose_event()
+        chosen_event = choose_event(game_map)
         chosen_event()
 
 
@@ -367,32 +387,3 @@ def play_potion():
     view.view_potions(player.potions, player.max_potions)
     input("This is currently not implemented. Press enter to leave > ")
 
-
-def play(encounter: EncounterType, gm: game_map.GameMap):
-    if encounter.type == EncounterType.START:
-        pass
-    elif encounter.type == EncounterType.REST_SITE:
-        return rest_site()
-    elif encounter.type == EncounterType.UNKNOWN:
-        return unknown()
-    elif encounter.type == EncounterType.BOSS:
-        return Combat(tier=CombatTier.BOSS, player=player).combat(gm)
-    elif encounter.type == EncounterType.ELITE:
-        return Combat(tier=CombatTier.ELITE, player=player).combat(gm)
-    elif encounter.type == EncounterType.NORMAL:
-        return Combat(tier=CombatTier.NORMAL, player=player).combat(gm)
-    elif encounter.type == EncounterType.SHOP:
-        return Shop(player).loop()
-    else:
-        raise game_map.MapError(f"Encounter type {encounter} is not valid.")
-
-
-def main(seed=None):
-    if seed is not None:
-        random.seed(seed)
-    gm = game_map.create_first_map()
-    gm.pretty_print()
-    for encounter in gm:
-        play(encounter, gm)
-        player.floors += 1
-        gm.pretty_print()

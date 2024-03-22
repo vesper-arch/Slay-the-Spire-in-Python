@@ -8,7 +8,7 @@ from uuid import uuid4
 
 import items
 from ansi_tags import ansiprint
-from definitions import CardType, CombatTier, EnemyState, PlayerClass, Rarity
+from definitions import CardType, CombatTier, EnemyState, PlayerClass, Rarity, TargetType
 from helper import active_enemies, ei, gen, view
 from message_bus_tools import Card, Message, Registerable, bus
 
@@ -127,37 +127,29 @@ class Player(Registerable):
             status = f"\n{self.name} (<red>{self.health} </red>/ <red>{self.max_health}</red> | <yellow>{self.gold} Gold</yellow>)"
         return (
             status + ""
-            if status
-            == f"\n{self.name} (<red>{self.health} </red>/ <red>{self.max_health}</red> | <light-blue>{self.block} Block</light-blue> | <light-red>{self.energy} / {self.max_energy}</light-red>)"
+            if status == f"\n{self.name} (<red>{self.health} </red>/ <red>{self.max_health}</red> | <light-blue>{self.block} Block</light-blue> | <light-red>{self.energy} / {self.max_energy}</light-red>)"
             else status + "\n"
         )
 
     def show_effects(self):
         for buff in self.buffs:
             if int(self.buffs[buff]) > 0:
-                ansiprint(
-                    f'<buff>{buff}</buff>: {ei.ALL_EFFECTS[buff].replace("X", str(self.buffs[buff]))}'
-                )
+                ansiprint(f'<buff>{buff}</buff>: {ei.ALL_EFFECTS[buff].replace("X", str(self.buffs[buff]))}')
         for debuff in self.debuffs:
-            ansiprint(
-                f'<debuff>{debuff}</debuff>: {ei.ALL_EFFECTS[debuff].replace("X", str(self.debuffs[debuff]))}'
-            )
+            ansiprint(f'<debuff>{debuff}</debuff>: {ei.ALL_EFFECTS[debuff].replace("X", str(self.debuffs[debuff]))}')
 
-    def use_card(self, card, target: "Enemy", exhaust, pile) -> None:
+    def use_card(self, card, exhaust, pile, target: "Enemy"=None) -> None:
         """
         Uses a card
         Wow!
         """
-        if card.type in ("Status", "Curse") and card.name not in ("Slimed", "Pride"):
-            ansiprint(
-                "<red>This card is not playable. This message shouldn't appear outside of tests.</red>"
-            )
+        if card.type in (CardType.STATUS, CardType.CURSE) and card.name not in ("Slimed", "Pride"):
             return
-        if card.target == "Single":
+        if card.target == TargetType.SINGLE:
             card.apply(origin=self, target=target)
-        elif card.target == "Area":
+        elif card.target == TargetType.AREA:
             card.apply(origin=self, enemies=active_enemies)
-        elif card.target == "Player":
+        elif card.target == TargetType.YOURSELF:
             card.apply(origin=self)
         bus.publish(Message.ON_CARD_PLAY, (self, card, target))
         if self.buffs["Corruption"]:
@@ -168,14 +160,9 @@ class Player(Registerable):
             sleep(1.5)
             view.clear()
             self.use_card(card=card, target=target, exhaust=True, pile=None)
-        if (
-            card.type == CardType.STATUS
-            and items.relics["Medical Kit"] in player.relics
-        ):
+        if (card.type == CardType.STATUS and items.relics["Medical Kit"] in player.relics):
             exhaust = True
-        elif (
-            card.type == CardType.CURSE and items.relics["Blue Candle"] in player.relics
-        ):
+        elif (card.type == CardType.CURSE and items.relics["Blue Candle"] in player.relics):
             self.take_sourceless_dmg(1)
             exhaust = True
         if pile is not None:
