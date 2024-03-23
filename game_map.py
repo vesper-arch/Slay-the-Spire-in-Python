@@ -1,12 +1,15 @@
 # game_map.py
 from __future__ import annotations
-from enum import StrEnum, auto
+
 import random
+from enum import StrEnum, auto
 from typing import List
-from typing import List
+
+from grandalf.graphs import Edge, Graph, Vertex
+
 from dagascii import draw
 from definitions import EncounterType
-from grandalf.graphs import Vertex, Edge, Graph
+
 
 class MapError(Exception):
   pass

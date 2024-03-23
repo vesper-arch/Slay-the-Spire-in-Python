@@ -10,8 +10,6 @@ user_tags = {
     "power": "\x1B[38;5;51m",
     "status": "\x1B[38;5;35m",
     "curse": "\x1B[38;5;127m",
-    "status": "\x1B[38;5;35m",
-    "curse": "\x1B[38;5;127m",
     "basic": "\x1B[38;5;245m",
     "common": "\x1B[38;5;245m",
     "uncommon": "\x1B[38;5;45m",
