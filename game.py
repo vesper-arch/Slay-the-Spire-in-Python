@@ -58,6 +58,8 @@ class Combat:
         self.player = player
         self.all_enemies = all_enemies if all_enemies else []
         self.active_enemies = [enemy for enemy in self.all_enemies if enemy.state == EnemyState.ALIVE]
+        self.previous_enemy_states = ()
+        self.death_messages = []
         self.turn = 1
         self.game_map = game_map
 
@@ -66,9 +68,10 @@ class Combat:
         self.start_combat()
         # Combat automatically ends when all enemies are dead.
         while len(self.active_enemies) > 0:
-            # Draws cards, removes block, ticks debuffs, and activates start-of-turn buffs, debuffs, and relics.
             bus.publish(Message.START_OF_TURN, (self.turn,))
             while True:
+                self.update_death_messages()
+                self.previous_enemy_states = tuple(enemy.state for enemy in self.all_enemies)
                 self.active_enemies = [enemy for enemy in self.all_enemies if enemy.state == EnemyState.ALIVE]  # Updates the list
                 if all((enemy.state == EnemyState.DEAD for enemy in self.all_enemies)):
                     self.end_combat(killed_enemies=True)
@@ -183,6 +186,7 @@ class Combat:
 
         bus.publish(Message.START_OF_COMBAT, (self.tier, player))
         self.active_enemies = [enemy for enemy in self.all_enemies if enemy.state == EnemyState.ALIVE]
+        self.previous_enemy_states = tuple(enemy.state for enemy in self.all_enemies)
 
     def select_target(self):
         if len(self.active_enemies) == 1:
@@ -221,6 +225,12 @@ class Combat:
             player.use_card(card, target=self.active_enemies[target], exhaust=False, pile=player.hand)
         else:
             player.use_card(card, target=self.active_enemies, exhaust=False, pile=player.hand)
+
+    def update_death_messages(self):
+        current_states = tuple(enemy.state for enemy in self.all_enemies)
+        for i in range(0, max(1, len(self.all_enemies) - 1)):
+            if self.previous_enemy_states[i] != current_states[i]:
+                self.death_messages.append(current_states[i])
 
 
 def rest_site():

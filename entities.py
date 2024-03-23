@@ -995,7 +995,7 @@ class Enemy(Registerable):
             insert_index = random.randint(0, upper_bound)
             pile.insert(insert_index, deepcopy(status_card))
         ansiprint(
-            f"{player.name} gained {amount} {status_card.name}({status_card.info}) \nPlaced into {location}"
+            f"{player.name} gained {amount} {status_card.name} \nPlaced into {location}"
         )
         sleep(1)
 
@@ -1039,7 +1039,8 @@ class Enemy(Registerable):
                 print()
                 self.set_intent()
         elif message == Message.END_OF_TURN:
-            self.execute_move()
+            if self.state == EnemyState.ALIVE:
+                self.execute_move()
             # Needs to be expanded at some point
         elif message == Message.ON_DEATH_OR_ESCAPE:
             event, bus = data
