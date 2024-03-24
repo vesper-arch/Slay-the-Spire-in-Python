@@ -635,7 +635,7 @@ relics: dict[str: dict] = {
     # Circlet can only be obtained once you have gotten all other relics.
     'Circlet': {'Name': 'Circlet', 'Class': 'Any', 'Rarity': 'Special', 'Info': 'Looks pretty.', 'Flavor': 'You ran out of relics to find. Impressive!'}
 }
-cards = (card() for card in (IroncladStrike, IroncladDefend, Bash, Anger, Armaments, BodySlam, Clash, Cleave, Clothesline, Flex, Havoc,
+cards = tuple(card() for card in (IroncladStrike, IroncladDefend, Bash, Anger, Armaments, BodySlam, Clash, Cleave, Clothesline, Flex, Havoc,
                              Headbutt, HeavyBlade, IronWave, PerfectedStrike, PommelStrike, ShrugItOff, SwordBoomerang, Thunderclap, TrueGrit, TwinStrike, Warcry, WildStrike))
 cards_old = {
     # Ironclad cards
