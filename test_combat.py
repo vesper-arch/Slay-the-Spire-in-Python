@@ -1,3 +1,4 @@
+from copy import deepcopy
 from unittest.mock import Mock
 
 import pytest
@@ -15,25 +16,24 @@ def replacement_clear_screen():
     '''Replacement for game.view.clear() so that I can see the test output'''
     print("\n--------------------------\n")
 
-@pytest.mark.only
+
 def test_new_combat_basic(monkeypatch):
     entities.random.seed(123)
-    all_cards = [c() for c in items.cards]
 
     # Create player
-    player = entities.Player(health=100, block=0, max_energy=3, deck=all_cards)
+    player = entities.create_player()
 
     # Create bad guys
     acidslime = enemy_catalog.AcidSlimeS()
     jawworm = enemy_catalog.JawWorm()
 
     # Create combat object
-    combat = game.Combat(player, CombatTier.NORMAL, [acidslime, jawworm])
-
     game_map = Mock()
+    combat = game.Combat(player=player, tier=CombatTier.NORMAL, all_enemies=[acidslime, jawworm], game_map=game_map)
+
 
     # Patch the input
-    responses = iter("11\n11\n2\n")
+    responses = iter("11112e111e21e233e122e31") # Fight sequence for Acid Slime (S) and Jaw Worm
     with monkeypatch.context() as m:
         m.setattr('builtins.input', lambda *a, **kw: next(responses))
         m.setattr(helper, 'sleep', lambda _: None)

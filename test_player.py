@@ -24,7 +24,7 @@ def test_all_attack_cards_with_all_relics(monkeypatch):
     because that logic is not isolated from enemy creation.
     '''
     entities.random.seed(123)
-    all_cards = [card for card in entities.cards.values()]
+    all_cards = list(items.cards)
 
     # Create uberplayer
     player = entities.Player(health=100, block=0, max_energy=3, deck=all_cards)

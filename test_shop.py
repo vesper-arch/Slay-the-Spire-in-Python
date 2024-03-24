@@ -10,7 +10,7 @@ from shop import SellableItem, Shop
 class TestSellableItems():
   def test_cards(self):
     '''See that we can make sellable items out of all cards and that they display correctly'''
-    all_sellable_cards = list(items.cards.values())
+    all_sellable_cards = list(items.cards)
     # all_sellable_cards = [card for card in all_sellable_cards if card["Type"] in ("Attack", "Skill", "Power") and card["Rarity"] not in ("Special")]
     for card in all_sellable_cards:
       sellable = SellableItem(card)
