@@ -52,9 +52,7 @@ class Player(Registerable):
         self.player_class: str = "Ironclad"
         self.in_combat = False
         self.floors = 1
-        self.fresh_effects: list[
-            str
-        ] = []  # Shows what effects were applied after the player's turn
+        self.fresh_effects: list[str] = []  # Shows what effects were applied after the player's turn
         self.max_health: int = health
         self.energy: int = 0
         self.max_energy: int = max_energy
@@ -104,9 +102,7 @@ class Player(Registerable):
         self.shuriken_attacks = 0
         self.draw_shuffles = 0  # Used for the Sundial relic
         self.incense_turns = 0  # Used for the Incense Burner relic
-        self.girya_charges = (
-            3  # Stores how many times the player can gain Energy from Girya
-        )
+        self.girya_charges = 3  # Stores how many times the player can gain Energy from Girya
         self.plays_this_turn = 0  # Counts how many cards the played plays each turn
         self.stone_calender = 0
         self.choker_cards_played = 0  # Used for the Velvet Choker relic
@@ -399,11 +395,12 @@ class Player(Registerable):
             # bus.publish(Message.ON_DRAW, (pl))
             break
 
-    def blocking(self, card: bool = True):
+    def blocking(self, card: Card = None, block=0):
         """Gains [block] Block. Cards are affected by Dexterity and Frail."""
+        block = card.block if card else block
         bus.publish(Message.BEFORE_BLOCK, (self, card))
-        self.block += card.block
-        ansiprint(f"{self.name} gained {card.block} <blue>Block</blue> from {', '.join(card.block_affected_by).lstrip(', ')}.")
+        self.block += block
+        ansiprint(f"""{self.name} gained {block} <blue>Block</blue>{f" from {', '.join(card.block_affected_by).lstrip(', ') if card else ''}"}.""") # f-strings my beloved
         bus.publish(Message.AFTER_BLOCK, (self, card))
 
     def health_actions(self, heal: int, heal_type: str):
@@ -490,9 +487,9 @@ class Player(Registerable):
         if items.cards["Burn"] in self.relics:
             self.take_sourceless_dmg(2)
 
-    def attack(self, target: "Enemy", card=None, dmg=-1, ignore_block=False):
+    def attack(self, target: "Enemy", card: Card=None, dmg=-1, ignore_block=False):
         # Check if already dead and skip if so
-        dmg = card.damage if card else dmg
+        dmg = getattr(card, 'damage', default=None) if card else dmg  # noqa: B009
         if target.health <= 0:
             return
         if card is not None and card.type not in (CardType.STATUS, CardType.CURSE):
@@ -505,9 +502,7 @@ class Player(Registerable):
                 dmg -= target.block
                 dmg = max(0, dmg)
                 target.health -= dmg
-                ansiprint(
-                    f"You dealt {dmg} damage(<light-blue>{target.block} Blocked</light-blue>) to {target.name} with {' | '.join(card.damage_affected_by)}"
-                )
+                ansiprint(f"You dealt {dmg} damage(<light-blue>{target.block} Blocked</light-blue>) to {target.name} with {' | '.join(card.damage_affected_by)}")
                 target.block = 0
                 bus.publish(Message.AFTER_ATTACK, (self, target, card))
                 if target.health <= 0:
@@ -956,11 +951,10 @@ class Enemy(Registerable):
             elif dmg > player.block:
                 dmg -= player.block
                 dmg = max(0, dmg)
-                ansiprint(
-                    f"{self.name} dealt {dmg}(<light-blue>{player.block} Blocked</light-blue>) damage to you."
-                )
+                ansiprint(f"{self.name} dealt {dmg}(<light-blue>{player.block} Blocked</light-blue>) damage to you.")
                 player.block = 0
                 player.health -= dmg
+                bus.publish(Message.ON_PLAYER_HEALTH_LOSS, None)
             bus.publish(Message.AFTER_ATTACK, (self, dmg, player.block))
         sleep(1)
 

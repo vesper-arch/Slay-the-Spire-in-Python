@@ -16,6 +16,7 @@ class Message(StrEnum):
     AFTER_ATTACK = 'after_attack'
     BEFORE_BLOCK = 'before_block'
     AFTER_BLOCK = 'after_block'
+    ON_PLAYER_HEALTH_LOSS = 'on_player_health_loss'
     ON_PICKUP = 'on_pickup' # For relics
     ON_DRAW = 'on_draw'
     ON_EXHAUST = 'on_exhaust'
