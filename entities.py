@@ -375,22 +375,20 @@ class Player(Registerable):
                 if items.relics["Ring of the Snake"] in self.relics:
                     draw_cards += 2
             if len(player.draw_pile) < draw_cards:
-                player.draw_pile.extend(
-                    random.sample(player.discard_pile, len(player.discard_pile))
-                )
+                player.draw_pile.extend(random.sample(player.discard_pile, len(player.discard_pile)))
                 player.discard_pile = []
                 if items.relics["Sundial"] in self.relics:
                     self.draw_shuffles += 1
                     if self.draw_shuffles == 3:
-                        ansiprint(
-                            "<bold>Sundial</bold> gave you 2 <italic><red>Energy</red></italic>"
-                        )
+                        ansiprint("<bold>Sundial</bold> gave you 2 <italic><red>Energy</red></italic>")
                         self.energy += 2
                         self.draw_shuffles = 0
                 ansiprint("<bold>Discard pile shuffled into draw pile.</bold>")
             self.hand.extend(player.draw_pile[-draw_cards:])
             # Removes those cards
             player.draw_pile = player.draw_pile[:-draw_cards]
+            for card in self.hand:
+                card.register(bus=bus)
             print(f"Drew {draw_cards} cards.")
             # bus.publish(Message.ON_DRAW, (pl))
             break
@@ -489,7 +487,7 @@ class Player(Registerable):
 
     def attack(self, target: "Enemy", card: Card=None, dmg=-1, ignore_block=False):
         # Check if already dead and skip if so
-        dmg = getattr(card, 'damage', default=None) if card else dmg  # noqa: B009
+        dmg = getattr(card, 'damage', None) if card else dmg  # noqa: B009
         if target.health <= 0:
             return
         if card is not None and card.type not in (CardType.STATUS, CardType.CURSE):
@@ -512,13 +510,9 @@ class Player(Registerable):
         if items.relics["Ectoplasm"] not in self.relics:
             self.gold += gold
         else:
-            ansiprint(
-                "You cannot gain <yellow>Gold</yellow> because of <bold>Ectoplasm</bold>."
-            )
+            ansiprint("You cannot gain <yellow>Gold</yellow> because of <bold>Ectoplasm</bold>.")
         if dialogue is True:
-            ansiprint(
-                f"You gained <green>{gold}</green> <yellow>Gold</yellow>(<yellow>{self.gold}</yellow> Total)"
-            )
+            ansiprint(f"You gained <green>{gold}</green> <yellow>Gold</yellow>(<yellow>{self.gold}</yellow> Total)")
         sleep(1)
 
     def bottle_card(self, card_type):
@@ -691,29 +685,19 @@ class Player(Registerable):
             turn = data
             ansiprint(f"<underline><bold>{self.name}</bold></underline>:")
             self.energy = self.energy if items.relics["Ice Cream"] in self.relics else 0
-            self.energy += (
-                self.energy_gain + self.buffs["Energized"] + self.buffs["Berzerk"]
-            )
+            self.energy += (self.energy_gain + self.buffs["Energized"] + self.buffs["Berzerk"])
             if self.buffs["Energized"] > 0:
-                ansiprint(
-                    f"You gained {self.buffs['Energized']} extra energy because of <light-cyan>Energized</light-cyan>"
-                )
+                ansiprint(f"You gained {self.buffs['Energized']} extra energy because of <light-cyan>Energized</light-cyan>")
                 self.buffs["Energized"] = 0
                 ansiprint("<light-cyan>Energized wears off.")
             if self.buffs["Berzerk"] > 0:
-                ansiprint(
-                    f"You gained {self.buffs['Berzerk']} extra energy because of <light-cyan>Berzerk</light-cyan>"
-                )
+                ansiprint(f"You gained {self.buffs['Berzerk']} extra energy because of <light-cyan>Berzerk</light-cyan>")
             if self.buffs["Barricade"]:
                 if turn > 1:
-                    ansiprint(
-                        "You kept your block because of <light-cyan>Barriacade</light-cyan>"
-                    )
+                    ansiprint("You kept your block because of <light-cyan>Barriacade</light-cyan>")
             elif items.relics["Calipers"] in self.relics and self.block > 15:
                 self.block -= 15
-                ansiprint(
-                    f"You kept {self.block} <light-blue>Block</light-blue> because of <bold>Calipers</bold>"
-                )
+                ansiprint(f"You kept {self.block} <light-blue>Block</light-blue> because of <bold>Calipers</bold>")
             else:
                 self.block = 0
             self.draw_cards(False)
@@ -722,6 +706,8 @@ class Player(Registerable):
             self.fresh_effects.clear()
         elif message == Message.END_OF_TURN:
             self.discard_pile += self.hand
+            for card in self.hand:
+                card.unsubscribe()
             if items.relics["Runic Pyramid"] not in self.relics:
                 self.hand.clear()
             sleep(1)

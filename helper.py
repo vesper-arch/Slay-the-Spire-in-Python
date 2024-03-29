@@ -285,46 +285,36 @@ class Generators:
 
     def claim_potions(self, choice: bool, potion_amount: int, entity, potion_pool: dict, rewards=None, chance_based=True):
         for relic in entity.relics:
-            if relic.name == "Sozu":
+            if relic['Name'] == "Sozu":
                 return
         if not rewards:
-            rewards = self.generate_potion_rewards(
-                potion_amount, entity, potion_pool, chance_based
-            )
+            rewards = self.generate_potion_rewards(potion_amount, entity, potion_pool, chance_based)
         if not choice:
             for i in range(potion_amount):
                 if len(entity.potions) <= entity.max_potions:
                     entity.potions.append(rewards[i])
-                    print(
-                        f"{entity.name} obtained {rewards[i].name} | {rewards[i].info}"
-                    )
+                    print(f"{entity.name} obtained {rewards[i].name} | {rewards[i].info}")
                     rewards.remove(rewards[i])
-            sleep(1.5)
+            sleep(1)
             view.clear()
         while len(rewards) > 0:
             print(f"Potion Bag: ({len(potion_pool)} / {entity.max_potions})")
             view.view_potions(entity, False)
             print()
             print("Potion reward(s):")
-            option = view.list_input(
-                "What potion you want? >", rewards, view.view_potions
-            )
+            option = view.list_input("Choose a potion", rewards, view.view_potions)
             if len(potion_pool) == entity.max_potions:
                 ansiprint("<red>Potion bag full!</red>")
-                sleep(1)
+                sleep(0.5)
                 option = input("Discard a potion?(y|n) > ")
                 if option == "y":
-                    option = view.list_input(
-                        "What potion do you want to discard? > ",
-                        potion_pool,
-                        view.view_potions,
-                    )
+                    option = view.list_input("Choose a potion to discard", potion_pool, view.view_potions,)
                     print(f"Discarded {potion_pool[option]['Name']}.")
                     potion_pool.remove(potion_pool[option])
-                    sleep(1.5)
+                    sleep(1)
                     view.clear()
                 else:
-                    sleep(1.5)
+                    sleep(1)
                     view.clear()
                 continue
             potion_pool.append(rewards[option])
@@ -334,27 +324,14 @@ class Generators:
 
     def card_rewards(self, tier: str, choice: bool, entity, card_pool: dict, rewards=None):
         if not rewards:
-            rewards = self.generate_card_rewards(
-                tier, entity.card_reward_choices, entity, card_pool
-            )
+            rewards = self.generate_card_rewards(tier, entity.card_reward_choices, entity, card_pool)
         while True:
             if choice:
-                chosen_reward = view.list_input("What card do you want? > ", rewards, view.view_piles)
-                if (
-                    entity.upgrade_attacks
-                    and rewards[chosen_reward].type == "Attack"
-                    or (
-                        entity.upgrade_skills
-                        and rewards[chosen_reward].type == "Skill"
-                        or entity.upgrade_powers
-                        and rewards[chosen_reward].type == "Power"
-                    )
-                ):
+                chosen_reward = view.list_input("Choose a card", rewards, view.view_piles)
+                if (entity.upgrade_attacks and rewards[chosen_reward].type == "Attack" or (entity.upgrade_skills and rewards[chosen_reward].type == "Skill" or entity.upgrade_powers and rewards[chosen_reward].type == "Power")):
                     rewards[chosen_reward].upgrade()
                 entity.deck.append(rewards[chosen_reward])
-                ansiprint(
-                    f"{entity.name} obtained <bold>{rewards[chosen_reward].name}</bold>"
-                )
+                ansiprint(f"{entity.name} obtained <bold>{rewards[chosen_reward].name}</bold>")
                 rewards.clear()
                 break
             for card in rewards:

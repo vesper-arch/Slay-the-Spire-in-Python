@@ -95,7 +95,6 @@ class Relic(Registerable):
 class Card(Registerable):
     def __init__(self, name: str, info: str, rarity: Rarity, player_class: PlayerClass, card_type: CardType, target='Nothing', energy_cost=-1, upgradeable=True):
         self.uid = uuid4()
-        self.register(bus=bus)
         self.name = name
         self.info = info
         self.rarity = rarity

@@ -1,6 +1,7 @@
 import random
 from copy import deepcopy
 from re import L
+from sys import platform
 from time import sleep
 
 from ansi_tags import ansiprint
@@ -39,7 +40,7 @@ class IroncladDefend(Card):
         self.info = "Gain 8 <keyword>Block</keyword>."
 
     def apply(self, origin):
-        origin.blocking(self)
+        origin.blocking(card=self)
 
 class Bash(Card):
     def __init__(self):
@@ -90,6 +91,7 @@ class Armaments(Card):
         self.info = "Gain 5 <keyword>Block</keyword>. Upgrade ALL cards in your hand for the rest of combat."
 
     def apply(self, origin):
+        origin.blocking(card=self)
         if not self.upgraded:
             chosen_card = view.list_input("Choose a card to upgrade", origin.hand, view.view_piles, lambda card: card.is_upgradeable(), "That card is not upgradeable.")
             origin.hand[chosen_card].upgrade()
@@ -100,7 +102,7 @@ class Armaments(Card):
 class BodySlam(Card):
     def __init__(self):
         super().__init__("Body Slam", "Deal damage equal to your current <keyword>Block</keyword>.", Rarity.COMMON, PlayerClass.IRONCLAD, CardType.ATTACK, TargetType.SINGLE, energy_cost=1)
-        self.base_damage = -1 # I am really not sure how to handle this
+        self.base_damage = 0 # I am really not sure how to handle this
         self.damage = self.base_damage
         self.damage_affected_by = [f"Body Slam({self.damage} dmg)"]
         self.upgrade_preview += f"<light-red>{self.energy_cost} Energy</light-red> -> <light-red>0 Energy</light-red>"
@@ -110,6 +112,7 @@ class BodySlam(Card):
         self.energy_cost = 0
 
     def apply(self, origin, target):
+        self.damage = origin.block
         origin.attack(target, self)
 
 class Clash(Card):
@@ -260,7 +263,7 @@ class IronWave(Card):
 
     def apply(self, origin, target):
         origin.attack(target, self)
-        origin.blocking(self)
+        origin.blocking(card=self)
 
 class PerfectedStrike(Card):
     registers = [Message.BEFORE_ATTACK]
@@ -320,7 +323,7 @@ class ShrugItOff(Card):
         self.info = "Gain 11 <keyword>Block</keyword>. Draw 1 card."
 
     def apply(self, origin):
-        origin.blocking(self)
+        origin.blocking(card=self)
         origin.draw_cards(False, 1)
 
 class SwordBoomerang(Card):
@@ -372,7 +375,7 @@ class TrueGrit(Card):
         self.info = "Gain 9 <keyword>Block</keyword>. <keyword>Exhaust</keyword> a card in your hand."
 
     def apply(self, origin):
-        origin.blocking(self)
+        origin.blocking(card=self)
         if self.upgraded is True:
             chosen_card = view.list_input("Choose a card to <keyword>Exhaust</keyword>", origin.hand, view.view_piles, lambda card: card.upgradeable is True and card.upgraded is False, "That card is either not upgradeable or is already upgraded.")
             origin.move_card(origin.hand[chosen_card], origin.exhaust_pile, origin.hand, False)
@@ -385,7 +388,7 @@ class TwinStrike(Card):
         super().__init__("Twin Strike", "Deal 5 damage twice.", Rarity.COMMON, PlayerClass.IRONCLAD, CardType.ATTACK, TargetType.SINGLE, energy_cost=1)
         self.base_damage = 5
         self.damage = self.base_damage
-        self.damage_affected_by = [f"Twin Strike({self.damage} dmg)"]
+        self.damage_affected_by = [f"Twin Strike({self.damage}x2 dmg)"]
         self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Deal <green>7</green> damage twice.</yellow>"
 
     def upgrade(self):
@@ -747,6 +750,138 @@ class Intimidate(Card):
     def apply(self, origin, enemies):
         for enemy in enemies:
             ei.apply_effect(enemy, origin, "Weak", self.weak)
+
+class Metallicize(Card):
+    def __init__(self):
+        super().__init__("Mettalicize", "At the end of your turn, gain 3 <keyword>Block</keyword>.", Rarity.UNCOMMON, PlayerClass.IRONCLAD, CardType.POWER, TargetType.YOURSELF, energy_cost=1)
+        self.mettalicize = 3
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>At the end of your turn, gain <green>4</green> <keyword>Block</keyword>.</yellow>"
+
+    def upgrade(self):
+        self.upgrade_markers()
+        self.mettalicize = 4
+        self.info = "At the end of your turn, gain 4 <keyword>Block</keyword>."
+
+    def apply(self, origin):
+        ei.apply_effect(origin, None, "Mettalicize", self.mettalicize)
+
+class PowerThrough(Card):
+    def __init__(self):
+        super().__init__("Power Through", "Add 2 <status>Wounds</status> into your hand. Gain 15 <keyword>Block</keyword>.", Rarity.UNCOMMON, PlayerClass.IRONCLAD, CardType.SKILL, TargetType.YOURSELF, energy_cost=1)
+        self.base_block = 15
+        self.block = self.base_block
+        self.block_affected_by = [f"Power Through({self.block} block)"]
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Add 2 <status>Wounds</status> into your hand. Gain <green>20</green> <keyword>Block</keyword>.</yellow>"
+
+    def upgrade(self):
+        self.upgrade_markers()
+        self.base_block, self.block = 20
+        self.info = "Add 2 <status>Wounds</status> into your hand. Gain 20 <keyword>Block</keyword>."
+
+    def apply(self, origin):
+        for _ in range(2):
+            origin.hand.append(Wound())
+        origin.blocking(card=self)
+
+class Pummel(Card):
+    def __init__(self):
+        super().__init__("Pummel", "Deal 2 damage 4 times. <keyword>Exhaust</keyword>.", Rarity.UNCOMMON, PlayerClass.IRONCLAD, CardType.ATTACK, TargetType.SINGLE, energy_cost=1)
+        self.times = 4
+        self.base_damage = 2
+        self.damage = self.base_damage
+        self.damage_affected_by = [f"Pummel({self.damage}x{self.times} dmg)"]
+        self.exhaust = True
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Deal 2 damage <green>5</green> times. <keyword>Exhaust</keyword>.</yellow>"
+
+    def upgrade(self):
+        self.upgrade_markers()
+        self.times = 5
+        self.info = "Deal 2 damage 5 times. <keyword>Exhaust</keyword>."
+        
+    def apply(self, origin, target):
+        for _ in range(self.times):
+            origin.attack(target, self)
+
+class Rage(Card):
+    def __init__(self):
+        super().__init__("Rage", "Whenever you play an <keyword>Attack</keyword> this turn, gain 3 <keyword>Block</keyword>.", Rarity.UNCOMMON, PlayerClass.IRONCLAD, CardType.SKILL, TargetType.YOURSELF, energy_cost=0)
+        self.rage = 3
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Whenever you play an <keyword>Attack</keyword> this turn, gain <green>5</green> <keyword>Block</keyword>.</yellow>"
+
+    def upgrade(self):
+        self.upgrade_markers()
+        self.rage = 5
+        self.info = "Whenever you play an <keyword>Attack</keyword> this turn, gain 5 <keyword>Block</keyword>."
+
+    def apply(self, origin):
+        ei.apply_effect(origin, None, "Rage", self.rage)
+
+class Barricade(Card):
+    def __init__(self):
+        super().__init__("Barricade", "<keyword>Block</keyword> is not removed at the start of your turn.", Rarity.RARE, PlayerClass.IRONCLAD, CardType.POWER, TargetType.YOURSELF, energy_cost=3)
+        self.upgrade_preview += f"<light-red>{self.energy_cost} Energy</light-red> -> <light-red><green>2</green> Energy</light-red>"
+
+    def upgrade(self):
+        self.upgrade_markers()
+        self.energy_cost = 2
+
+    def apply(self, origin):
+        ei.apply_effect(origin, None, "Barricade")
+
+class Berzerk(Card):
+    def __init__(self):
+        super().__init__("Berzerk", "Gain 2 <debuff>Vulnerable</debuff>. At the start of your turn, gain 1 <keyword>Energy</keyword>.", Rarity.RARE, PlayerClass.IRONCLAD, CardType.POWER, TargetType.YOURSELF, energy_cost=0)
+        self.self_vulnerable = 2
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Gain <green>1</green> <debuff>Vulnerable</debuff>. At the start of your turn, gain 1 <keyword>Energy</keyword>.</yellow>"
+
+    def upgrade(self):
+        self.self_vulnerable = 1
+        self.info = "Gain 1 <debuff>Vulnerable</debuff>. At the start of your turn, gain 1 <keyword>Energy</keyword>."
+
+    def apply(self, origin):
+        ei.apply_effect(origin, None, "Vulnerable", self.self_vulnerable)
+        ei.apply_effect(origin, None, "Berzerk", 1)
+
+class Bludgeon(Card):
+    def __init__(self):
+        super().__init__("Bludgeon", "Deal 32 damage.", Rarity.RARE, PlayerClass.IRONCLAD, CardType.ATTACK, TargetType.SINGLE, energy_cost=3)
+        self.base_damage = 32
+        self.damage = self.base_damage
+        self.damage_affected_by = [f"Bludgeon({self.damage} dmg)"]
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Deal <green>42</green> damage.</yellow>"
+
+    def upgrade(self):
+        self.upgrade_markers()
+        self.base_damage, self.damage = 42
+        self.info = "Deal 42 damage."
+
+    def apply(self, origin, target):
+        origin.attack(target, self)
+
+class Brutality(Card):
+    def __init__(self):
+        super().__init__("Brutality", "At the start of your turn, lose 1 HP and draw 1 card.", Rarity.RARE, PlayerClass.IRONCLAD, CardType.POWER, TargetType.YOURSELF, energy_cost=0)
+        self.innate = False
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow><green><keyword>Innate</keyword>.</green> At the start of your turn, lose 1 HP and draw 1 card.</yellow>"
+
+    def upgrade(self):
+        self.upgrade_markers()
+        self.info = "<keyword>Innate</keyword>. At the start of your turn, lose 1 HP and draw 1 card."
+
+    def apply(self, origin):
+        ei.apply_effect(origin, None, "Brutality", 1)
+
+class Corruption(Card):
+    def __init__(self):
+        super().__init__("Corruption", "<keyword>Skills</keyword> cost 0. Whenever you play a <keyword>Skill</keyword>, <keyword>Exhaust</keyword> it.", Rarity.RARE, PlayerClass.IRONCLAD, CardType.POWER, TargetType.YOURSELF, energy_cost=3)
+        self.upgrade_preview += f"<light-red>{self.energy_cost} Energy</light-red> -> <light-red><green>2</green> Energy</light-red>"
+
+    def upgrade(self):
+        self.upgrade_markers()
+        self.energy_cost = 2
+
+    def apply(self, origin):
+        ei.apply_effect(origin, None, "Corruption")
  
 class Slimed(Card):
     def __init__(self):
@@ -954,10 +1089,19 @@ relics: dict[str: dict] = {
     # Circlet can only be obtained once you have gotten all other relics.
     'Circlet': {'Name': 'Circlet', 'Class': 'Any', 'Rarity': 'Special', 'Info': 'Looks pretty.', 'Flavor': 'You ran out of relics to find. Impressive!'}
 }
-cards = tuple(card() for card in (IroncladStrike, IroncladDefend, Bash, Anger, Armaments, BodySlam, Clash, Cleave, Clothesline, Flex, Havoc, 
-                                  Headbutt, HeavyBlade, IronWave, PerfectedStrike, PommelStrike, ShrugItOff, SwordBoomerang, Thunderclap, TrueGrit, TwinStrike, Warcry, WildStrike,
-                                  BattleTrance, BloodForBlood, Bloodletting, BurningPact, Carnage, Combust, DarkEmbrace, Disarm, Dropkick, DualWield, Entrench, Evolve, FeelNoPain,
-                                  FireBreathing, FlameBarrier, GhostlyArmor, Hemokinesis, InfernalBlade, Inflame, Intimidate))
+cards = tuple(card() for card in (
+    # IRONCLAD CARDS
+    # Starter(basic) cards
+    IroncladStrike, IroncladDefend, Bash,
+    # Common Cards
+    Anger, Armaments, BodySlam, Clash, Cleave, Clothesline, Flex, Havoc, 
+    Headbutt, HeavyBlade, IronWave, PerfectedStrike, PommelStrike, ShrugItOff, SwordBoomerang, Thunderclap, TrueGrit, TwinStrike, Warcry, WildStrike,
+    # Uncommon Cards
+    BattleTrance, BloodForBlood, Bloodletting, BurningPact, Carnage, Combust, DarkEmbrace, Disarm, Dropkick, DualWield, Entrench, Evolve, FeelNoPain,
+    FireBreathing, FlameBarrier, GhostlyArmor, Hemokinesis, InfernalBlade, Inflame, Intimidate, Metallicize, PowerThrough, Pummel, Rage,
+    # Rare Cards
+    Barricade, Berzerk, Bludgeon, Brutality, Corruption
+))
 cards_old = {
     # Ironclad cards
     #'Strike': {'Name': 'Strike', 'Damage': 6, 'Energy': 1, 'Rarity': 'Basic', 'Target': 'Single', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ6 damage.', 'Effects+': {'Damage': 9, 'Info': 'Deal Σ9 damage.'}},
