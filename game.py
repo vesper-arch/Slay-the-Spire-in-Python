@@ -3,6 +3,7 @@ import random
 from time import sleep
 
 import game_map
+import items
 from ansi_tags import ansiprint
 from definitions import CombatTier, EncounterType, EnemyState
 from enemy_catalog import (
@@ -13,7 +14,6 @@ from enemy_catalog import (
 from entities import Enemy, Player, player
 from events import choose_event
 from helper import ei, gen, view
-from items import activate_sacred_bark, cards, potions, relics
 from message_bus_tools import Message, bus
 from shop import Shop
 
@@ -68,7 +68,7 @@ class Combat:
         self.start_combat()
         # Combat automatically ends when all enemies are dead.
         while len(self.active_enemies) > 0:
-            bus.publish(Message.START_OF_TURN, (self.turn,))
+            bus.publish(Message.START_OF_TURN, (self.turn, player))
             while True:
                 self.update_death_messages()
                 self.previous_enemy_states = tuple(enemy.state for enemy in self.all_enemies)
@@ -76,16 +76,6 @@ class Combat:
                 if all((enemy.state == EnemyState.DEAD for enemy in self.all_enemies)):
                     self.end_combat(killed_enemies=True)
                     break
-                # if all((enemy.state  for enemy in self.active_enemies)):
-                #     self.end_combat(robbed=True)
-                #     break
-                # Todo: Move this to the Unceasing Top Relic
-                _ = (
-                    player.draw_cards(True, 1)
-                    if len(player.hand) == 0
-                    and relics["Unceasing Top"] in player.relics
-                    else None
-                )  # Assigned to _ so my linter shuts up
 
                 print(f"Turn {self.turn}: ")
                 # Shows the player's potions, cards(in hand), amount of cards in discard and draw pile, and shows the status for you and the enemies.
@@ -122,30 +112,20 @@ class Combat:
                     continue
                 sleep(1)
                 view.clear()
-            bus.publish(
-                Message.END_OF_TURN, data=None
-            )  # So far I don't need to have anything passed for data
+            bus.publish(Message.END_OF_TURN, data=None)  # So far I don't need to have anything passed for data
             self.turn += 1
 
     def end_combat(self, killed_enemies=False, escaped=False, robbed=False):
         if killed_enemies is True:
             potion_roll = random.random()
             ansiprint("<green>Combat finished!</green>")
-            player.gain_gold(
-                random.randint(10, 20) * 1
-                if relics["Golden Idol"] not in self.player.relics
-                else 1.25
-            )
-            if (
-                potion_roll < self.player.potion_dropchance
-                or relics["White Beast Statue"] in self.player.relics
-            ):
-                gen.claim_potions(True, 1, player, potions)
+            player.gain_gold(random.randint(10, 20))
+            if (potion_roll < self.player.potion_dropchance):
+                gen.claim_potions(True, 1, player, items.potions)
                 player.potion_dropchance -= 10
             else:
                 player.potion_dropchance += 10
-            for _ in range(int(relics["Prayer Wheel"] in self.player.relics) + 1):
-                gen.card_rewards(self.tier, True, self.player, cards)
+            gen.card_rewards(self.tier, True, self.player, items.cards)
             sleep(1.5)
             view.clear()
         elif escaped is True:
@@ -184,7 +164,7 @@ class Combat:
         for enemy in self.all_enemies:
             enemy.register(bus=bus)
 
-        bus.publish(Message.START_OF_COMBAT, (self.tier, player))
+        bus.publish(Message.START_OF_COMBAT, (self.tier, self.active_enemies, player))
         self.active_enemies = [enemy for enemy in self.all_enemies if enemy.state == EnemyState.ALIVE]
         self.previous_enemy_states = tuple(enemy.state for enemy in self.all_enemies)
 
@@ -246,17 +226,13 @@ def rest_site():
     """
     # God I hate how long this is. Reminding myself to rewrite this later.
     valid_inputs = ["rest", "smith"]
-    if relics["Ancient Tea Set"] in player.relics and not player.ancient_tea_set:
-        player.ancient_tea_set = True
-        ansiprint("<bold>Ancient Tea Set activated</bold>")
     while True:
         ansiprint(player)
         ansiprint("You come across a <green>Rest Site</green>")
-        if relics["Eternal Feather"] in player.relics:
-            player.health_actions(len(player.deck) // 5 * 3, "Heal")
+        bus.publish(Message.WHEN_ENTERING_CAMPFIRE, (player))
         sleep(1)
-        ansiprint(f"<bold>[Rest]</bold> <green>Heal for 30% of your <light-blue>Max HP</light-blue>({math.floor(player.max_health * 0.30 + 15 if relics['Regal Pillow'] in player.relics else 0)})</green> \n<bold>[Smith]</bold> <green><keyword>Upgrade</keyword> a card in your deck</green> ")
-        ansiprint("+15 from <bold>Regal Pillow</bold>\n" if relics["Regal Pillow"] in player.relics else "", end="",)
+        ansiprint(f"<bold>[Rest]</bold> <green>Heal for 30% of your <light-blue>Max HP</light-blue>({math.floor(player.max_health * 0.30)})</green> \n<bold>[Smith]</bold> <green><keyword>Upgrade</keyword> a card in your deck</green> ")
+        ansiprint("+15 from <bold>Regal Pillow</bold>\n")
         relic_actions = {
             "Girya": (
                 "lift",
@@ -268,8 +244,8 @@ def rest_site():
             ),
             "Shovel": ("dig", "<bold>[Dig]</bold> <green>Obtain a relic</green>"),
         }
-        for relic_name, (action, message) in relic_actions.items():
-            if relics[relic_name] in player.relics:
+        for relic, (action, message) in relic_actions.items():
+            if relic in player.relics:
                 valid_inputs.append(action)
                 ansiprint(message, end="")
         action = input("> ").lower()
@@ -279,32 +255,13 @@ def rest_site():
             view.clear()
             continue
         if action == "rest":
-            if relics["Coffee Dripper"] in player.relics:
-                ansiprint(
-                    "<red>You cannot rest because of </red><bold>Coffee Dripper</bold>."
-                )
-                sleep(1)
-                view.clear()
-                continue
             # heal_amount is equal to 30% of the player's max health rounded down.
             heal_amount = math.floor(player.max_health * 0.30)
-            if relics["Regal Pillow"] in player.relics:
-                heal_amount += 15
             sleep(1)
             view.clear()
             player.health_actions(heal_amount, "Heal")
-            if relics["Dream Catcher"] in player.relics:
-                ansiprint("<bold><italic>Dreaming...</italic></bold>")
-                gen.card_rewards(CombatTier.NORMAL, True, player, cards)
             break
         if action == "smith":
-            if relics["Fusion Hammer"] in player.relics:
-                ansiprint(
-                    "<red>You cannot smith because of <bold>Fusion Hammer</bold>.</red>"
-                )
-                sleep(1.5)
-                view.clear()
-                continue
             upgrade_card = view.list_input(
                 "What card do you want to upgrade?",
                 player.deck,
@@ -313,9 +270,7 @@ def rest_site():
                 and (card["Type"] not in ("Status", "Curse") or card["Name"] == "Burn"),
                 "That card is not upgradeable.",
             )
-            player.deck[upgrade_card] = player.card_actions(
-                player.deck[upgrade_card], "Upgrade", cards
-            )
+            player.deck[upgrade_card] = player.card_actions(player.deck[upgrade_card], "Upgrade", items.cards)
             break
         if action == "lift":
             if player.girya_charges > 0:
@@ -336,12 +291,10 @@ def rest_site():
                 lambda card: card.get("Removable") is False,
                 "That card is not removable.",
             )
-            player.deck[option] = player.card_actions(
-                player.deck[option], "Remove", cards
-            )
+            player.deck[option] = player.card_actions(player.deck[option], "Remove", items.cards)
             break
         if action == "dig":
-            gen.claim_relics(False, player, 1, relics, None, False)
+            gen.claim_relics(False, player, 1, items.relics, None, False)
             break
     while True:
         ansiprint("<bold>[View Deck]</bold> or <bold>[Leave]</bold>")
@@ -392,8 +345,6 @@ def play_potion():
     if len(player.potions) == 0:
         ansiprint("<red>You have no potions.</red>")
         return
-    if relics["Sacred Bark"] in player.relics:
-        activate_sacred_bark()
     view.view_potions(player.potions, player.max_potions)
     input("This is currently not implemented. Press enter to leave > ")
 

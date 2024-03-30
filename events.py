@@ -4,21 +4,21 @@ import random
 from time import sleep
 from typing import Callable
 
+import items
 from ansi_tags import ansiprint
-from definitions import CombatTier
+from definitions import CardType, CombatTier, PlayerClass
 from entities import player
 from helper import gen, view
-from items import cards, potions, relics
 
 
 def event_Neow():
-    if player.player_class == "Ironclad":
+    if player.player_class == PlayerClass.IRONCLAD:
         max_hp_increase = 8
         # max_hp_decrease = 8
-    elif player.player_class == "Silent":
+    elif player.player_class == PlayerClass.SILENT:
         max_hp_increase = 6
         # max_hp_decrease = 7
-    elif player.player_class in ('Defect', 'Watcher'):
+    elif player.player_class in (PlayerClass.DEFECT, PlayerClass.WATCHER):
         max_hp_increase = 7
         # max_hp_decrease = 7
 
@@ -37,10 +37,10 @@ The spirits toss small bones and fragments unto the fire, which brilliantly erup
         sleep(0.8)
         ansiprint("<bold>[Offer]</bold> Recieve a reward based on the offer.")
         input('Press enter > ')
-        offering = view.list_input("What card do you want to offer? > ", player.deck, view.view_piles, lambda card: card.get("Removable") is False, "The card you chose is not removable.")
+        offering = view.list_input("What card do you want to offer? > ", player.deck, view.view_piles, lambda card: not card.removable, "The card you chose is not removable.")
         ansiprint("<bold>You toss an offering into the bonfire</bold>")
         if player.deck[offering].get("Rarity") == "Curse":
-            ansiprint("However, the spirits aren't happy that you offered a <italic><magenta>Curse...</magenta></italic> The card fizzles a meek black smoke. You recieve a... <italic><magenta>something</italic></magenta> in return.")
+            ansiprint("However, the spirits aren't happy that you offered a <curse>Curse...</curse> The card fizzles a meek black smoke. You recieve a... <italic><magenta>something</italic></magenta> in return.")
             sleep(1.5)
             view.clear()
             break
@@ -65,7 +65,7 @@ The spirits dance around you exitedly, filling you with a sense of warmth.\n""")
             break
         if player.deck[offering].get("Rarity") == "Rare":
             ansiprint("""<italic>The flames burst, nearly knocking you off your feet, as the fire doubles in strength.</italic>
-
+ 
 The spirits dance around you excitedly before merging into your form, filling you with warmth and strength\n""")
             player.health_actions(10, "Max Health")
             player.health_actions(player.max_health, "Heal")
@@ -83,7 +83,7 @@ def event_TheDivineFountain():
         option = input('> ').lower()
         if option == "drink":
             for card in player.deck:
-                if card.get("Type") == "Curse":
+                if card.type == CardType.CURSE:
                     player.deck.remove(card)
             ansiprint("As you drink the <light-blue>water</light-blue>, you feel a <magenta>dark grasp</magenta> loosen.")
             sleep(1.5)
@@ -144,7 +144,7 @@ def event_GoldenShrine():
             ansiprint("""Each time you strike the shrine, <yellow>gold</yellow> pours forth again and again!
 
 As you pocket the riches, something <red>weighs heavily on you.</red>""")
-            player.deck.append(cards["Regret"])
+            player.deck.append(items.Regret())
             ansiprint(f"{player.name} gained <curse>Regret</curse>")
             sleep(1.5)
             view.clear()
@@ -168,7 +168,7 @@ def event_Lab():
 Why do you know the name of all these tools? It doesn't matter, you take a look around.""")
     ansiprint("<bold>[Search]</bold> <green>Obtain 3 random potions</green>")
     input('Press enter > ')
-    gen.claim_potions(True, 3, player, potions)
+    gen.claim_potions(True, 3, player, items.potions)
 
 # Won't add the Match and Keep event because i just don't know how to.
 
@@ -183,14 +183,14 @@ def event_OminousForge():
         option = input('> ').lower()
         if option == 'forge':
             option = view.list_input("What card do you want to upgrade? > ", player.deck, view.upgrade_preview, lambda card: not card.get("Upgraded") and (card['Name'] == "Burn" or card['Type'] not in ("Status", "Curse")), "That card is not upgradeable.")
-            player.deck[option] = player.card_actions(player.deck[option], "Upgrade", cards)
+            player.deck[option] = player.card_actions(player.deck[option], "Upgrade", items.cards)
             break
         if option == 'rummage':
             ansiprint('''You decide to see if you can find anything of use. After uncovering tarps, looking through boxes, and checking nooks and crannies, you find a dust covered <yellow>relic!</yellow>.
 
 Taking the relic, you can't shake a sudden feeling of <red>sharp pain</red> as you exit the hut. Maybe you disturbed some sort of spirit?''')
-            gen.claim_relics(False, player, 1, relics, [relics['Warped Tongs']])
-            gen.card_rewards(CombatTier.NORMAL, False, player, cards, [cards['Pain']])
+            gen.claim_relics(False, player, 1, items.relics, [items.WarpedTongs()])
+            gen.card_rewards(CombatTier.NORMAL, False, player, items.cards, [items.Pain()])
             break
     input('Press enter to continue > ')
     sleep(1)
@@ -208,7 +208,7 @@ def event_Purifier():
         if option == 'pray':
             view.view_piles(player.deck, player, False, 'Removable')
             remove_card = view.list_input('What card do you want to remove?', player.deck, view.view_piles, lambda card: card.get("Removable") is False, "That card is not removable.")
-            player.deck[remove_card] = player.card_actions(player.deck[remove_card], 'Remove', cards)
+            player.deck[remove_card] = player.card_actions(player.deck[remove_card], 'Remove', items.cards)
             print('As you kneel in reverence, you feel a weight lifted off your shoulders.')
             break
         if option == 'leave':
@@ -233,7 +233,7 @@ def event_Transmogrifier():
         if option == 'pray':
             view.view_piles(player.deck, player, False, 'Removable')
             transform_card = view.list_input('What card would you like to transform?', player.deck, view.view_piles, lambda card: card.get("Removable") is False, "That card is not transformable.")
-            player.deck[transform_card] = player.card_actions(player.deck[transform_card], 'Transform', cards)
+            player.deck[transform_card] = player.card_actions(player.deck[transform_card], 'Transform', items.cards)
             print('As the power of the shrine flows through you, your mind feels altered.')
             break
         if option == 'leave':
@@ -258,7 +258,7 @@ def event_UpgradeShrine():
         if option == 'pray':
             view.upgrade_preview(player.deck)
             upgrade_card = view.list_input('What card do you want to upgrade?', player.deck, view.upgrade_preview, lambda card: not card.get("Upgraded") and (card['Type'] not in ("Status", "Curse") or card['Name'] == 'Burn'), "That card is not upgradeable.")
-            player.deck[upgrade_card] = player.card_actions(player.deck[upgrade_card], 'Upgrade', cards)
+            player.deck[upgrade_card] = player.card_actions(player.deck[upgrade_card], 'Upgrade', items.cards)
             break
         if option == 'leave':
             print('You ignore the shrine.')
@@ -286,7 +286,7 @@ You eye him suspiciously and consider your options...""")
         ansiprint("<bold>[Give Potion]</bold> <red>Lose a potion.</red> <green>Recieve a relic.</green> \n<bold>[Give Gold]</bold> <red>Lose a varying amount of gold.</red> <green>Recieve a relic.</green> \n<bold>[Give Card]</bold> <red>Lose a card.</red> <green>Recieve a relic.</green> \n<bold>[Attack]</bold> Nothing happens.")
         option = input('> ').lower()
         if 'give' in option:
-            relic_rewards = [relic for relic in relics.values() if relic.get('Rarity') in ('Common', 'Uncommon', 'Rare')]
+            relic_rewards = [relic for relic in items.relics if relic.get('Rarity') in ('Common', 'Uncommon', 'Rare')]
             if 'potion' in option:
                 if len(player.potions) == 0:
                     print("You don't have any potions.")
@@ -341,7 +341,7 @@ He runs away.''')
 
 
 def event_TheWomanInBlue():
-    valid_potions = {potion: stats for potion, stats in potions.items() if stats.get('Class') == player.player_class}
+    valid_potions = {potion: stats for potion, stats in items.potions.items() if stats.get('Class') == player.player_class}
     while True:
         ansiprint('<bold>The Woman in Blue</bold>')
         sleep(0.8)
@@ -374,8 +374,8 @@ You exit the shop cautiously.''')
 
 
 def event_FaceTrader():
-    face_relics = [relics['Cultist Headpiece'], relics['Face of Cleric'],
-                   relics['Ssserpent Head'], relics['Gremlin Visage'], relics["N'loth's Hungry Face"]]
+    face_relics = [items.relics['Cultist Headpiece'], items.relics['Face of Cleric'],
+                   items.relics['Ssserpent Head'], items.relics['Gremlin Visage'], items.relics["N'loth's Hungry Face"]]
     while True:
         ansiprint('<bold>Face Trader</bold>\n')
         sleep(0.8)
@@ -406,7 +406,7 @@ During this, his mask falls off and shatters. Screaming, he quickly covers his f
 His face was completely blank.''')
             break
         if option == 'trade':
-            gen.claim_relics(False, player, 1, relics, [random.choice(face_relics)], False)
+            gen.claim_relics(False, player, 1, items.relics, [random.choice(face_relics)], False)
             sleep(0.8)
             ansiprint('''<bold>Eerie Man</bold>: "For me? <italic>FOR ME?</italic> Oh yes.. Yes. Yes.. mmm..."
 
@@ -435,7 +435,7 @@ What do you do?''')
         print()
         sleep(0.8)
         ansiprint(f'<bold>[Banana]</bold> <green>Heal {math.floor(player.max_health / 3)} HP</green> \n<bold>[Donut]</bold> <green>Max HP +5</green> \n<bold>[Box]</bold> <green>Recieve a relic.</green> <red>Become Cursed: <bold>Regret</bold></red>')
-        ansiprint(f'<keyword>Regret</keyword> | <yellow>{cards["Regret"]["Info"]}</yellow>') # curse is purple
+        ansiprint(f'<keyword>Regret</keyword> | <yellow>{items.cards["Regret"]["Info"]}</yellow>') # curse is purple
         option = input('> ').lower()
         if option == 'banana':
             ansiprint('You eat the <yellow>banana</yellow>. It is nutritious and slightly <light-blue>magical</light-blue>, healing you.')
@@ -450,11 +450,9 @@ What do you do?''')
         if option == 'box':
             ansiprint('You grab the box. Inside you find a <yellow>relic</yellow>! \nHowever, you really craved the donut... \nYou are filled with sadness, but mostly <red>regret</red>.')
             sleep(1.3)
-            gen.claim_relics(False, player, 1, relics, None, False)
-            player.deck.append(cards['Regret'])
-            ansiprint(f'You obtained <magenta>Regret</magenta> | {cards["Regret"]["Info"]}')
-            break
-        ansiprint('<red>Valid inputs:</red> ["banana", "donut", "box"]')
+            gen.claim_relics(False, player, 1, items.relics, None, False)
+            player.deck.append(items.Regret())
+            ansiprint(f'You obtained <magenta>Regret</magenta> | {items.Regret().info}')
         sleep(1.5)
         view.clear()
     input('Press enter to leave > ')
@@ -497,7 +495,7 @@ def event_TheCleric():
 The creature grins.
 
 <bold>Cleric</bold>: "Cleric talented. Have a good day!"''')
-            player.deck[option] = player.card_actions(player.deck[option], "Remove", cards)
+            player.deck[option] = player.card_actions(player.deck[option], "Remove", items.cards)
             break
         if option == 'leave':
             ansiprint("You don't trust this <light-blue>'Cleric'</light-blue>, so you leave.")
@@ -523,7 +521,7 @@ You're sure you don't see any traps nearby.\n""")
             view.clear()
             continue
         if option == 'take':
-            gen.claim_relics(False, player, 1, relics, [relics['Golden Idol']], False)
+            gen.claim_relics(False, player, 1, items.relics, [items.GoldenIdol], False)
             ansiprint("""As you grab the idol and stow it away, a giant boulder smashes through the ceiling into the ground next to you.
 
 You realize that the floor is slanted downwards as the boulder starts to roll towards you.""")
@@ -533,7 +531,7 @@ You realize that the floor is slanted downwards as the boulder starts to roll to
                 ansiprint("""<italic>RUUUUUUUUUUUUUUUN!</italic>
 
 You barely leap into a side passageway as the boulder rushes by. Unfortunatly, it feels like you sprained something.""")
-                gen.card_rewards("Normal", False, player, cards, [cards['Injury']])
+                gen.card_rewards("Normal", False, player, items.cards, [items.Injury()])
                 break
             if option == 'smash':
                 player.take_sourceless_dmg(math.floor(player.max_health * 0.25))

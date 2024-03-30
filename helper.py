@@ -45,12 +45,9 @@ class Displayer:
             self.clear()
 
     def view_relics(self, relic_pool, end=False, validator: Callable = lambda placehold: bool(placehold)):
-        counter = 1
         for relic in relic_pool:
             if validator(relic):
-                name_colors = {"Starter": "starter", "Common": "white", "Uncommon": "uncommon", "Rare": "rare", "Event": "event"}
-                ansiprint(f"{counter}: <{name_colors[relic['Rarity']]}>{relic['Name']}</{name_colors[relic['Rarity']]}> | {relic['Class']} | <yellow>{relic['Info']}</yellow> | <dark-blue><italic>{relic['Flavor']}</italic></dark-blue>")
-                counter += 1
+                ansiprint(relic.pretty_print())
                 sleep(0.05)
         if end:
             input("Press enter to continue > ")
@@ -233,9 +230,9 @@ class Generators:
     def generate_relic_rewards(self, source: str, amount: int, entity, relic_pool: dict, chance_based=True) -> list[dict]:
         claimed_relics = [relic.name for relic in entity.relics]
 
-        common_relics = [relic() for relic in relic_pool if relic.get("Rarity") == "Common" and relic.get("Class") == entity.player_class and relic not in entity.relics and relic.name not in claimed_relics]
-        uncommon_relics = [relic() for relic in relic_pool if relic.get("Rarity") == "Uncommon" and relic.get("Class") == entity.player_class and relic not in entity.relics and relic.name not in claimed_relics]
-        rare_relics = [relic() for relic in relic_pool if relic.get("Rarity") == "Rare" and relic.get("Class") == entity.player_class and relic not in entity.relics and relic.name not in claimed_relics]
+        common_relics = [relic() for relic in relic_pool if relic.rarity == Rarity.COMMON and relic.player_class == entity.player_class and relic not in entity.relics and relic.name not in claimed_relics]
+        uncommon_relics = [relic() for relic in relic_pool if relic.rarity == Rarity.UNCOMMON and relic.player_class == entity.player_class and relic not in entity.relics and relic.name not in claimed_relics]
+        rare_relics = [relic() for relic in relic_pool if relic.rarity == Rarity.RARE and relic.player_class == entity.player_class and relic not in entity.relics and relic.name not in claimed_relics]
 
         all_relic_pool = common_relics + uncommon_relics + rare_relics
         rarities = [common_relics, uncommon_relics, rare_relics]
@@ -268,24 +265,24 @@ class Generators:
             for i in range(relic_amount):
                 entity.relics.append(rewards[i])
                 entity.on_relic_pickup(rewards[i])
-                ansiprint(f"{entity.name} obtained {rewards[i]['Name']} | {rewards[i]['Info']}")
+                ansiprint(f"{entity.name} obtained {rewards[i].name}.")
                 rewards.remove(rewards[i])
                 sleep(0.5)
             sleep(0.5)
         while len(rewards) > 0 and choice:
-            option = view.list_input("What relic do you want? > ", rewards, view.view_relics)
+            option = view.list_input("Choose a relic", rewards, view.view_relics)
             if not option:
                 sleep(1.5)
                 view.clear()
                 continue
             entity.relics.append(rewards[option])
-            entity.on_relic_pickup(rewards[option])
-            print(f"{entity.name} obtained {rewards[option]['Name']}.")
+            bus.publish(Message.ON_RELIC_ADD, (rewards[option], entity))
+            print(f"{entity.name} obtained {rewards[option].name}.")
             rewards.remove(rewards[i])
 
     def claim_potions(self, choice: bool, potion_amount: int, entity, potion_pool: dict, rewards=None, chance_based=True):
         for relic in entity.relics:
-            if relic['Name'] == "Sozu":
+            if relic.name == "Sozu":
                 return
         if not rewards:
             rewards = self.generate_potion_rewards(potion_amount, entity, potion_pool, chance_based)
@@ -328,7 +325,11 @@ class Generators:
         while True:
             if choice:
                 chosen_reward = view.list_input("Choose a card", rewards, view.view_piles)
-                if (entity.upgrade_attacks and rewards[chosen_reward].type == "Attack" or (entity.upgrade_skills and rewards[chosen_reward].type == "Skill" or entity.upgrade_powers and rewards[chosen_reward].type == "Power")):
+                if (
+                    entity.upgrade_attacks and rewards[chosen_reward].type == CardType.ATTACK 
+                    or (entity.upgrade_skills and rewards[chosen_reward].type == CardType.SKILL 
+                    or entity.upgrade_powers and rewards[chosen_reward].type == CardType.POWER
+                )):
                     rewards[chosen_reward].upgrade()
                 entity.deck.append(rewards[chosen_reward])
                 ansiprint(f"{entity.name} obtained <bold>{rewards[chosen_reward].name}</bold>")
@@ -579,9 +580,8 @@ class EffectInterface:
     def apply_effect(self, target, user, effect_name: str, amount=0, recursion_tag=False) -> None:
         """recurstion_tag is only meant for internal use to stop infinite loops with Champion Belt."""
         assert (effect_name in self.ALL_EFFECTS), f"{effect_name} is not a valid debuff or buff."
-        champion_belt_activated = False
         current_relic_pool = (
-            [relic.get("Name") for relic in user.relics]
+            [relic.name for relic in user.relics]
             if getattr(user, "player_class", "placehold") in str(user)
             else []
         )

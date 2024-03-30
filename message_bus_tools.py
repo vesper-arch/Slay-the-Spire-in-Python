@@ -1,5 +1,4 @@
 from enum import StrEnum
-from typing import Any
 from uuid import uuid4
 
 from ansi_tags import ansiprint
@@ -16,12 +15,14 @@ class Message(StrEnum):
     AFTER_ATTACK = 'after_attack'
     BEFORE_BLOCK = 'before_block'
     AFTER_BLOCK = 'after_block'
+    WHEN_ENTERING_CAMPFIRE = 'when_entering_campfire'
     ON_PLAYER_HEALTH_LOSS = 'on_player_health_loss'
     ON_PICKUP = 'on_pickup' # For relics
     ON_DRAW = 'on_draw'
     ON_EXHAUST = 'on_exhaust'
     ON_CARD_PLAY = 'on_card_play'
     ON_CARD_ADD = 'on_card_add'
+    ON_RELIC_ADD = 'on_relic_add'
     ON_DEATH_OR_ESCAPE = 'on_death_or_escape'
 
 class MessageBus():
@@ -29,13 +30,13 @@ class MessageBus():
     registering a callback function that will be called when that message is published.
     '''
     def __init__(self, debug=True):
-        self.subscribers = dict(dict())
+        self.subscribers = dict(dict())  # noqa: C408
         self.debug = debug
         self.death_messages = []
 
     def subscribe(self, event_type: Message, callback, uid):
         if event_type not in self.subscribers:
-            self.subscribers[event_type] = dict()
+            self.subscribers[event_type] = {}
         self.subscribers[event_type][uid] = callback
         if self.debug:
             ansiprint(f"<basic>MESSAGEBUS</basic>: <blue>{event_type}</blue> | Subscribed <bold>{callback.__qualname__}</bold>")
@@ -48,6 +49,7 @@ class MessageBus():
     def publish(self, event_type: Message, data):
         if event_type in self.subscribers:
             for uid, callback in self.subscribers[event_type].items():
+                _ = uid
                 if self.debug:
                     ansiprint(f"<basic>MESSAGEBUS</basic>: <blue>{event_type}</blue> | Calling <bold>{callback.__qualname__}</bold>")
                 callback(event_type, data)
@@ -80,9 +82,8 @@ class Effect(Registerable):
         return f"<{stack_type_colors[self.type]}>{self.name}</{stack_type_colors[self.type]}>{f' {self.amount}' if self.type != 'no stack' else ''}"
 
 class Relic(Registerable):
-    def __init__(self, name, info, flavor_text, rarity, player_class='Any'):
+    def __init__(self, name: str, info: str, flavor_text: str, rarity: Rarity, player_class: PlayerClass=PlayerClass.ANY):
         self.uid = uuid4()
-        self.register(bus=bus)
         self.name = name
         self.info = info
         self.flavor_text = flavor_text
@@ -90,7 +91,8 @@ class Relic(Registerable):
         self.player_class = player_class
 
     def pretty_print(self):
-        return f"<{self.rarity}>{self.name}</{self.rarity}> | <yellow>{self.info}</yellow> | <italic><dark-blue>{self.flavor_text}</dark-blue></italic>"
+        rarity_color = self.rarity.lower()
+        return f"<{rarity_color}>{self.name}</{rarity_color}> | <yellow>{self.info}</yellow> | <italic><dark-blue>{self.flavor_text}</dark-blue></italic>"
     
 class Card(Registerable):
     def __init__(self, name: str, info: str, rarity: Rarity, player_class: PlayerClass, card_type: CardType, target='Nothing', energy_cost=-1, upgradeable=True):
@@ -106,10 +108,12 @@ class Card(Registerable):
         self.target = target
         self.upgrade = False
         self.upgradeable = upgradeable
+        self.removable = True
         self.upgrade_preview = f"{self.name} -> <green>{self.name + '+'}</green> | "
 
     def pretty_print(self):
-        return f"""<{self.rarity.lower()}>{self.name}</{self.rarity.lower()}> | <light-black>{self.type}</light-black>{f' | <light-red>{"<green>" if self.base_energy_cost != self.energy_cost else ""}{self.energy_cost}{"</green>" if self.base_energy_cost != self.energy_cost else ""} Energy</light-red>' if self.energy_cost > -1 else ''} | <yellow>{self.info}</yellow>"""
+        type_color = self.type.lower()
+        return f"""<{self.rarity.lower()}>{self.name}</{self.rarity.lower()}> | <{type_color}>{self.type}</{type_color}>{f' | <light-red>{"<green>" if self.base_energy_cost != self.energy_cost else ""}{self.energy_cost}{"</green>" if self.base_energy_cost != self.energy_cost else ""} Energy</light-red>' if self.energy_cost > -1 else ''} | <yellow>{self.info}</yellow>"""
 
     def upgrade_markers(self):
         self.info += '<green>+</green>'
