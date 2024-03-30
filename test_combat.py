@@ -39,6 +39,7 @@ def test_new_combat_basic(monkeypatch):
         m.setattr(helper, 'sleep', lambda _: None)
         m.setattr(entities, 'sleep', lambda _: None)
         m.setattr(items, 'sleep', lambda _: None)
+        m.setattr(game, 'sleep', lambda _: None)
         helper.view.clear = replacement_clear_screen
 
         # Run combat

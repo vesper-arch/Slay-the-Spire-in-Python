@@ -89,7 +89,7 @@ class Armaments(Card):
 
     def apply(self, origin):
         origin.blocking(card=self)
-        if not self.upgraded:
+        if not self.upgraded and len(origin.hand) > 0:
             chosen_card = view.list_input("Choose a card to upgrade", origin.hand, view.view_piles, lambda card: card.is_upgradeable(), "That card is not upgradeable.")
             origin.hand[chosen_card].upgrade()
         else:
@@ -313,7 +313,7 @@ class ShrugItOff(Card):
         self.block = self.base_block
         self.block_affected_by = [f"Shrug It Off({self.block} block)"]
         self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Gain <green>11</green> <keyword>Block</keyword>. Draw 1 card."
-    
+
     def upgrade(self):
         self.upgrade_markers()
         self.block, self.base_block = 11
@@ -581,7 +581,7 @@ class Dropkick(Card):
 
 class DualWield(Card):
     def __init__(self):
-        super().__init__("Dual Wield", "Create a copy of an <keyword>Attack</keyword> or </keyword>Power</keyword> card in your hand.", Rarity.UNCOMMON, PlayerClass.IRONCLAD, CardType.SKILL, TargetType.YOURSELF, energy_cost=1)
+        super().__init__("Dual Wield", "Create a copy of an <keyword>Attack</keyword> or <keyword>Power</keyword> card in your hand.", Rarity.UNCOMMON, PlayerClass.IRONCLAD, CardType.SKILL, TargetType.YOURSELF, energy_cost=1)
         self.copies = 1
         self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Create <green>2 copies</green> of an <keyword>Attack</keyword> or <keyword>Power</keyword> card in your hand.</yellow>"
 
@@ -794,7 +794,7 @@ class Pummel(Card):
         self.upgrade_markers()
         self.times = 5
         self.info = "Deal 2 damage 5 times. <keyword>Exhaust</keyword>."
-        
+
     def apply(self, origin, target):
         for _ in range(self.times):
             origin.attack(target, self)
@@ -879,7 +879,7 @@ class Corruption(Card):
 
     def apply(self, origin):
         ei.apply_effect(origin, None, "Corruption")
- 
+
 class Slimed(Card):
     def __init__(self):
         super().__init__("Slimed", "<keyword>Exhaust</keyword>.", Rarity.COMMON, PlayerClass.IRONCLAD, CardType.STATUS, TargetType.YOURSELF, energy_cost=1)
@@ -1086,7 +1086,7 @@ cards = tuple(card() for card in (
     # Starter(basic) cards
     IroncladStrike, IroncladDefend, Bash,
     # Common Cards
-    Anger, Armaments, BodySlam, Clash, Cleave, Clothesline, Flex, Havoc, 
+    Anger, Armaments, BodySlam, Clash, Cleave, Clothesline, Flex, Havoc,
     Headbutt, HeavyBlade, IronWave, PerfectedStrike, PommelStrike, ShrugItOff, SwordBoomerang, Thunderclap, TrueGrit, TwinStrike, Warcry, WildStrike,
     # Uncommon Cards
     BattleTrance, BloodForBlood, Bloodletting, BurningPact, Carnage, Combust, DarkEmbrace, Disarm, Dropkick, DualWield, Entrench, Evolve, FeelNoPain,

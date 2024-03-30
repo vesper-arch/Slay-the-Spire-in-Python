@@ -182,7 +182,7 @@ def event_OminousForge():
         ansiprint("<bold>[Forge]</bold> <green>Upgrade a Card</green> \n<bold>[Rummage]</bold> <green>Obtain Warped Tongs.</green> <red>Become <keyword>Cursed | Pain</keyword></red> \n<bold>[Leave]</bold> Nothing happens")
         option = input('> ').lower()
         if option == 'forge':
-            option = view.list_input("What card do you want to upgrade? > ", player.deck, view.upgrade_preview, lambda card: not card.get("Upgraded") and (card['Name'] == "Burn" or card['Type'] not in ("Status", "Curse")), "That card is not upgradeable.")
+            option = view.list_input("What card do you want to upgrade? > ", player.deck, view.upgrade_preview, lambda card: not card.get("Upgraded") and (card.name == "Burn" or card['Type'] not in ("Status", "Curse")), "That card is not upgradeable.")
             player.deck[option] = player.card_actions(player.deck[option], "Upgrade", items.cards)
             break
         if option == 'rummage':
