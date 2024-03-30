@@ -39,7 +39,7 @@ class MessageBus():
         self.subscribers[event_type][uid] = callback
         if self.debug:
             ansiprint(f"<basic>MESSAGEBUS</basic>: <blue>{event_type}</blue> | Subscribed <bold>{callback.__qualname__}</bold>")
-    
+
     def unsubscribe(self, event_type, uid):
         if self.debug:
             ansiprint(f"<basic>MESSAGEBUS</basic>: Unsubscribed <bold>{self.subscribers[event_type][uid].__qualname__}</bold> from {', '.join(event_type).replace(', ', '')}")
@@ -52,13 +52,13 @@ class MessageBus():
                     ansiprint(f"<basic>MESSAGEBUS</basic>: <blue>{event_type}</blue> | Calling <bold>{callback.__qualname__}</bold>")
                 callback(event_type, data)
         return data
-    
+
 class Registerable():
     registers = []
     def register(self, bus):
         for message in self.registers:
             bus.subscribe(message, self.callback, self.uid)
-    
+
     def unsubscribe(self, event_types: list[Message]=None):
         '''Unsubscribes the object from certain events. Unsubscribes from all registers by default.'''
         if not event_types:
@@ -91,7 +91,7 @@ class Relic(Registerable):
 
     def pretty_print(self):
         return f"<{self.rarity}>{self.name}</{self.rarity}> | <yellow>{self.info}</yellow> | <italic><dark-blue>{self.flavor_text}</dark-blue></italic>"
-    
+
 class Card(Registerable):
     def __init__(self, name: str, info: str, rarity: Rarity, player_class: PlayerClass, card_type: CardType, target='Nothing', energy_cost=-1, upgradeable=True):
         self.uid = uuid4()
@@ -104,17 +104,28 @@ class Card(Registerable):
         self.energy_cost = energy_cost
         self.reset_energy_next_turn = False
         self.target = target
-        self.upgrade = False
+        self.upgraded = False
         self.upgradeable = upgradeable
         self.upgrade_preview = f"{self.name} -> <green>{self.name + '+'}</green> | "
 
+    def changed_energy(self):
+        return self.base_energy_cost != self.energy_cost
+
     def pretty_print(self):
+        print(f"""<{self.rarity.lower()}>{self.name}</{self.rarity.lower()}> | <light-black>{self.type}</light-black>{f' | <light-red>{"<green>" if self.base_energy_cost != self.energy_cost else ""}{self.energy_cost}{"</green>" if self.base_energy_cost != self.energy_cost else ""} Energy</light-red>' if self.energy_cost > -1 else ''} | <yellow>{self.info}</yellow>""")
         return f"""<{self.rarity.lower()}>{self.name}</{self.rarity.lower()}> | <light-black>{self.type}</light-black>{f' | <light-red>{"<green>" if self.base_energy_cost != self.energy_cost else ""}{self.energy_cost}{"</green>" if self.base_energy_cost != self.energy_cost else ""} Energy</light-red>' if self.energy_cost > -1 else ''} | <yellow>{self.info}</yellow>"""
+
+    def pretty_print_valid(self, valid: bool):
+        changed_energy = 'light-red' if not self.changed_energy() else 'green'
+        if valid:
+            return f"<{self.rarity.lower()}>{self.name}</{self.rarity.lower()}> | <{self.type.lower()}>{self.type}</{self.type.lower()}> | <{changed_energy}>{self.energy_cost}</{changed_energy}> | <yellow>{self.info}</yellow>".replace('Σ', '').replace('Ω', '')
+        else:
+            return f"<light-black>{self.name} | {self.type} | {self.energy_cost} | {self.info}</light-black>".replace('Σ', '').replace('Ω', '')
 
     def upgrade_markers(self):
         self.info += '<green>+</green>'
         self.upgraded = True
-    
+
     def modify_energy_cost(self, amount, modify_type='Adjust', one_turn=False):
         if not (modify_type == 'Set' and amount != self.energy_cost) or not (modify_type == 'Adjust' and amount != 0):
             pass
@@ -126,14 +137,14 @@ class Card(Registerable):
             ansiprint(f"{self.name} got its energy set to {amount}.")
         if one_turn:
             self.reset_energy_next_turn = True
-    
+
     def modify_damage(self, amount, context: str, permanent=False):
         if permanent:
             self.base_damage += amount
         else:
             self.damage += amount
         self.damage_affected_by.append(context)
-    
+
     def modify_block(self, amount, context: str, permanent=False):
         if permanent:
             self.base_block += amount

@@ -310,7 +310,7 @@ def rest_site():
                 player.deck,
                 view.view_piles,
                 lambda card: not card.get("Upgraded")
-                and (card["Type"] not in ("Status", "Curse") or card["Name"] == "Burn"),
+                and (card["Type"] not in ("Status", "Curse") or card.name == "Burn"),
                 "That card is not upgradeable.",
             )
             player.deck[upgrade_card] = player.card_actions(

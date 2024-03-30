@@ -33,10 +33,9 @@ class TestSellableItems():
       ansiprint(sellable.valid_string())
       ansiprint(sellable.invalid_string())
 
-
 def test_shop(monkeypatch):
   player = entities.create_player()
-  cards = [SellableItem(items.cards[x]) for x in ("Strike","Body Slam","Heavy Blade","Warcry")]
+  cards = [SellableItem(x) for x in items.cards if x.name in ("Strike","Body Slam","Heavy Blade","Warcry")]
   shop = Shop(player, cards)
   responses = iter(['1', '\n', 'e'])
   with monkeypatch.context() as m:

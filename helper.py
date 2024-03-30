@@ -12,6 +12,15 @@ from message_bus_tools import Message, bus
 
 active_enemies = []
 
+def get_attribute(item, attribute):
+    '''While refactoring, some items (Cards) have properties that are on the object, whereas others have them in a dictionary.
+        This function bridges the difference.
+    '''
+    if isinstance(item, dict):
+        return item[attribute]
+    else:
+        return getattr(item, attribute.lower())
+
 
 class Displayer:
     """Displays important info to the player during combat"""

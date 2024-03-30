@@ -163,7 +163,7 @@ class Player(Registerable):
             exhaust = True
         if pile is not None:
             if exhaust is True or getattr(card, "exhaust", False) is True:
-                ansiprint(f"{card['Name']} was <bold>Exhausted</bold>.")
+                ansiprint(f"{card.name} was <bold>Exhausted</bold>.")
                 self.move_card(
                     card=card,
                     move_to=self.exhaust_pile,
@@ -443,7 +443,7 @@ class Player(Registerable):
             elif action == "Transform":
                 # Curse cards can only be transformed into other Curses
                 ansiprint(
-                    f"{subject_card['Name']} was <bold>transformed</bold> into ", end=""
+                    f"{subject_card.name} was <bold>transformed</bold> into ", end=""
                 )
                 if subject_card.get("Type") == "Curse":
                     options = [
@@ -466,7 +466,7 @@ class Player(Registerable):
                     if new_card == subject_card:
                         continue
                     ansiprint(
-                        f"{new_card['Name']} | <yellow>{new_card['Info']}</yellow>"
+                        f"{new_card.name} | <yellow>{new_card['Info']}</yellow>"
                     )
                     return new_card
 

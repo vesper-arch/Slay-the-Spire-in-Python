@@ -48,6 +48,6 @@ def test_all_attack_cards_with_all_relics(monkeypatch):
         # Let 'er rip!
         for idx, card in enumerate(player.draw_pile):
           stats(player, boss)
-          print(f"Playing card {idx} of {len(player.draw_pile)} - {card['Name']}")
+          print(f"Playing card {idx} of {len(player.draw_pile)} - {card.name}")
           player.use_card(card=card, target=boss, exhaust=True, pile=player.draw_pile)
 

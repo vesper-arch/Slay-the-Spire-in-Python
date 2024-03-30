@@ -2,13 +2,16 @@ import helper
 import items
 import entities
 
+
 def test_view_piles_on_all_cards(monkeypatch):
-  all_cards = [card for card in items.cards.values()]
+  all_cards = list(items.cards)
   entity = entities.create_player()
   entity.energy = 3
-  all_conditions = [(lambda card: card.get("Upgraded") is True, "Upgraded"), (lambda card: not card.get("Upgraded") and (card['Type'] not in ("Status", "Curse") or card['Name'] == 'Burn'), "Upgradeable"),
-                    (lambda card: card.get("Removable") is False, "Removable"), (lambda card: card['Type'] == 'Skill', "Skill"), (lambda card: card['Type'] == 'Attack', "Attack"), (lambda card: card['Type'] == 'Power', "Power"),
-                    (lambda card:  (card.get("Energy", float('inf')) if card.get("Energy", float('inf')) != -1 else entity.energy) <= entity.energy, "Playable")]
+  all_conditions = [(lambda card: card.upgraded is True, "Upgraded"),
+                    (lambda card: not card.upgraded and card.type not in ("Status", "Curse") or card.name == 'Burn', "Upgradeable"),
+                    (lambda card: card.removable is False, "Removable"), (lambda card: card.type == 'Skill', "Skill"),
+                    (lambda card: card.type == 'Attack', "Attack"), (lambda card: card.type == 'Power', "Power"),
+                    (lambda card: card.energy_cost <= entity.energy, "Playable")]
 
   with monkeypatch.context() as m:
     # Patch sleeps so it's faster
