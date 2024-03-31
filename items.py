@@ -1,10 +1,11 @@
+import math
 import random
 from copy import deepcopy
 
 from ansi_tags import ansiprint
-from definitions import CardType, PlayerClass, Rarity, TargetType
+from definitions import CardType, DeepCopyTuple, PlayerClass, Rarity, State, TargetType
 from helper import ei, view
-from message_bus_tools import Card, Message, Relic
+from message_bus_tools import Card, Message, Potion, Relic
 
 
 class IroncladStrike(Card):
@@ -893,7 +894,7 @@ class Wound(Card):
     def __init__(self):
         super().__init__("Wound", "<keyword>Unplayable</keyword>.", Rarity.COMMON, PlayerClass.ANY, CardType.STATUS, TargetType.NOTHING)
         self.playable = False
-# #####END OF CARDS SECTION#####
+#####---END OF CARDS SECTION---#####
 
 class BurningBlood(Relic):
     registers = [Message.END_OF_COMBAT]
@@ -1069,8 +1070,223 @@ class DuVuDoll(Relic):
             if additional_strength != 0:
                 ei.apply_effect(player, None, "Strength", additional_strength)
 
+class WarpedTongs(Relic):
+    registers = [Message.START_OF_TURN]
+    def __init__(self):
+        super().__init__("Warped Tongs", "At the start of your turn, <keyword>Upgrade</keyword> a random card in your hand for the rest of combat.", "The cursed tongs emit a strong desire to return to where they were stolen from.", Rarity.EVENT)
 
-relics = tuple(relic() for relic in (
+    def callback(self, message, data):
+        if message == Message.START_OF_TURN:
+            _, player = data
+            random_card = random.choice([card for card in player.hand if card.is_upgradeable()])
+            random_card.upgrade()
+#####---END OF RELICS SECTION---#####
+
+class BloodPotion(Potion):
+    def __init__(self):
+        super().__init__("Blood Potion", "Heal for 20% of your Max HP.", Rarity.COMMON, TargetType.YOURSELF, PlayerClass.IRONCLAD)
+        self.hp_gain = 0.20
+        self.golden_stats = [self.hp_gain]
+        self.golden_info = "Heal for 40% of your Max HP."
+
+    def apply(self, origin):
+        origin.health_actions(math.round(origin.max_health * self.hp_gain), "Heal")
+
+class AttackPotion(Potion):
+    def __init__(self):
+        super().__init__("Attack Potion", "Add 1 of 3 random <keyword>Attack</keyword> cards to your hand. It costs 0 this turn.", Rarity.COMMON, TargetType.YOURSELF)
+        self.copies = 1
+        self.golden_stats = [self.copies]
+        self.golden_info = "Add 2 copies of 1 of 3 random <keyword>Attack</keyword> cards to your hand. They cost 0 this turn."
+
+    def apply(self, origin):
+        valid_cards = random.choices([card for card in cards if card.type == CardType.ATTACK], k=3)
+        chosen_card = view.list_input("Choose a card", valid_cards, view.view_piles)
+        for _ in range(self.copies):
+            origin.hand.append(chosen_card)
+
+class SkillPotion(Potion):
+    def __init__(self):
+        super().__init__("Skill Potion", "Add 1 of 3 random <keyword>Skill</keyword> cards to your hand. It costs 0 this turn.", Rarity.COMMON, TargetType.YOURSELF)
+        self.copies = 1
+        self.golden_stats = [self.copies]
+        self.golden_info = "Add 2 copies of 1 of 3 random <keyword>Skill</keyword> cards to your hand. They cost 0 this turn."
+
+    def apply(self, origin):
+        valid_cards = random.choices([card for card in cards if card.type == CardType.SKILL], k=3)
+        chosen_card = view.list_input("Choose a card", valid_cards, view.view_piles)
+        for _ in range(self.copies):
+            origin.hand.append(chosen_card)
+
+class PowerPotion(Potion):
+    def __init__(self):
+        super().__init__("Power Potion", "Add 1 of 3 random <keyword>Power</keyword> cards to your hand. It costs 0 this turn.", Rarity.COMMON, TargetType.YOURSELF)
+        self.copies = 1
+        self.golden_stats = [self.copies]
+        self.golden_info = "Add 2 copies of 1 of 3 random <keyword>Power</keyword> cards to your hand. They cost 0 this turn."
+
+    def apply(self, origin):
+        valid_cards = random.choices([card for card in cards if card.type == CardType.POWER], k=3)
+        chosen_card = view.list_input("Choose a card", valid_cards, view.view_piles)
+        for _ in range(self.copies):
+            origin.hand.append(chosen_card)
+
+class ColorlessPotion(Potion):
+    def __init__(self):
+        super().__init__("Colorless Potion", "Add 1 of 3 random <keyword>Colorless</keyword> cards to your hand. It costs 0 this turn.", Rarity.COMMON, TargetType.YOURSELF)
+        self.copies = 1
+        self.golden_stats = [self.copies]
+        self.golden_info = "Add 2 copies of 1 of 3 random <keyword>Colorless</keyword> cards to your hand. They cost 0 this turn."
+
+    def apply(self, origin):
+        valid_cards = random.choices([card for card in cards if card.player_class == PlayerClass.COLORLESS], k=3)
+        chosen_card = view.list_input("Choose a card", valid_cards, view.view_piles)
+        for _ in range(self.copies):
+            origin.hand.append(chosen_card)
+
+class BlessingOfTheForge(Potion):
+    def __init__(self):
+        super().__init__("Blessing of the Forge", "<keyword>Upgrade</keyword> ALL cards in your hand for the rest of combat.", Rarity.COMMON, TargetType.YOURSELF)
+
+    def apply(self, origin):
+        for card in (card for card in origin.hand if card.is_upgradeable()):
+            card.upgrade()
+
+class Elixir(Potion):
+    def __init__(self):
+        super().__init__("Elixir", "<keyword>Exhaust</keyword> any number of cards in your hand.", Rarity.UNCOMMON, TargetType.YOURSELF, PlayerClass.IRONCLAD)
+
+    def apply(self, origin):
+        chosen_cards = view.multi_input("Choose any number of cards to <keyword>Exhaust</keyword>", origin.hand, view.view_piles, len(origin.hand))
+        for i in chosen_cards:
+            origin.move_card(origin.hand[i], origin.exhaust_pile, origin.hand)
+
+class GamblersBrew(Potion):
+    def __init__(self):
+        super().__init__("Gambler's Brew", "Discard any number of cards, then draw that many.", Rarity.UNCOMMON, TargetType.YOURSELF)
+
+    def apply(self, origin):
+        chosen_cards = view.multi_input("Choose any number of cards to discard", origin.hand, view.view_piles)
+        for i in chosen_cards:
+            origin.move_card(origin.hand[i], origin.discard_pile, origin.hand)
+        origin.draw_cards(cards=len(chosen_cards))
+
+class LiquidMemories(Potion):
+    def __init__(self):
+        super().__init__("Liquid Memories", "Choose a card in your discard pile and return it to your hand. It costs 0 this turn.", Rarity.UNCOMMON, TargetType.YOURSELF)
+        self.cards = 1
+        self.golden_stats = [self.cards]
+        self.golden_info = "Choose 2 cards in your discard pile and return them to your hand. They cost 0 this turn."
+
+    def apply(self, origin):
+        chosen_cards = view.multi_input(f"Choose {'a' if self.cards == 1 else '2'} card{'' if self.cards == 1 else 's'} to return to your hand", origin.discard_pile, view.view_piles, self.cards)
+        for i in chosen_cards:
+            chosen_cards[i].modify_energy_cost(0, "Set", one_turn=True)
+            origin.move_card(chosen_cards[i], origin.hand, origin.discard_pile)
+
+class DistilledChaos(Potion):
+    def __init__(self):
+        super().__init__("Distilled Chaos", "Play the top 3 cards of your draw pile.", Rarity.UNCOMMON, TargetType.ANY)
+        self.cards = 3
+        self.golden_stats = [self.cards]
+        self.golden_info = "Play the top 6 cards of your draw pile."
+
+    def apply(self, origin, enemies):
+        # Literally Havoc but multiple cards
+        for i in range(-1, -self.cards, -1):
+            card = origin.draw_pile[i]
+            if card.target in (TargetType.SINGLE, TargetType.YOURSELF):
+                origin.use_card(card, True, origin.draw_pile, random.choice(enemies))
+            elif card.target in (TargetType.AREA, TargetType.ANY):
+                origin.use_card(card, True, origin.draw_pile, enemies)
+            else:
+                origin.use_card(card, True, origin.draw_pile, random.choice(enemies))
+
+class DuplicationPotion(Potion):
+    def __init__(self):
+        super().__init__("Duplication Potion", "This turn, your next card is played twice.", Rarity.UNCOMMON, TargetType.YOURSELF)
+        self.duplication = 1
+        self.golden_stats = [self.duplication]
+        self.golden_info = "This turn, your next 2 cards are played twice."
+
+    def apply(self, origin):
+        ei.apply_effect(origin, None, "Duplication", self.duplication)
+
+class AncientPotion(Potion):
+    def __init__(self):
+        super().__init__("Ancient Potion", "Gain 1 <buff>Artifact</buff>.", Rarity.UNCOMMON, TargetType.YOURSELF)
+        self.artifact = 1
+        self.golden_stats = [self.artifact]
+        self.golden_info = "Gain 2 <buff>Artifact</buff>."
+
+    def apply(self, origin):
+        ei.apply_effect(origin, None, "Artifact", self.artifact)
+
+class HeartOfIron(Potion):
+    def __init__(self):
+        super().__init__("Heart of Iron", "Gain 6 <buff>Mettalicize</buff>.", Rarity.RARE, TargetType.YOURSELF)
+        self.mettalicize = 6
+        self.golden_stats = [self.mettalicize]
+        self.golden_info = "Gain 12 <buff>Mettalicize</buff>."
+
+    def apply(self, origin):
+        ei.apply_effect(origin, None, "Mettalicize", self.mettalicize)
+
+class FruitJuice(Potion):
+    def __init__(self):
+        super().__init__("Fruit Juice", "Gain 5 Max HP.", Rarity.RARE, TargetType.YOURSELF)
+        self.max_hp_gain = 5
+        self.golden_stats = [self.max_hp_gain]
+        self.golden_info = "Gain 10 Max HP."
+
+    def apply(self, origin):
+        origin.health_actions(self.max_hp_gain, "Max Health")
+
+class FairyInABottle(Potion):
+    def __init__(self):
+        super().__init__("Fairy in a Bottle", "Unplayable. When you would die, heal 30% HP instead and discard this potion.", Rarity.RARE, TargetType.NOTHING)
+        self.hp_percent = 0.3
+        self.golden_stats = [self.hp_percent]
+        self.golden_info = "Unplayable. When you would die, heal 60% HP instead and discard this potion."
+
+class CultistPotion(Potion):
+    def __init__(self):
+        super().__init__("Cultist Potion", "Gain 1 <buff>Ritual</buff>.", Rarity.RARE, TargetType.YOURSELF)
+        self.ritual = 1
+        self.golden_stats = [self.ritual]
+        self.golden_info = "Gain 2 <buff>Ritual</buff>."
+
+    def apply(self, origin):
+        ei.apply_effect(origin, None, "Ritual", self.ritual)
+
+class EntropicBrew(Potion):
+    def __init__(self):
+        super().__init__("Entropic Brew", "Fill all your empty potion slots with random potions.", Rarity.RARE, TargetType.YOURSELF)
+
+    def apply(self, origin):
+        for _ in range(origin.max_potions - len(origin.potions)):
+            origin.potions.append(random.choice(potion for potion in potions if potion.player_class == origin.player_class))
+
+class SmokeBomb(Potion):
+    def __init__(self):
+        super().__init__("Smoke Bomb", "Escape from a non-boss combat. Recieve no rewards.", Rarity.RARE, TargetType.YOURSELF)
+
+    def apply(self, origin):
+        origin.state = State.ESCAPED
+
+class SneckoOil(Potion):
+    def __init__(self):
+        super().__init__("Snecko Oil", "Draw 5 cards. Randomize the costs of all cards in your hand for the rest of combat.", Rarity.RARE, TargetType.YOURSELF)
+        self.cards = 5
+        self.golden_stats = [self.cards]
+        self.golden_info = "Draw 10 cards. Randomize the costs of all cards in your hand for the rest of combat."
+
+    def apply(self, origin):
+        origin.draw_cards(cards=self.cards)
+        for card in origin.hand:
+            card.modify_energy_cost(random.randint(0, 3), "Set")
+
+relics = DeepCopyTuple(relic() for relic in (
     # Starter Relics
     BurningBlood,
     # Common Relics
@@ -1079,10 +1295,12 @@ relics = tuple(relic() for relic in (
     BlueCandle, BottledFlame, BottledLighting, BottledTornado, DarkstonePeriapt,
     # Rare Relics
     BirdFacedUrn, Calipers, CaptainsWheel, DeadBranch, DuVuDoll,
+    # Event Relics
+    WarpedTongs,
 ))
 
-cards = tuple(card() for card in (
-    # IRONCLAD CARDS
+cards = DeepCopyTuple(card() for card in (
+    # ----------IRONCLAD CARDS------------
     # Starter(basic) cards
     IroncladStrike, IroncladDefend, Bash,
     # Common Cards
@@ -1095,58 +1313,17 @@ cards = tuple(card() for card in (
     Barricade, Berzerk, Bludgeon, Brutality, Corruption
 ))
 
+potions = DeepCopyTuple(potion() for potion in (
+    # Common Potions
+    BloodPotion, AttackPotion, SkillPotion, PowerPotion, ColorlessPotion, BlessingOfTheForge,
+    # Uncommon Potions
+    Elixir, GamblersBrew, LiquidMemories, DistilledChaos, DuplicationPotion, AncientPotion,
+    # Rare Potions
+    HeartOfIron, FruitJuice, FairyInABottle, CultistPotion, EntropicBrew, SmokeBomb, SneckoOil,
+))
+
 sacred_multi: int = 1
 def activate_sacred_bark():
     global sacred_multi
     sacred_multi = 2
 
-potions = {
-    # Common | All Classes
-    'Attack Potion': {'Name': 'Attack Potion', 'Cards': 1 * sacred_multi, 'Card Type': 'Attack', 'Class': 'Any', 'Rarity': 'Common', 'Info': f'Add {"1" if sacred_multi < 2 else "2 copies"} of 3 random <keyword>Attack</keyword> cards to your hand, {"it" if sacred_multi < 2 else "they"} costs 0 this turn'},
-    'Power Potion': {'Name': 'Power Potion', 'Cards': 1 * sacred_multi, 'Card Type': 'Power', 'Class': 'Any', 'Rarity': 'Common', 'Info': f'Add {"1" if sacred_multi < 2 else "2 copies"} of 3 random <keyword>Power</keyword> cards to your hand, {"it" if sacred_multi < 2 else "they"} costs 0 this turn'},
-    'Skill Potion': {'Name': 'Skill Potion', 'Cards': 1 * sacred_multi, 'Card Type': 'Skill', 'Class': 'Any', 'Rarity': 'Common', 'Info': f'Add {"1" if sacred_multi < 2 else "2 copies"} of 3 random <keyword>Skill</keyword> cards to your hand, {"it" if sacred_multi < 2 else "they"} costs 0 this turn'},
-    'Colorless Potion': {'Name': 'Colorless Potion', 'Cards': 1 * sacred_multi, 'Card Type': 'Colorless', 'Class': 'Any', 'Rarity': 'Common', 'Info': f'Choose {"1" if sacred_multi < 2 else "2 copies"} of 3 random Colorless cards to add to your hand, {"it" if sacred_multi < 2 else "they"} costs 0 this turn'},
-    'Block Potion': {'Name': 'Block Potion', 'Block': 12 * sacred_multi, 'Class': 'Any', 'Rarity': 'Common', 'Info': f'Gain {12 * sacred_multi} <keyword>Block</keyword>'},
-    'Dexterity Potion': {'Name': 'Dexterity Potion', 'Dexterity': 2 * sacred_multi, 'Class': 'Any', 'Rarity': 'Common', 'Info': f'Gain {2 * sacred_multi} <buff>Dexterity</buff>'},
-    'Energy Potion': {'Name': 'Energy Potion', 'Energy': 2 * sacred_multi, 'Class': 'Any', 'Rarity': 'Common', 'Info': f'Gain {2 * sacred_multi} <keyword>Energy</keyword>'},
-    'Explosive Potion': {'Name': 'Explosive Potion', 'Damage': 10 * sacred_multi, 'Target': 'Any', 'Class': 'Any', 'Rarity': 'Common', 'Info': f'Deal {10 * sacred_multi} damage to ALL enemies'},
-    'Fear Potion': {'Name': 'Fear Potion', 'Vulnerable': 3 * sacred_multi, 'Target': 'Enemy', 'Class': 'Any', 'Rarity': 'Common', 'Info': f'Apply {3 * sacred_multi} <debuff>Vulnerable</debuff>'},
-    'Fire Potion': {'Name': 'Fire Potion', 'Damage': 20 * sacred_multi, 'Target': 'Enemy', 'Class': 'Any', 'Rarity': 'Common', 'Info': f'Deal {20 * sacred_multi} damage to target enemy'},
-    'Flex Potion': {'Name': 'Flex Potion', 'Strength': 5 * sacred_multi, 'Class': 'Any', 'Rarity': 'Common', 'Info': f'Gain {5 * sacred_multi} <buff>Strength</buff>. At the end of your turn lose {5 * sacred_multi} <buff>Strength</buff>'},
-    'Speed Potion': {'Name': 'Speed Potion', 'Dexterity': 5 * sacred_multi, 'Class': 'Any', 'Rarity': 'Common', 'Info': f'Gain {5 * sacred_multi} <buff>Dexterity</buff>. At the end of your turn, lose {5 * sacred_multi} <buff>Dexterity</buff>'},
-    'Strength Potion': {'Name': 'Strength Potion', 'Strength': 2 * sacred_multi, 'Class': 'Any', 'Rarity': 'Common', 'Info': f'Gain {2 * sacred_multi} <buff>Strength</buff>'},
-    'Swift Potion': {'Name': 'Swift Potion', 'Cards': 3 * sacred_multi, 'Class': 'Any', 'Rarity': 'Common', 'Info': 'Draw 3 cards'},
-    # Uncommon | All Classes
-    'Ancient Potion': {'Name': 'Ancient Potion', 'Artifact': 1 * sacred_multi, 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': f'Gain {1 * sacred_multi} <buff>Artifact</buff>.'},
-    'Distilled Chaos': {'Name': 'Distilled Chaos', 'Cards': 3 * sacred_multi, 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': f'Play the top {3 * sacred_multi} cards of your draw pile'},
-    'Duplication Potion': {'Name': 'Duplication Potion', 'Cards': 1 * sacred_multi, 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': f'This turn, the next {"card is" if sacred_multi < 2 else "2 cards are"} played twice.'},
-    'Essence of Steel': {'Name': 'Essence of Steel', 'Plated Armor': 4 * sacred_multi, 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': f'Gain {4 * sacred_multi} <buff>Plated Armor</buff>'},
-    "Gambler's Brew": {'Name': "Gambler's Brew", 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': 'Discard any number of cards, then draw that many'},
-    'Liquid Bronze': {'Name': 'Liquid Bronze', 'Thorns': 3 * sacred_multi, 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': f'Gain {3 * sacred_multi} <buff>Thorns</buff>'},
-    'Liquid Memories': {'Name': 'Liquid Memories', 'Cards': 1 * sacred_multi, 'Class': 'Any', 'Rarity': 'Uncommon', 'Info': f'Choose {"a card" if sacred_multi < 2 else "2 cards"} in your discard pile and return {"it" if sacred_multi < 2 else "them"} to your hand. {"It" if sacred_multi < 2 else "They"} costs 0 this turn'},
-    'Regen Potion': {'Name': 'Regen Potion', 'Regen': 5 * sacred_multi, 'Class': 'Any', 'Rarity': 'Common', 'Info': f'Gain {5 * sacred_multi} <buff>Regeneration</buff>.'},
-    # Rare | All Classes
-    'Cultist Potion': {'Name': 'Cultist Potion', 'Ritual': 1 * sacred_multi, 'Class': 'Any', 'Rarity': 'Rare', 'Info': f'Gain {1 * sacred_multi} <buff>Ritual</buff>'},
-    'Entropic Brew': {'Name': 'Entropic Brew', 'Type': 'Entropic', 'Class': 'Any', 'Rarity': 'Rare', 'Info': 'Fill all your empty potion slots with random potions'},
-    'Fairy in a Bottle': {'Name': 'Fairy in a Bottle', 'Playable': False, 'Revive Health': 0.3 * sacred_multi, 'Class': 'Any', 'Rarity': 'Rare', 'Info': f'When you would die, heal to {30 * sacred_multi}% of your Max HP instead and discard this potion'},
-    'Fruit Juice': {'Name': 'Fruit Juice', 'Playable Everywhere?': True, 'Max Health': 5 * sacred_multi, 'Class': 'Any', 'Rarity': 'Rare', 'Info': f'Gain {5 * sacred_multi} Max HP'},
-    'Smoke Bomb': {'Name': 'Smoke Bomb', 'Escape from boss': False, 'Target': 'Nothing', 'Class': 'Any', 'Rarity': 'Rare', 'Info': 'Escape from a non-boss combat. You recieve no rewards.'},
-    'Sneko Oil': {'Name': 'Snecko Oil', 'Cards': 5 * sacred_multi, 'Type': 'Snecko', 'Class': 'Any', 'Rarity': 'Rare', 'Info': f'Draw {5 * sacred_multi} cards. Randomize the costs of all cards in your hand for the rest of combat.'},
-    # Ironclad Potions
-    'Blood Potion': {'Name': 'Blood Potion', 'Health': 0.2 * sacred_multi, 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Info': f'Heal for {20 * sacred_multi}% of your Max HP'},
-    'Elixir': {'Name': 'Elixir', 'Class': 'Ironclad', 'Rarity': 'Uncommon', 'Info': 'Exhaust any number of cards in your hand'},
-    'Heart of Iron': {'Name': 'Heart of Iron', 'Metallicize': 8 * sacred_multi, 'Class': 'Ironclad', 'Rarity': 'Rare', 'Info': f'Gain {8 * sacred_multi} <buff>Metallicize</buff>'},
-    # Silent potion
-    'Poison Potion': {'Name': 'Poison Potion', 'Poison': 6 * sacred_multi, 'Target': 'Enemy', 'Class': 'Silent', 'Rarity': 'Common', 'Info': f'Apply {6 * sacred_multi} <debuff>Poison</debuff> to target enemy'},
-    # Shiv card doesn't not exist yet
-    'Cunning Potion': {'Name': 'Cunning Potion', 'Shivs': 3 * sacred_multi, 'Card': 'placehold', 'Class': 'Silent', 'Rarity': 'Uncommon', 'Info': f'Add {3 * sacred_multi} <keyword>Upgraded</keyword> Shivs to your hand'},
-    'Ghost in a Jar': {'Name': 'Ghost in a Jar', 'Intangible': 1 * sacred_multi, 'Class': 'Silent', 'Rarity': 'Rare', 'Info': f'Gain {1 * sacred_multi} <buff>Intangible</buff>.'},
-    # Defect Potions
-    'Focus Potion': {'Name': 'Focus Potion', 'Focus': 2 * sacred_multi, 'Class': 'Defect', 'Rarity': 'Common', 'Info': f'Gain {2 * sacred_multi} <buff>Focus</buff>'},
-    'Potion of Capacity': {'Name': 'Potion of Capacity', 'Orb Slots': 2 * sacred_multi, 'Class': 'Defect', 'Rarity': 'Uncommon', 'Info': f'Gain {2 * sacred_multi} <keyword>Orb</keyword> slots'},
-    'Essence of Darkness': {'Name': 'Essence of Darkness', 'Type': 'Dark Essence', 'Class': 'Defect', 'Rarity': 'Rare', 'Info': f'<keyword>Channel</keyword> {1 * sacred_multi} <keyword>Dark</keyword> for each <keyword>Orb</keyword> slot'},
-    # Watcher Potions
-    'Bottled Miracle': {'Name': 'Bottled Miracle', 'Miracles': 2 * sacred_multi, 'Card': 'placehold', 'Class': 'Watcher', 'Rarity': 'Common', 'Info': f'Add {2 * sacred_multi} Miracles to your hand'},
-    'Stance Potion': {'Name': 'Stance Potion', 'Stances': ['Calm', 'Wrath'], 'Class': 'Watcher', 'Rarity': 'Uncommon', 'Info': 'Enter <keyword>Calm</keyword> or <keyword>Wrath</keyword>'},
-    'Ambrosia': {'Name': 'Ambrosia', 'Stance': 'Divinity', 'Class': 'Watcher', 'Rarity': 'Rare', 'Info': 'Enter <keyword>Divinity</keyword>'}
-}

@@ -1,13 +1,12 @@
 import math
 import random
 import re
-from copy import deepcopy
 from os import name, system
 from time import sleep
 from typing import Callable
 
 from ansi_tags import ansiprint, strip
-from definitions import CardType, CombatTier, EnemyState, PlayerClass, Rarity
+from definitions import CardType, CombatTier, PlayerClass, Rarity, State
 from message_bus_tools import Message, bus
 
 active_enemies = []
@@ -63,19 +62,16 @@ class Displayer:
             sleep(1.5)
             self.clear()
 
-    def view_potions(self, potion_pool, max_potions=3, numbered_list=True, validator: Callable = lambda placehold: bool(placehold)):
-        class_colors = {"Ironclad": "red", "Silent": "dark-green", "Defect": "true-blue", "Watcher": "watcher-purple", "Any": "white"}
-        rarity_colors = {"Common": "white", "Uncommon": "uncommon", "Rare": "rare"}
+    def view_potions(self, potion_pool, only_the_potions = False, max_potions=3, numbered_list=True, validator: Callable = lambda placehold: bool(placehold)):
         counter = 1
         for potion in potion_pool:
             if validator(potion):
-                chosen_class_color = class_colors[potion["Class"]]
-                chosen_rarity_color = rarity_colors[potion["Rarity"]]
-                ansiprint(f"{f'{counter}: ' if numbered_list else ''}<{chosen_rarity_color}>{potion.name}</{chosen_rarity_color}> | <{chosen_class_color}>{potion.player_class}</{chosen_class_color}> | <yellow>{potion.info}</yellow>")
+                ansiprint(f'{counter}: ' + potion.pretty_print())
                 counter += 1
-        for _ in range(max_potions - len(potion_pool)):
-            ansiprint(f"<light-black>{f'{counter}: ' if numbered_list else ''}(Empty)</light-black>")
-            counter += 1
+        if only_the_potions is False:
+            for _ in range(max_potions - len(potion_pool)):
+                ansiprint(f"<light-black>{f'{counter}: ' if numbered_list else ''}(Empty)</light-black>")
+                counter += 1
 
     def view_map(self, game_map):
         game_map.pretty_print()
@@ -92,7 +88,7 @@ class Displayer:
         if combat is True:
             counter = 1
             ansiprint("\n<bold>Enemies:</bold>")
-            viewable_enemies = [enemy for enemy in enemies if enemy.state in (EnemyState.ALIVE, EnemyState.INTANGIBLE)]
+            viewable_enemies = [enemy for enemy in enemies if enemy.state in (State.ALIVE, State.INTANGIBLE)]
             for enemy in viewable_enemies:
                 ansiprint(f"{counter}: " + repr(enemy))
                 counter += 1
@@ -126,6 +122,43 @@ class Displayer:
             break
         return option
 
+    def multi_input(self, input_string: str, choices: list, displayer: Callable, max_choices: int, strict: bool = False, validator: Callable = lambda placehold: bool(placehold), message_when_invalid: str = None, extra_allowables: list=None):
+        """Basically the same as view.list_input but you can choose multiple cards one at a time. Mainly used for discarding and Exhausting cards."""
+        if not extra_allowables:
+            extra_allowables = []
+        finished = False
+        to_be_moved = []
+        while not finished:
+            while True:
+                try:
+                    displayer(choices, validator=validator)
+                    ansiprint(input_string + "(type 'exit' to finish) > ", end="")
+                    response = input()
+                    if response == 'exit' and (strict and len(to_be_moved) < max_choices):
+                        ansiprint(f"\u001b[1A\u001b[1000D<red>You have to choose exactly {max_choices} items.</red>", end="")
+                        sleep(1)
+                        print("\u001b[2K\u001b[100D", end="")
+                        continue
+                    elif response == 'exit':
+                        finished = True
+                        break
+                    if response in extra_allowables:
+                        return response
+                    option = int(response) - 1
+                    if not validator(choices[option]):
+                        ansiprint(f"\u001b[1A\u001b[1000D<red>{message_when_invalid}</red>", end="")
+                        sleep(1.5)
+                        print("\u001b[2K\u001b[100D")
+                        continue
+                    if len(to_be_moved) == max_choices:
+                        del to_be_moved[0]
+                except (IndexError, ValueError):
+                    ansiprint(f"\u001b[1A\u001b[100D<red>You have to enter a whole number between 1 and {len(choices)}.</red>", end="")
+                    sleep(1)
+                    print("\u001b[2K\u001b[100D", end="")
+                    continue
+                to_be_moved.append(choices[option])
+                break
     def display_actual_damage(self, string: str, target, entity, card=None) -> tuple[str, str]:
         if not card:
             card = {}
@@ -193,9 +226,9 @@ class Generators:
         Boss combat rewards:
         Rare: 100% | Uncommon: 0% | Common: 0%
         """
-        common_cards = [deepcopy(card) for card in card_pool if card.rarity == Rarity.COMMON and card.type not in (CardType.STATUS, CardType.CURSE) and card.player_class == entity.player_class]
-        uncommon_cards = [deepcopy(card) for card in card_pool if card.rarity == Rarity.UNCOMMON and card.type not in (CardType.STATUS, CardType.CURSE) and card.player_class == entity.player_class]
-        rare_cards = [deepcopy(card) for card in card_pool if card.rarity == Rarity.RARE and card.type not in (CardType.STATUS, CardType.CURSE) and card.player_class == entity.player_class]
+        common_cards = [card for card in card_pool if card.rarity == Rarity.COMMON and card.type not in (CardType.STATUS, CardType.CURSE) and card.player_class == entity.player_class]
+        uncommon_cards = [card for card in card_pool if card.rarity == Rarity.UNCOMMON and card.type not in (CardType.STATUS, CardType.CURSE) and card.player_class == entity.player_class]
+        rare_cards = [card for card in card_pool if card.rarity == Rarity.RARE and card.type not in (CardType.STATUS, CardType.CURSE) and card.player_class == entity.player_class]
         assert len(common_cards) > 0, "Common pool is empty."
         assert len(uncommon_cards) > 0, "Uncommon pool is empty."
         assert len(rare_cards) > 0, "Rare pool is empty."
@@ -217,9 +250,9 @@ class Generators:
         """You have a 40% chance to get a potion at the end of combat.
         -10% when you get a potion.
         +10% when you don't get a potion."""
-        common_potions: list[dict] = [potion() for potion in potion_pool if potion.rarity == Rarity.COMMON and (potion.player_class == PlayerClass.ANY or potion.player_class == entity.player_class)]
-        uncommon_potions: list[dict] = [potion() for potion in potion_pool if potion.rarity == Rarity.UNCOMMON and (potion.player_class == PlayerClass.ANY or potion.player_class == entity.player_class)]
-        rare_potions: list[dict] = [potion() for potion in potion_pool if potion.rarity == Rarity.RARE and (potion.player_class == PlayerClass.ANY or potion.player_class == entity.player_class)]
+        common_potions: list[dict] = [potion for potion in potion_pool if potion.rarity == Rarity.COMMON and (potion.player_class == PlayerClass.ANY or potion.player_class == entity.player_class)]
+        uncommon_potions: list[dict] = [potion for potion in potion_pool if potion.rarity == Rarity.UNCOMMON and (potion.player_class == PlayerClass.ANY or potion.player_class == entity.player_class)]
+        rare_potions: list[dict] = [potion for potion in potion_pool if potion.rarity == Rarity.RARE and (potion.player_class == PlayerClass.ANY or potion.player_class == entity.player_class)]
         assert len(common_potions) > 0, "Common potions pool is empty."
         assert len(uncommon_potions) > 0, "Uncommon potions pool is empty."
         assert len(rare_potions) > 0, "Rare potions pool is empty."
@@ -229,9 +262,7 @@ class Generators:
         rewards = []
         for _ in range(amount):
             if chance_based:
-                rewards.append(
-                    random.choice(random.choices(rarities, [0.65, 0.25, 0.1], k=1)[0])
-                )
+                rewards.append(random.choice(random.choices(rarities, [0.65, 0.25, 0.1], k=1)[0]))
             else:
                 rewards.append(random.choice(all_potions))
         return rewards
@@ -239,9 +270,9 @@ class Generators:
     def generate_relic_rewards(self, source: str, amount: int, entity, relic_pool: dict, chance_based=True) -> list[dict]:
         claimed_relics = [relic.name for relic in entity.relics]
 
-        common_relics = [relic() for relic in relic_pool if relic.rarity == Rarity.COMMON and relic.player_class == entity.player_class and relic not in entity.relics and relic.name not in claimed_relics]
-        uncommon_relics = [relic() for relic in relic_pool if relic.rarity == Rarity.UNCOMMON and relic.player_class == entity.player_class and relic not in entity.relics and relic.name not in claimed_relics]
-        rare_relics = [relic() for relic in relic_pool if relic.rarity == Rarity.RARE and relic.player_class == entity.player_class and relic not in entity.relics and relic.name not in claimed_relics]
+        common_relics = [relic for relic in relic_pool if relic.rarity == Rarity.COMMON and relic.player_class == entity.player_class and relic not in entity.relics and relic.name not in claimed_relics]
+        uncommon_relics = [relic for relic in relic_pool if relic.rarity == Rarity.UNCOMMON and relic.player_class == entity.player_class and relic not in entity.relics and relic.name not in claimed_relics]
+        rare_relics = [relic for relic in relic_pool if relic.rarity == Rarity.RARE and relic.player_class == entity.player_class and relic not in entity.relics and relic.name not in claimed_relics]
 
         all_relic_pool = common_relics + uncommon_relics + rare_relics
         rarities = [common_relics, uncommon_relics, rare_relics]
@@ -305,26 +336,25 @@ class Generators:
             view.clear()
         while len(rewards) > 0:
             print(f"Potion Bag: ({len(potion_pool)} / {entity.max_potions})")
-            view.view_potions(entity, False)
+            view.view_potions(entity.potions)
             print()
             print("Potion reward(s):")
-            option = view.list_input("Choose a potion", rewards, view.view_potions)
+            option = view.list_input("Choose a potion", rewards, lambda potion_pool, validator: view.view_potions(potion_pool, True, validator=validator))
             if len(potion_pool) == entity.max_potions:
                 ansiprint("<red>Potion bag full!</red>")
                 sleep(0.5)
                 option = input("Discard a potion?(y|n) > ")
                 if option == "y":
-                    option = view.list_input("Choose a potion to discard", potion_pool, view.view_potions,)
-                    print(f"Discarded {potion_pool[option]['Name']}.")
-                    potion_pool.remove(potion_pool[option])
+                    option = view.list_input("Choose a potion to discard", entity.potions, view.view_potions,)
+                    print(f"Discarded {entity.potions[option]['Name']}.")
+                    del entity.potions[option]
                     sleep(1)
                     view.clear()
                 else:
                     sleep(1)
                     view.clear()
                 continue
-            potion_pool.append(rewards[option])
-            rewards.remove(rewards[option])
+            entity.potions.append(rewards.pop(option))
             sleep(0.2)
             view.clear()
 

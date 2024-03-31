@@ -5,7 +5,7 @@ from time import sleep
 import game_map
 import items
 from ansi_tags import ansiprint
-from definitions import CombatTier, EncounterType, EnemyState
+from definitions import CombatTier, EncounterType, State, TargetType
 from enemy_catalog import (
     create_act1_boss,
     create_act1_elites,
@@ -57,7 +57,7 @@ class Combat:
         self.tier = tier
         self.player = player
         self.all_enemies = all_enemies if all_enemies else []
-        self.active_enemies = [enemy for enemy in self.all_enemies if enemy.state == EnemyState.ALIVE]
+        self.active_enemies = [enemy for enemy in self.all_enemies if enemy.state == State.ALIVE]
         self.previous_enemy_states = ()
         self.death_messages = []
         self.turn = 1
@@ -72,8 +72,8 @@ class Combat:
             while True:
                 self.update_death_messages()
                 self.previous_enemy_states = tuple(enemy.state for enemy in self.all_enemies)
-                self.active_enemies = [enemy for enemy in self.all_enemies if enemy.state == EnemyState.ALIVE]  # Updates the list
-                if all((enemy.state == EnemyState.DEAD for enemy in self.all_enemies)):
+                self.active_enemies = [enemy for enemy in self.all_enemies if enemy.state == State.ALIVE]  # Updates the list
+                if all((enemy.state == State.DEAD for enemy in self.all_enemies)):
                     self.end_combat(killed_enemies=True)
                     break
 
@@ -91,7 +91,7 @@ class Combat:
                     ),
                     "s": lambda: view.view_piles(player.discard_pile, end=True),
                     "x": lambda: view.view_piles(player.exhaust_pile, end=True),
-                    "p": play_potion,
+                    "p": self.play_potion,
                     "f": lambda: ei.full_view(player, self.active_enemies),
                     "m": lambda: view.view_map(current_map),
                 }
@@ -112,6 +112,8 @@ class Combat:
                     continue
                 sleep(1)
                 view.clear()
+            if player.state == State.ESCAPED:
+                self.end_combat(self, escaped=True)
             bus.publish(Message.END_OF_TURN, data=None)  # So far I don't need to have anything passed for data
             self.turn += 1
 
@@ -126,7 +128,6 @@ class Combat:
             else:
                 player.potion_dropchance += 10
             gen.card_rewards(self.tier, True, self.player, items.cards)
-            sleep(1.5)
             view.clear()
         elif escaped is True:
             print("Escaped...")
@@ -165,7 +166,7 @@ class Combat:
             enemy.register(bus=bus)
 
         bus.publish(Message.START_OF_COMBAT, (self.tier, self.active_enemies, player))
-        self.active_enemies = [enemy for enemy in self.all_enemies if enemy.state == EnemyState.ALIVE]
+        self.active_enemies = [enemy for enemy in self.all_enemies if enemy.state == State.ALIVE]
         self.previous_enemy_states = tuple(enemy.state for enemy in self.all_enemies)
 
     def select_target(self):
@@ -212,6 +213,19 @@ class Combat:
             if self.previous_enemy_states[i] != current_states[i]:
                 self.death_messages.append(current_states[i])
 
+    def play_potion(self):
+        if len(player.potions) == 0:
+            ansiprint("<red>You have no potions.</red>")
+            return
+        chosen_potion = view.list_input("Choose a potion to play", player.potions, view.view_potions, lambda potion: potion.playable, "That potion is not playable.")
+        potion = player.potions.pop(chosen_potion)
+        if potion.target == TargetType.YOURSELF:
+            potion.apply(player)
+        elif potion.target == TargetType.SINGLE:
+            target = self.select_target()
+            potion.apply(player, self.active_enemies[target])
+        elif potion.target in (TargetType.AREA, TargetType.ANY):
+            potion.apply(player, self.active_enemies)
 
 def rest_site():
     """
@@ -339,12 +353,4 @@ def unknown(game_map) -> None:
         ansiprint(player)
         chosen_event = choose_event(game_map)
         chosen_event()
-
-
-def play_potion():
-    if len(player.potions) == 0:
-        ansiprint("<red>You have no potions.</red>")
-        return
-    view.view_potions(player.potions, player.max_potions)
-    input("This is currently not implemented. Press enter to leave > ")
 

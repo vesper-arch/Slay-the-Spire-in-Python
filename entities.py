@@ -7,7 +7,7 @@ from uuid import uuid4
 
 import items
 from ansi_tags import ansiprint
-from definitions import CardType, EnemyState, TargetType
+from definitions import CardType, State, TargetType
 from helper import active_enemies, ei, view
 from message_bus_tools import Card, Message, Registerable, Relic, bus
 
@@ -38,6 +38,7 @@ class Player(Registerable):
         self.name: str = "Ironclad"
         self.player_class: str = "Ironclad"
         self.in_combat = False
+        self.state = State.ALIVE
         self.floors = 1
         self.fresh_effects: list[str] = []  # Shows what effects were applied after the player's turn
         self.max_health: int = health
@@ -133,7 +134,7 @@ class Player(Registerable):
                 return
         if card.target == TargetType.SINGLE:
             card.apply(origin=self, target=target)
-        elif card.target == TargetType.AREA:
+        elif card.target in (TargetType.AREA, TargetType.ANY):
             card.apply(origin=self, enemies=active_enemies)
         elif card.target == TargetType.YOURSELF:
             card.apply(origin=self)
@@ -161,10 +162,10 @@ class Player(Registerable):
         sleep(0.5)
         view.clear()
 
-    def draw_cards(self, middle_of_turn: bool, draw_cards: int = 0):
+    def draw_cards(self, middle_of_turn: bool=True, cards: int = 0):
         """Draws [draw_cards] cards."""
-        if draw_cards == 0:
-            draw_cards = self.draw_strength
+        if cards == 0:
+            cards = self.draw_strength
         while True:
             self.discard_pile.extend(self.hand)
             self.hand.clear()
@@ -172,17 +173,17 @@ class Player(Registerable):
                 print("You can't draw any more cards")
                 break
             if middle_of_turn is False:
-                draw_cards += self.buffs["Draw Up"]
-            if len(player.draw_pile) < draw_cards:
+                cards += self.buffs["Draw Up"]
+            if len(player.draw_pile) < cards:
                 player.draw_pile.extend(random.sample(player.discard_pile, len(player.discard_pile)))
                 player.discard_pile = []
                 ansiprint("<bold>Discard pile shuffled into draw pile.</bold>")
-            self.hand.extend(player.draw_pile[-draw_cards:])
+            self.hand.extend(player.draw_pile[-cards:])
             # Removes those cards
-            player.draw_pile = player.draw_pile[:-draw_cards]
+            player.draw_pile = player.draw_pile[:-cards]
             for card in self.hand:
                 card.register(bus=bus)
-            print(f"Drew {draw_cards} cards.")
+            print(f"Drew {cards} cards.")
             # bus.publish(Message.ON_DRAW, (pl))
             break
 
@@ -242,7 +243,7 @@ class Player(Registerable):
                     ansiprint(f"{new_card['Name']} | <yellow>{new_card['Info']}</yellow>")
                     return new_card
 
-    def move_card(self, card, move_to, from_location, cost_energy, shuffle=False):
+    def move_card(self, card, move_to, from_location, cost_energy=False, shuffle=False):
         if cost_energy is True:
             self.energy -= max(card.energy_cost, 0)
         from_location.remove(card)
@@ -286,6 +287,14 @@ class Player(Registerable):
 
     def die(self):
         view.clear()
+        self.health = max(self.health, 0)
+        if items.FairyInABottle() in self.potions:
+            try:
+                potion_index = self.potions.index(items.FairyInABottle())
+            except ValueError:
+                potion_index = -1
+            player.health_actions(math.floor(player.max_health * self.potions[potion_index].hp_percent), "Heal")
+            return
         ansiprint("<red>You Died</red>")
         input("Press enter > ")
         sys.exit()
@@ -345,7 +354,7 @@ class Enemy(Registerable):
         self.past_moves = ["place"] * 3
         self.intent: str = ""
         self.next_move: list[tuple[str, str, tuple] | tuple[str, tuple]] = ""
-        self.state = EnemyState.ALIVE
+        self.state = State.ALIVE
         self.buffs = ei.init_effects("Enemy Buffs") | powers
         self.debuffs = ei.init_effects("Enemy Debuffs")
         self.stolen_gold = 0
@@ -455,7 +464,7 @@ class Enemy(Registerable):
         sleep(0.6)
         if func_name == "Cowardly":
             ansiprint("<italic>Hehe. Thanks for the money.<italic>")
-            self.state = EnemyState.ESCAPED
+            self.state = State.ESCAPED
             ansiprint(f"<italic><red>{self.name} has escaped</red></italic>")
         elif func_name == "Sleeping":
             sleeptalk = parameters[0]
@@ -508,7 +517,7 @@ class Enemy(Registerable):
         Dies.
         """
         print(f"{self.name} has died.")
-        self.state = EnemyState.DEAD
+        self.state = State.DEAD
 
     def debuff_and_buff_check(self):
         """
@@ -588,7 +597,7 @@ class Enemy(Registerable):
     def callback(self, message, data):
         if message == Message.START_OF_TURN:
             ansiprint(f"{self.name}'s current state: {self.state}")
-            if self.state == EnemyState.ALIVE:
+            if self.state == State.ALIVE:
                 ansiprint(f"<underline><bold>{self.name}</bold></underline>:")
                 if "Block" not in self.intent:  # Checks the last move(its intent hasn't been updated yet) used to see if the enemy Blocked last turn
                     if self.buffs["Barricade"] is False:
@@ -600,7 +609,7 @@ class Enemy(Registerable):
                 print()
                 self.set_intent()
         elif message == Message.END_OF_TURN:
-            if self.state == EnemyState.ALIVE:
+            if self.state == State.ALIVE:
                 self.execute_move()
             # Needs to be expanded at some point
         elif message == Message.ON_DEATH_OR_ESCAPE:

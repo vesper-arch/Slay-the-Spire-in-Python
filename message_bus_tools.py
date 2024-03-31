@@ -2,7 +2,7 @@ from enum import StrEnum
 from uuid import uuid4
 
 from ansi_tags import ansiprint
-from definitions import CardType, PlayerClass, Rarity
+from definitions import CardType, PlayerClass, Rarity, TargetType
 
 
 class Message(StrEnum):
@@ -24,6 +24,7 @@ class Message(StrEnum):
     ON_CARD_ADD = 'on_card_add'
     ON_RELIC_ADD = 'on_relic_add'
     ON_DEATH_OR_ESCAPE = 'on_death_or_escape'
+    BEFORE_PLAYER_DEATH = 'before_player_death'
 
 class MessageBus():
     '''This is a Pub/Sub, or Publish/Subscribe, message bus. It allows components to subscribe to messages,
@@ -94,6 +95,31 @@ class Relic(Registerable):
         rarity_color = self.rarity.lower()
         return f"<{rarity_color}>{self.name}</{rarity_color}> | <yellow>{self.info}</yellow> | <italic><dark-blue>{self.flavor_text}</dark-blue></italic>"
 
+class Potion(Registerable):
+    def __init__(self, name: str, info: str, rarity: Rarity, target: TargetType, player_class: PlayerClass=PlayerClass.ANY):
+        self.name = name
+        self.info = info
+        self.rarity = rarity
+        self.target = target
+        self.player_class = player_class
+        self.playable = True
+        self.golden_stats = [] # This is a list of the attributes that will be doubled when Golden Bark is collected.
+        self.golden_info = ""
+
+    def pretty_print(self):
+        rarity_color = self.rarity.lower()
+        color_map = {"Ironclad": "red", "Silent": "dark-green", "Defect": "true-blue", "Watcher": "watcher-purple", "Any": "white"}
+        class_color = color_map[self.player_class]
+        return f"""<{rarity_color}>{self.name}</{rarity_color}> | <yellow>{self.info}</yellow>{f" | <{class_color}>{self.player_class}</{class_color}>" if self.player_class != PlayerClass.ANY else ""}"""
+
+    def callback(self, message, data):
+        if message == Message.ON_RELIC_ADD:
+            _, relic = data
+            if relic.name == "Golden Bark":
+                self.info = self.golden_info
+                for stat in self.golden_stats:
+                    stat *= 2
+
 class Card(Registerable):
     def __init__(self, name: str, info: str, rarity: Rarity, player_class: PlayerClass, card_type: CardType, target='Nothing', energy_cost=-1, upgradeable=True):
         self.uid = uuid4()
@@ -117,13 +143,6 @@ class Card(Registerable):
     def pretty_print(self):
         type_color = self.type.lower()
         return f"""<{self.rarity.lower()}>{self.name}</{self.rarity.lower()}> | <{type_color}>{self.type}</{type_color}>{f' | <light-red>{"<green>" if self.base_energy_cost != self.energy_cost else ""}{self.energy_cost}{"</green>" if self.base_energy_cost != self.energy_cost else ""} Energy</light-red>' if self.energy_cost > -1 else ''} | <yellow>{self.info}</yellow>"""
-
-    def pretty_print_valid(self, valid: bool):
-        changed_energy = 'light-red' if not self.changed_energy() else 'green'
-        if valid:
-            return f"<{self.rarity.lower()}>{self.name}</{self.rarity.lower()}> | <{self.type.lower()}>{self.type}</{self.type.lower()}> | <{changed_energy}>{self.energy_cost}</{changed_energy}> | <yellow>{self.info}</yellow>".replace('Σ', '').replace('Ω', '')
-        else:
-            return f"<light-black>{self.name} | {self.type} | {self.energy_cost} | {self.info}</light-black>".replace('Σ', '').replace('Ω', '')
 
     def upgrade_markers(self):
         self.info += '<green>+</green>'
