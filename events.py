@@ -7,11 +7,10 @@ from typing import Callable
 import items
 from ansi_tags import ansiprint
 from definitions import CardType, CombatTier, PlayerClass
-from entities import player
 from helper import gen, view
 
 
-def event_Neow():
+def event_Neow(player):
     if player.player_class == PlayerClass.IRONCLAD:
         max_hp_increase = 8
         # max_hp_decrease = 8
@@ -28,7 +27,7 @@ def event_Neow():
         player.health_actions(max_hp_increase, 'Max Health')
 
 
-def event_BonfireSpirits():
+def event_BonfireSpirits(player):
     while True:
         ansiprint("<bold>Bonfire Spirits</bold>")
         ansiprint("""You happen upon a group of what looks like <magenta>purple fire spirits</magenta> dancing around a large bonfire.
@@ -73,7 +72,7 @@ The spirits dance around you excitedly before merging into your form, filling yo
     del player.deck[offering]
 
 
-def event_TheDivineFountain():
+def event_TheDivineFountain(player):
     while True:
         ansiprint("<bold>The Divine Fountain</bold>\n")
         sleep(0.8)
@@ -99,7 +98,7 @@ def event_TheDivineFountain():
         view.clear()
 
 
-def event_Duplicator():
+def event_Duplicator(player):
     while True:
         ansiprint("<bold>Duplicator</bold>\n")
         sleep(0.8)
@@ -124,7 +123,7 @@ def event_Duplicator():
         view.clear()
 
 
-def event_GoldenShrine():
+def event_GoldenShrine(player):
     while True:
         ansiprint("<bold>Golden Shrine</bold>")
         sleep(0.8)
@@ -159,7 +158,7 @@ As you pocket the riches, something <red>weighs heavily on you.</red>""")
         view.clear()
 
 
-def event_Lab():
+def event_Lab(player):
     ansiprint("<bold>Lab</bold>")
     print()
     sleep(1)
@@ -173,7 +172,7 @@ Why do you know the name of all these tools? It doesn't matter, you take a look 
 # Won't add the Match and Keep event because i just don't know how to.
 
 
-def event_OminousForge():
+def event_OminousForge(player):
     while True:
         ansiprint("<bold>Ominous Forge</bold>")
         sleep(0.8)
@@ -197,7 +196,7 @@ Taking the relic, you can't shake a sudden feeling of <red>sharp pain</red> as y
     view.clear()
 
 
-def event_Purifier():
+def event_Purifier(player):
     while True:
         ansiprint('<bold>Purifier</bold>')
         sleep(0.8)
@@ -222,7 +221,7 @@ def event_Purifier():
     view.clear()
 
 
-def event_Transmogrifier():
+def event_Transmogrifier(player):
     while True:
         ansiprint('<bold>Transmogrifier</bold>')
         sleep(0.8)
@@ -247,7 +246,7 @@ def event_Transmogrifier():
     view.clear()
 
 
-def event_UpgradeShrine():
+def event_UpgradeShrine(player):
     while True:
         ansiprint('<bold>Upgrade Shrine</bold>')
         sleep(0.8)
@@ -271,7 +270,7 @@ def event_UpgradeShrine():
     view.clear()
 
 
-def event_WeMeetAgain():
+def event_WeMeetAgain(player):
     while True:
         ansiprint('<bold>We Meet Again!</bold>')
         sleep(0.8)
@@ -340,7 +339,7 @@ He runs away.''')
     view.clear()
 
 
-def event_TheWomanInBlue():
+def event_TheWomanInBlue(player):
     valid_potions = {potion: stats for potion, stats in items.potions.items() if stats.get('Class') == player.player_class}
     while True:
         ansiprint('<bold>The Woman in Blue</bold>')
@@ -373,7 +372,7 @@ You exit the shop cautiously.''')
     view.clear()
 
 
-def event_FaceTrader():
+def event_FaceTrader(player):
     face_relics = [items.relics['Cultist Headpiece'], items.relics['Face of Cleric'],
                    items.relics['Ssserpent Head'], items.relics['Gremlin Visage'], items.relics["N'loth's Hungry Face"]]
     while True:
@@ -425,7 +424,7 @@ This was probably the right call.''')
     view.clear()
 
 
-def event_BigFish():
+def event_BigFish(player):
     while True:
         ansiprint('<bold>Big Fish</bold> \n')
         sleep(0.8)
@@ -460,7 +459,7 @@ What do you do?''')
     view.clear()
 
 
-def event_TheCleric():
+def event_TheCleric(player):
     while True:
         ansiprint('<bold>The Cleric</bold>')
         sleep(0.7)
@@ -507,7 +506,7 @@ The creature grins.
     sleep(1.5)
     view.clear()
 
-def event_GoldenIdol():
+def event_GoldenIdol(player):
     while True:
         ansiprint("<bold>Golden Idol</bold>")
         sleep(0.8)
@@ -557,7 +556,7 @@ global_events = [event_BonfireSpirits, event_TheDivineFountain, event_Duplicator
                  event_Purifier, event_Transmogrifier, event_UpgradeShrine, event_WeMeetAgain, event_TheWomanInBlue]
 act1_events = [event_FaceTrader, event_BigFish, event_TheCleric, event_GoldenIdol, ]
 
-def choose_event(game_map) -> Callable:
+def choose_event(game_map, player) -> Callable:
     while True:
         valid_events: list[Callable] = global_events
         valid_events.extend(act1_events)
@@ -570,5 +569,5 @@ def choose_event(game_map) -> Callable:
             continue
         # Should enable me to have events that need the game map for combat.
         event_args = inspect.getfullargspec(chosen_event)
-        return lambda: chosen_event(game_map=game_map) if 'game_map' in event_args[0] else chosen_event
+        return lambda: chosen_event(game_map=game_map, player=player) if 'game_map' in event_args[0] else lambda chosen_event=chosen_event: chosen_event(player=player)
 

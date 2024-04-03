@@ -8,7 +8,7 @@ from uuid import uuid4
 import items
 from ansi_tags import ansiprint
 from definitions import CardType, State, TargetType
-from helper import active_enemies, ei, view
+from helper import ei, view
 from message_bus_tools import Card, Message, Registerable, Relic, bus
 
 
@@ -95,6 +95,17 @@ class Player(Registerable):
         self.stone_calender = 0
         self.choker_cards_played = 0  # Used for the Velvet Choker relic
 
+    @classmethod
+    def create_player(cls):
+        player = cls(health=80, block=0, max_energy=3, deck=[
+            items.IroncladStrike(), items.IroncladStrike(), items.IroncladStrike(), items.IroncladStrike(), items.IroncladStrike(),
+            items.IroncladDefend(), items.IroncladDefend(), items.IroncladDefend(), items.IroncladDefend(),
+            items.Bash()
+        ])
+        player.relics.append(items.BurningBlood())
+        return player
+
+
     def __str__(self):
         return f"(<italic>Player</italic>)Ironclad(<red>{self.health} / {self.max_health}</red> | <yellow>{self.gold} Gold</yellow> | Deck: {len(self.deck)})"
 
@@ -122,7 +133,7 @@ class Player(Registerable):
         for debuff in self.debuffs:
             ansiprint(f'<debuff>{debuff}</debuff>: {ei.ALL_EFFECTS[debuff].replace("X", str(self.debuffs[debuff]))}')
 
-    def use_card(self, card, exhaust, pile, target: "Enemy"=None) -> None:
+    def use_card(self, card, exhaust, pile, enemies, target: "Enemy"=None) -> None:
         """
         Uses a card
         Wow!
@@ -135,7 +146,7 @@ class Player(Registerable):
         if card.target == TargetType.SINGLE:
             card.apply(origin=self, target=target)
         elif card.target in (TargetType.AREA, TargetType.ANY):
-            card.apply(origin=self, enemies=active_enemies)
+            card.apply(origin=self, enemies=enemies)
         elif card.target == TargetType.YOURSELF:
             card.apply(origin=self)
         bus.publish(Message.ON_CARD_PLAY, (self, card, target))
@@ -147,9 +158,9 @@ class Player(Registerable):
             sleep(1.5)
             view.clear()
             self.use_card(card=card, target=target, exhaust=True, pile=None)
-        if (card.type == CardType.STATUS and items.relics["Medical Kit"] in player.relics):
+        if (card.type == CardType.STATUS and items.relics["Medical Kit"] in self.player.relics):
             exhaust = True
-        elif (card.type == CardType.CURSE and items.relics["Blue Candle"] in player.relics):
+        elif (card.type == CardType.CURSE and items.relics["Blue Candle"] in self.player.relics):
             self.take_sourceless_dmg(1)
             exhaust = True
         if pile is not None:
@@ -174,13 +185,13 @@ class Player(Registerable):
                 break
             if middle_of_turn is False:
                 cards += self.buffs["Draw Up"]
-            if len(player.draw_pile) < cards:
-                player.draw_pile.extend(random.sample(player.discard_pile, len(player.discard_pile)))
-                player.discard_pile = []
+            if len(self.draw_pile) < cards:
+                self.draw_pile.extend(random.sample(self.discard_pile, len(self.discard_pile)))
+                self.discard_pile = []
                 ansiprint("<bold>Discard pile shuffled into draw pile.</bold>")
-            self.hand.extend(player.draw_pile[-cards:])
+            self.hand.extend(self.draw_pile[-cards:])
             # Removes those cards
-            player.draw_pile = player.draw_pile[:-cards]
+            self.draw_pile = self.draw_pile[:-cards]
             for card in self.hand:
                 card.register(bus=bus)
             print(f"Drew {cards} cards.")
@@ -293,7 +304,7 @@ class Player(Registerable):
                 potion_index = self.potions.index(items.FairyInABottle())
             except ValueError:
                 potion_index = -1
-            player.health_actions(math.floor(player.max_health * self.potions[potion_index].hp_percent), "Heal")
+            self.player.health_actions(math.floor(self.player.max_health * self.potions[potion_index].hp_percent), "Heal")
             return
         ansiprint("<red>You Died</red>")
         input("Press enter > ")
@@ -338,6 +349,7 @@ class Player(Registerable):
 
 class Enemy(Registerable):
     registers = [Message.START_OF_TURN, Message.END_OF_TURN, Message.ON_DEATH_OR_ESCAPE]
+    player = None
 
     def __init__(self, health_range: list, block: int, name: str, powers: dict = None):
         self.uid = uuid4()
@@ -363,8 +375,6 @@ class Enemy(Registerable):
         self.flames = -1
         self.upgrade_burn = False
         self.active_turns = 1
-        if "louse" in self.name:
-            self.buffs["Curl Up"] = random.randint(3, 7)
 
     def __str__(self):
         return "Enemy"
@@ -379,7 +389,7 @@ class Enemy(Registerable):
                 status += f"<debuff>{debuff}</debuff>{f' {self.debuffs[debuff]}' if isinstance(self.debuffs[debuff], int) else ''} | "
         if self.flames > 0:
             status += f"<yellow>{self.flames} Flames</yellow> | "
-        actual_intent, _ = view.display_actual_damage(self.intent, player, self)
+        actual_intent, _ = view.display_actual_damage(self.intent, self.player, self)
         status += "Intent: " + actual_intent
         return status
 
@@ -392,7 +402,7 @@ class Enemy(Registerable):
     def set_intent(self):
         pass
 
-    def execute_move(self):
+    def execute_move(self, enemies):
         moves = 1
         display_name = "DEFAULT: UNKNOWN"
         for action in self.next_move:
@@ -400,14 +410,8 @@ class Enemy(Registerable):
                 display_name, action, parameters = action
             else:
                 action, parameters = action
-            if action in ("Cowardly", "Sleeping", "Stunned") or action not in (
-                "Attack",
-                "Buff",
-                "Debuff",
-                "Status",
-                "Block",
-            ):
-                self.misc_move()
+            if action in ("Cowardly", "Sleeping", "Stunned") or action not in ("Attack", "Buff", "Debuff", "Status", "Block"):
+                self.misc_move(enemies)
                 sleep(1)
                 view.clear()
                 return
@@ -431,9 +435,7 @@ class Enemy(Registerable):
                 effect_type = parameters[1]
                 self.remove_effect(effect_name, effect_type)
             elif action == "Status":
-                assert (
-                    len(parameters) >= 3
-                ), f"Status action requires 3 parameters: given {parameters}"
+                assert (len(parameters) >= 3), f"Status action requires 3 parameters: given {parameters}"
                 status = parameters[0]
                 amount = parameters[1]
                 location = parameters[2].lower()
@@ -455,7 +457,7 @@ class Enemy(Registerable):
         if self.flames > -1:
             self.flames += 1
 
-    def misc_move(self):
+    def misc_move(self, enemies):
         if len(self.next_move[0]) > 2:
             name, func_name, parameters = self.next_move[0]
         else:
@@ -508,7 +510,7 @@ class Enemy(Registerable):
                 ),
             }
             for _ in range(2):
-                active_enemies.append(split_into[self.name])
+                enemies.append(split_into[self.name])
             ansiprint(f"{self.name} split into 2 {split_into[self.name].name}s")
         self.active_turns += 1
 
@@ -540,19 +542,19 @@ class Enemy(Registerable):
 
     def attack(self, dmg: int, times: int):
         for _ in range(times):
-            bus.publish(Message.BEFORE_ATTACK, (self, dmg, player.block))
-            if dmg <= player.block:
-                player.block -= dmg
+            bus.publish(Message.BEFORE_ATTACK, (self, dmg, self.player.block))
+            if dmg <= self.player.block:
+                self.player.block -= dmg
                 dmg = 0
                 ansiprint("<light-blue>Blocked</light-blue>")
-            elif dmg > player.block:
-                dmg -= player.block
+            elif dmg > self.player.block:
+                dmg -= self.player.block
                 dmg = max(0, dmg)
-                ansiprint(f"{self.name} dealt {dmg}(<light-blue>{player.block} Blocked</light-blue>) damage to you.")
-                player.block = 0
-                player.health -= dmg
+                ansiprint(f"{self.name} dealt {dmg}(<light-blue>{self.player.block} Blocked</light-blue>) damage to you.")
+                self.player.block = 0
+                self.player.health -= dmg
                 bus.publish(Message.ON_PLAYER_HEALTH_LOSS, None)
-            bus.publish(Message.AFTER_ATTACK, (self, dmg, player.block))
+            bus.publish(Message.AFTER_ATTACK, (self, dmg, self.player.block))
         sleep(1)
 
     def remove_effect(self, effect_name, effect_type):
@@ -573,9 +575,9 @@ class Enemy(Registerable):
 
     def status(self, status_card: Card, amount: int, location: str):
         locations = {
-            "draw pile": player.draw_pile,
-            "discard pile": player.discard_pile,
-            "hand": player.hand,
+            "draw pile": self.player.draw_pile,
+            "discard pile": self.player.discard_pile,
+            "hand": self.player.hand,
         }
         pile = locations[location]
         status_card = status_card()
@@ -583,15 +585,15 @@ class Enemy(Registerable):
             upper_bound = len(location) - 1 if len(location) > 0 else 1
             insert_index = random.randint(0, upper_bound)
             pile.insert(insert_index, deepcopy(status_card))
-        ansiprint(f"{player.name} gained {amount} {status_card.name} \nPlaced into {location}")
+        ansiprint(f"{self.player.name} gained {amount} {status_card.name} \nPlaced into {location}")
         sleep(1)
 
-    def summon(self, enemy, amount: int, random_enemy: bool):
+    def summon(self, enemy, amount: int, random_enemy: bool, enemies):
         if len(enemy) == 1:
             enemy = enemy[0]
         for _ in range(amount):
             chosen_enemy = random.choice(enemy) if random_enemy else enemy
-            active_enemies.append(chosen_enemy)
+            enemies.append(chosen_enemy)
             ansiprint(f"<bold>{chosen_enemy.name}</bold> summoned!")
 
     def callback(self, message, data):
@@ -609,24 +611,11 @@ class Enemy(Registerable):
                 print()
                 self.set_intent()
         elif message == Message.END_OF_TURN:
+            _, enemies = data
             if self.state == State.ALIVE:
-                self.execute_move()
+                self.execute_move(enemies)
             # Needs to be expanded at some point
         elif message == Message.ON_DEATH_OR_ESCAPE:
             event, bus = data
             bus.death_messages.append(event)
 
-
-def create_player():
-    return Player(80, 0, 3, [
-        card()
-        for card in [
-            items.IroncladStrike, items.IroncladStrike, items.IroncladStrike, items.IroncladStrike, items.IroncladStrike, 
-            items.IroncladDefend, items.IroncladDefend, items.IroncladDefend, items.IroncladDefend, 
-            items.Bash
-        ]])
-
-
-# Characters
-player = create_player()
-player.relics.append(items.BurningBlood())

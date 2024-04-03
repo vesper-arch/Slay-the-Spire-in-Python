@@ -9,7 +9,6 @@ from ansi_tags import ansiprint, strip
 from definitions import CardType, CombatTier, PlayerClass, Rarity, State
 from message_bus_tools import Message, bus
 
-active_enemies = []
 
 def get_attribute(item, attribute):
     '''While refactoring, some items (Cards) have properties that are on the object, whereas others have them in a dictionary.

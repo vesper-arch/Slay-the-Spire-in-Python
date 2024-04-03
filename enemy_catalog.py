@@ -2,12 +2,11 @@ import math
 import random
 
 import items
-from entities import Enemy, player
-from helper import active_enemies
+from entities import Enemy
 
 
 class AcidSlimeL(Enemy):
-    def __init__(self):
+    def __init__(self, ):
         super().__init__([65, 69], 0, 'Acid Slime (L)', {"Split": True})
 
     def set_intent(self):
@@ -26,8 +25,8 @@ class AcidSlimeL(Enemy):
             break
 
 class AcidSlimeM(Enemy):
-    def __init__(self):
-        super().__init__([28, 32], 0, "Acid Slime (M)")
+    def __init__(self, ):
+        super().__init__([28, 32], 0, "Acid Slime (M)", )
 
     def set_intent(self):
         while True:
@@ -43,8 +42,8 @@ class AcidSlimeM(Enemy):
             break
 
 class AcidSlimeS(Enemy):
-    def __init__(self):
-        super().__init__([8, 12], 0, "Acid Slime (S)")
+    def __init__(self, ):
+        super().__init__([8, 12], 0, "Acid Slime (S)", )
 
     def set_intent(self):
         while True:
@@ -62,7 +61,7 @@ class AcidSlimeS(Enemy):
             break
 
 class SpikeSlimeL(Enemy):
-    def __init__(self):
+    def __init__(self, ):
         super().__init__([64, 70], 0, "Spike Slime (L)", {"Split": True})
 
     def set_intent(self):
@@ -79,8 +78,8 @@ class SpikeSlimeL(Enemy):
             break
 
 class SpikeSlimeM(Enemy):
-    def __init__(self):
-        super().__init__([28, 32], 0, "Spike Slime (M)")
+    def __init__(self, ):
+        super().__init__([28, 32], 0, "Spike Slime (M)", )
 
     def set_intent(self):
         while True:
@@ -94,15 +93,15 @@ class SpikeSlimeM(Enemy):
             break
 
 class SpikeSlimeS(Enemy):
-    def __init__(self):
-        super().__init__([10, 14], 0, "Spike Slime (S)")
+    def __init__(self, ):
+        super().__init__([10, 14], 0, "Spike Slime (S)", )
 
     def set_intent(self):
         self.next_move, self.intent = [("Tackle", "Attack", (5, ))], "<aggresive>Attack</aggresive> Σ5"
 
 class Cultist(Enemy):
-    def __init__(self):
-        super().__init__([48, 54], 0, "Cultist")
+    def __init__(self, ):
+        super().__init__([48, 54], 0, "Cultist", )
 
     def set_intent(self):
         if self.active_turns == 1:
@@ -111,8 +110,8 @@ class Cultist(Enemy):
             self.next_move, self.intent = [("Dark Strike", "Attack", (6, ))], "<aggresive>Attack</aggresive> Σ6"
 
 class JawWorm(Enemy):
-    def __init__(self):
-        super().__init__([40, 44], 0, "Jaw Worm")
+    def __init__(self, ):
+        super().__init__([40, 44], 0, "Jaw Worm", )
 
     def set_intent(self):
         while True:
@@ -131,7 +130,7 @@ class JawWorm(Enemy):
             break
 
 class RedLouse(Enemy):
-    def __init__(self):
+    def __init__(self, ):
         self.damage = random.randint(5, 7)
         super().__init__([10, 15], 0, "Red Louse", {"Curl Up": random.randint(3, 7)})
 
@@ -147,7 +146,7 @@ class RedLouse(Enemy):
             break
 
 class GreenLouse(Enemy):
-    def __init__(self):
+    def __init__(self, ):
         self.damage = random.randint(5, 7)
         super().__init__([11, 17], 0, "Green Louse", {"Curl Up": random.randint(3, 7)})
 
@@ -163,7 +162,7 @@ class GreenLouse(Enemy):
             break
 
 class FungiBeast(Enemy):
-    def __init__(self):
+    def __init__(self, ):
         super().__init__([22, 28], 0, "Fungi Beast", {"Spore Cloud": 2})
 
     def set_intent(self):
@@ -178,25 +177,26 @@ class FungiBeast(Enemy):
             break
 
 class FatGremlin(Enemy): # Fatass
-    def __init__(self):
+    def __init__(self, ):
         super().__init__([13, 17], 0, "Fat Gremlin")
 
     def set_intent(self):
         self.next_move, self.intent = [("Smash", "Attack", (4,)), ("Debuff", ("Weak", 1))], "<aggresive>Attack</aggresive> Σ4 / <debuff>Debuff</debuff>"
 
 class MadGremlin(Enemy):
-    def __init__(self):
+    def __init__(self, ):
         super().__init__([20, 24], 0, "Mad Gremlin", {"Anger": 1})
 
     def set_intent(self):
         self.next_move, self.intent = [("Scratch", "Attack", (4,))], "<aggresive>Attack</aggresive> Σ4"
 
 class ShieldGremlin(Enemy):
-    def __init__(self):
+    def __init__(self, enemies, ):
         super().__init__([12, 15], 0, "Shield Gremlin")
+        self.enemies = enemies
 
     def set_intent(self):
-        other_gremlins = [enemy for enemy in active_enemies if "Gremlin" in enemy.name and "Shield" not in enemy.name]
+        other_gremlins = [enemy for enemy in self.enemies if "Gremlin" in enemy.name and "Shield" not in enemy.name]
         move_roll = random.random()
         if len(other_gremlins) > 0:
             self.next_move, self.intent = [("Protect", "Block", (7, random.choice(other_gremlins)))], "<light-blue>Block</light-blue>"
@@ -208,15 +208,15 @@ class ShieldGremlin(Enemy):
                 self.next_move, self.intent = [("Protect", "Block", (6,))], "<light-blue>Block</light-blue>"
 
 class SneakyGremlin(Enemy):
-    def __init__(self):
-        super().__init__([10, 14], 0, "Sneaky Gremlin")
+    def __init__(self, ):
+        super().__init__([10, 14], 0, "Sneaky Gremlin", )
 
     def set_intent(self):
         self.next_move, self.intent = [("Puncture", "Attack", (9,))], "<aggresive>Attack</aggresive> Σ9"
 
 class WizardGremlin(Enemy):
-    def __init__(self):
-        super().__init__([23, 25], 0, "Gremlin Wizard")
+    def __init__(self, ):
+        super().__init__([23, 25], 0, "Gremlin Wizard", )
 
     def set_intent(self):
         attack_indices = [2 + 4 * x for x in range(50)]
@@ -226,7 +226,7 @@ class WizardGremlin(Enemy):
             self.next_move, self.intent = [("Charging.", ("Charging",))], "<yellow>Charging</yellow>"
 
 class Looter(Enemy):
-    def __init__(self):
+    def __init__(self, ):
         self.escaped = False
         super().__init__([44, 48], 0, "Looter", {"Theivery": 15})
 
@@ -250,7 +250,7 @@ class Looter(Enemy):
             break
 
 class Mugger(Enemy):
-    def __init__(self):
+    def __init__(self, ):
         self.escaped = False
         super().__init__([44, 48], 0, "Looter", {"Theivery": 15})
 
@@ -274,8 +274,8 @@ class Mugger(Enemy):
             break
 
 class BlueSlaver(Enemy):
-    def __init__(self):
-        super().__init__([46, 50], 0, "Blue Slaver")
+    def __init__(self, ):
+        super().__init__([46, 50], 0, "Blue Slaver", )
 
     def set_intent(self):
         while True:
@@ -289,8 +289,8 @@ class BlueSlaver(Enemy):
             break
 
 class RedSlaver(Enemy):
-    def __init__(self):
-        super().__init__([46, 50], 0, "Red Slaver")
+    def __init__(self, ):
+        super().__init__([46, 50], 0, "Red Slaver", )
 
     def set_intent(self):
         scrape_pattern = [i + (i // 2) for i in range(1, 50 + 1)]
@@ -318,8 +318,8 @@ class RedSlaver(Enemy):
 
 # Elites
 class GremlinNob(Enemy):
-    def __init__(self):
-        super().__init__([82, 86], 0, "Gremlin Nob")
+    def __init__(self, ):
+        super().__init__([82, 86], 0, "Gremlin Nob", )
 
     def set_intent(self):
         while True:
@@ -336,7 +336,7 @@ class GremlinNob(Enemy):
             break
 
 class Lagavulin(Enemy):
-    def __init__(self):
+    def __init__(self, ):
         super().__init__([109, 111], 0, "Lagavulin", {"Asleep": True, "Metallicize": 8})
 
     def set_intent(self):
@@ -376,7 +376,7 @@ class Sentry(Enemy):
             break
 
 class SlimeBoss(Enemy):
-    def __init__(self):
+    def __init__(self, ):
         super().__init__([140, 140], 0, "Slime Boss", {"Split": True})
 
     def set_intent(self):
@@ -388,7 +388,7 @@ class SlimeBoss(Enemy):
             self.next_move, self.intent = [("Slam", "Attack", (35,))], "<aggresive>Attack</aggresive> Σ35"
 
 class Guardian(Enemy):
-    def __init__(self):
+    def __init__(self, ):
         self.mode = "Offensive"
         self.offensive_turns = 1
         self.defensive_turns = 1
@@ -417,17 +417,17 @@ class Guardian(Enemy):
                 self.next_move, self.intent = [("Twin Slam", "Attack", (8, 2)), ("Remove Effect", ("Sharp Hide", "Buffs")), ("Buff", ("Mode Shift", self.mode_shift_base))], "<aggresive>Attack</aggresive> Σ8x2 / <buff>Buff</buff>"
 
 class Hexaghost(Enemy):
-    def __init__(self, player_health):
+    def __init__(self, ):
         self.flames = 0
         self.upgrade_burn = False
-        self.h = (player_health / 12) + 1
-        super().__init__([250, 250], 0, "Hexaghost")
+        self.divider_dmg = (self.player.health / 12) + 1
+        super().__init__([250, 250], 0, "Hexaghost", )
 
     def set_intent(self):
         if self.active_turns == 1:
             self.next_move, self.intent = [("Activate", "Charging", (""))], "<yellow>Unknown</yellow>"
         elif self.active_turns == 2:
-            self.next_move, self.intent = [("Divider", "Attack", (self.h, 6))], f"<aggresive>Attack</aggresive> Σ{self.h}x6"
+            self.next_move, self.intent = [("Divider", "Attack", (self.divider_dmg, 6))], f"<aggresive>Attack</aggresive> Σ{self.divider_dmg}x6"
         elif self.active_turns > 2:
             if self.flames in (0, 2, 5):
                 self.next_move, self.intent = [("Sear", "Attack", (6,)), ("Status", (items.Burn if not self.upgrade_burn else items.Burn, 1, "discard pile"))]
@@ -450,13 +450,12 @@ def small_slimes():
     return [random.choice([SpikeSlimeM, AcidSlimeM])(), random.choice([SpikeSlimeS, AcidSlimeS])()] # 25%
 first3_encounters = [cultist, jaw_worm, two_louses, small_slimes]
 # Remaining Encounters
-def gremlin_gang():
-    gremlin_pool = [MadGremlin, MadGremlin, SneakyGremlin, SneakyGremlin, FatGremlin, FatGremlin, WizardGremlin, ShieldGremlin]
-    return [random.choice(gremlin_pool)() for _ in range(4)]
+def gremlin_gang(enemies):
+    return [MadGremlin(), MadGremlin(), SneakyGremlin(), SneakyGremlin(), FatGremlin(), FatGremlin(), WizardGremlin(), ShieldGremlin(enemies)]
 def large_slime():
     return [random.choice([SpikeSlimeL, AcidSlimeL])()]
 def lots_of_slimes():
-    return [SpikeSlimeS, SpikeSlimeS, SpikeSlimeS, AcidSlimeS, AcidSlimeS]
+    return [enemy() for enemy in [SpikeSlimeS, SpikeSlimeS, SpikeSlimeS, AcidSlimeS, AcidSlimeS]]
 def blue_slaver():
     return [BlueSlaver()]
 def red_slaver():
@@ -482,14 +481,14 @@ def sentries():
     return [Sentry('Bolt'), Sentry('Beam'), Sentry('Bolt')]
 def lagavulin():
     return [Lagavulin()]
-remaining_act1_encounters = [gremlin_gang, large_slime, lots_of_slimes, blue_slaver, red_slaver,
-                             three_louses, two_fungi_beasts, exordium_thugs, exordium_wildlife, looter]
 
-def create_act1_normal_encounters():
+def create_act1_normal_encounters(enemies):
+    remaining_act1_encounters = [lambda: gremlin_gang(enemies), large_slime, lots_of_slimes, blue_slaver, red_slaver,
+                                three_louses, two_fungi_beasts, exordium_thugs, exordium_wildlife, looter]
     return [random.choice(first3_encounters)() for _ in range(3)] + [random.choices(remaining_act1_encounters, weights=[6.25, 12.5, 6.35, 12.5, 6.25, 12.5, 12.5, 9.375, 9.375, 12.5], k=1)[0]() for _ in range(15)]
 
 def create_act1_elites():
     return [random.choice([gremlin_nob, sentries, lagavulin])() for _ in range(4)]
 
 def create_act1_boss():
-    return [random.choice([SlimeBoss(), Hexaghost(player.health), Guardian()])]
+    return [random.choice([SlimeBoss(), Hexaghost(), Guardian()])]
