@@ -5,12 +5,14 @@ from copy import deepcopy
 from time import sleep
 from uuid import uuid4
 
+import helper
 import items
 from ansi_tags import ansiprint
 from definitions import CardType, State, TargetType
-from helper import ei, view
-from message_bus_tools import Card, Message, Registerable, Relic, bus
+from message_bus_tools import Card, Effect, Message, Potion, Registerable, Relic, bus
 
+ei = helper.ei
+view = helper.view
 
 class Player(Registerable):
     """
@@ -29,10 +31,10 @@ class Player(Registerable):
 
     registers = [Message.END_OF_COMBAT, Message.START_OF_COMBAT, Message.START_OF_TURN, Message.END_OF_TURN, Message.ON_RELIC_ADD]
 
-    def __init__(self, health: int, block: int, max_energy: int, deck: list[Card], powers: dict = None):
+    def __init__(self, health: int, block: int, max_energy: int, deck: list[Card], powers: list = None):
         self.uid = uuid4()
         if not powers:
-            powers = {}
+            powers = []
         self.health: int = health
         self.block: int = block
         self.name: str = "Ironclad"
@@ -46,7 +48,7 @@ class Player(Registerable):
         self.max_energy: int = max_energy
         self.energy_gain: int = max_energy
         self.deck: list[Card] = deck
-        self.potions: list[dict] = []
+        self.potions: list[Potion] = []
         self.relics: list[Relic] = []
         self.max_potions: int = 3
         self.hand: list[Card] = []
@@ -59,10 +61,9 @@ class Player(Registerable):
         self.orbs = []
         self.orb_slots: int = 3
         self.gold: int = 100
-        self.debuffs: dict[str:int] = ei.init_effects("Player Debuffs") | powers
-        self.buffs: dict[str:int] = ei.init_effects("Player Buffs") | powers
+        self.debuffs: list[Effect] = []
+        self.buffs: list[Effect] = powers
         # Alternate debuff/buff effects
-        self.combusts_played = 0
         self.the_bomb_countdown = 3
         self.deva_energy = 1
         # Relic buffs
@@ -112,12 +113,8 @@ class Player(Registerable):
     def __repr__(self):
         if self.in_combat is True:
             status = f"\n{self.name} (<red>{self.health} </red>/ <red>{self.max_health}</red> | <light-blue>{self.block} Block</light-blue> | <light-red>{self.energy} / {self.max_energy} Energy</light-red>)"
-            for buff in self.buffs:
-                if int(self.buffs[buff]) >= 1:
-                    status += f" | <buff>{buff}</buff>{f' {self.buffs[buff]}' if isinstance(self.buffs[buff], int) else ''}"
-            for debuff in self.debuffs:
-                if int(self.debuffs[debuff]) >= 1:
-                    status += f" | <debuff>{debuff}</debuff>{f' {self.debuffs[debuff]}' if isinstance(self.debuffs[debuff], int) else ''}"
+            for effect in self.buffs + self.debuffs:
+                status += " | " + effect.get_name()
         else:
             status = f"\n{self.name} (<red>{self.health} </red>/ <red>{self.max_health}</red> | <yellow>{self.gold} Gold</yellow>)"
         return (
@@ -125,13 +122,6 @@ class Player(Registerable):
             if status == f"\n{self.name} (<red>{self.health} </red>/ <red>{self.max_health}</red> | <light-blue>{self.block} Block</light-blue> | <light-red>{self.energy} / {self.max_energy}</light-red>)"
             else status + "\n"
         )
-
-    def show_effects(self):
-        for buff in self.buffs:
-            if int(self.buffs[buff]) > 0:
-                ansiprint(f'<buff>{buff}</buff>: {ei.ALL_EFFECTS[buff].replace("X", str(self.buffs[buff]))}')
-        for debuff in self.debuffs:
-            ansiprint(f'<debuff>{debuff}</debuff>: {ei.ALL_EFFECTS[debuff].replace("X", str(self.debuffs[debuff]))}')
 
     def use_card(self, card, exhaust, pile, enemies, target: "Enemy"=None) -> None:
         """
@@ -150,14 +140,6 @@ class Player(Registerable):
         elif card.target == TargetType.YOURSELF:
             card.apply(origin=self)
         bus.publish(Message.ON_CARD_PLAY, (self, card, target))
-        if self.buffs["Corruption"]:
-            exhaust = True
-
-        if self.buffs["Double Tap"] > 0 and card.get("Type") == "Attack":
-            self.buffs["Double Tap"] -= 1
-            sleep(1.5)
-            view.clear()
-            self.use_card(card=card, target=target, exhaust=True, pile=None)
         if (card.type == CardType.STATUS and items.relics["Medical Kit"] in self.player.relics):
             exhaust = True
         elif (card.type == CardType.CURSE and items.relics["Blue Candle"] in self.player.relics):
@@ -175,16 +157,12 @@ class Player(Registerable):
 
     def draw_cards(self, middle_of_turn: bool=True, cards: int = 0):
         """Draws [draw_cards] cards."""
+        _ = middle_of_turn
         if cards == 0:
             cards = self.draw_strength
         while True:
             self.discard_pile.extend(self.hand)
             self.hand.clear()
-            if self.debuffs["No Draw"] is True:
-                print("You can't draw any more cards")
-                break
-            if middle_of_turn is False:
-                cards += self.buffs["Draw Up"]
             if len(self.draw_pile) < cards:
                 self.draw_pile.extend(random.sample(self.discard_pile, len(self.discard_pile)))
                 self.discard_pile = []
@@ -209,24 +187,22 @@ class Player(Registerable):
 
     def health_actions(self, heal: int, heal_type: str):
         """If [heal_type] is 'Heal', you heal for [heal] HP. If [heal_type] is 'Max Health', increase your max health by [heal]."""
-        if heal_type == "Heal":
-            heal = round(heal * 1.5 if self.in_combat and items.relics["Magic Flower"] in self.relics else 1)
+        heal_type = heal_type.lower()
+        if heal_type == "heal":
             self.health += heal
             self.health = min(self.health, self.max_health)
             ansiprint(f"You heal <green>{min(self.max_health - self.health, heal)}</green> <light-blue>HP</light-blue>")
             if (self.health >= math.floor(self.health * 0.5) and items.relics["Red Skull"] in self.relics):
                 ansiprint("<red><bold>Red Skull</bold> deactivates</red>.")
                 self.starting_strength -= 3
-        elif heal_type == "Max Health":
+        elif heal_type == "max health":
             self.max_health += heal
             self.health += heal
             ansiprint(f"Your Max HP is {'increased' if heal > 0 else 'decreased'} by <{'light-blue' if heal > 0 else 'red'}>{heal}</{'light-blue' if heal > 0 else 'red'}>")
 
     def card_actions(self, subject_card: dict, action: str, card_pool: list[dict] = None):
         """[action] == 'Remove', remove [card] from your deck.
-        [action] == 'Upgrade', Upgrade [card]
         [action] == 'Transform', transform a card into another random card.
-        [action] == 'Store', (Only in the Note From Yourself event) stores a card to be collected from the event in another run.
         """
         if card_pool is None:
             card_pool = items.cards
@@ -285,6 +261,7 @@ class Player(Registerable):
                 bus.publish(Message.AFTER_ATTACK, (self, target, card))
                 if target.health <= 0:
                     target.die()
+                bus.publish(Message.ON_ATTACKED, (target))
 
     def gain_gold(self, gold, dialogue=True):
         self.gold += gold
@@ -321,17 +298,14 @@ class Player(Registerable):
             self.hand.clear()
             self.exhaust_pile.clear()
         elif message == Message.START_OF_TURN:
-            turn = data
+            # turn = data
+            for effect in self.buffs + self.debuffs:
+                if effect.subscribed is False:
+                    effect.register(bus)
             ansiprint(f"<underline><bold>{self.name}</bold></underline>:")
             self.energy += self.energy_gain
-            if self.buffs["Barricade"]:
-                if turn > 1:
-                    ansiprint("You kept your block because of <light-cyan>Barriacade</light-cyan>")
-            elif items.Calipers in self.relics and self.block > 15:
-                self.block -= 15
-                ansiprint(f"You kept {self.block} <light-blue>Block</light-blue> because of <bold>Calipers</bold>")
-            else:
-                self.block = 0
+            # INFO: Both Barricade and Calipers are not accounted for here and will be added later.
+            self.block = 0
             self.draw_cards(False)
             self.plays_this_turn = 0
             ei.tick_effects(self)
@@ -354,7 +328,7 @@ class Enemy(Registerable):
     def __init__(self, health_range: list, block: int, name: str, powers: dict = None):
         self.uid = uuid4()
         if not powers:
-            powers = {}
+            powers = []
         actual_health = random.randint(health_range[0], health_range[1])
         self.health = actual_health
         self.max_health = actual_health
@@ -367,8 +341,8 @@ class Enemy(Registerable):
         self.intent: str = ""
         self.next_move: list[tuple[str, str, tuple] | tuple[str, tuple]] = ""
         self.state = State.ALIVE
-        self.buffs = ei.init_effects("Enemy Buffs") | powers
-        self.debuffs = ei.init_effects("Enemy Debuffs")
+        self.buffs = powers
+        self.debuffs = []
         self.stolen_gold = 0
         self.awake_turns = 0
         self.mode = ""
@@ -380,24 +354,13 @@ class Enemy(Registerable):
         return "Enemy"
 
     def __repr__(self):
-        status = f"{self.name} (<red>{self.health} </red>/ <red>{self.max_health}</red> | <light-blue>{self.block} Block</light-blue>) | "
-        for buff in self.buffs:
-            if self.buffs[buff] is True or self.buffs[buff] > 0:
-                status += f"<buff>{buff}</buff>{f' {self.buffs[buff]}' if isinstance(self.buffs[buff], int) else ''} | "
-        for debuff in self.debuffs:
-            if self.debuffs[debuff] is True or self.debuffs[debuff] > 0:
-                status += f"<debuff>{debuff}</debuff>{f' {self.debuffs[debuff]}' if isinstance(self.debuffs[debuff], int) else ''} | "
+        status = f"{self.name} (<red>{self.health} </red>/ <red>{self.max_health}</red> | <light-blue>{self.block} Block</light-blue>)"
+        for effect in self.buffs + self.debuffs:
+            status += " | " + effect.get_name()
         if self.flames > 0:
-            status += f"<yellow>{self.flames} Flames</yellow> | "
-        actual_intent, _ = view.display_actual_damage(self.intent, self.player, self)
-        status += "Intent: " + actual_intent
+            status += f" | <yellow>{self.flames} Flames</yellow>"
+        status += " | Intent: " + self.intent.replace('Σ', '')
         return status
-
-    def show_effects(self):
-        for buff in self.buffs:
-            ansiprint(f'<buff>{buff}</buff>: {ei.ALL_EFFECTS[buff].replace("X", str(self.buffs[buff]))})')
-        for debuff in self.debuffs:
-            ansiprint(f'<debuff>{debuff}</debuff>: {ei.ALL_EFFECTS[debuff].replace("X", str(self.debuffs[debuff]))}')
 
     def set_intent(self):
         pass
@@ -422,14 +385,14 @@ class Enemy(Registerable):
                 times = parameters[1] if len(parameters) > 1 else 1
                 self.attack(dmg, times)
             elif action == "Buff":
-                buff_name = parameters[0]
+                buff = parameters[0]
                 amount = parameters[1] if len(parameters) > 1 else 1
                 target = parameters[2] if len(parameters) > 2 else self
-                ei.apply_effect(target, self, buff_name, amount)
+                ei.apply_effect(target, self, buff, amount)
             elif action == "Debuff":
-                debuff_name = parameters[0]
+                debuff = parameters[0]
                 amount = parameters[1] if len(parameters) > 1 else 1
-                ei.apply_effect(self, self, debuff_name, amount)
+                ei.apply_effect(self, self, debuff, amount)
             elif action == "Remove Effect":
                 effect_name = parameters[0]
                 effect_type = parameters[1]
@@ -452,8 +415,6 @@ class Enemy(Registerable):
         sleep(0.5)
         self.past_moves.append(display_name)
         self.active_turns += 1
-        if not self.debuffs.get("Asleep"):
-            self.awake_turns += 1
         if self.flames > -1:
             self.flames += 1
 
@@ -597,16 +558,16 @@ class Enemy(Registerable):
             ansiprint(f"<bold>{chosen_enemy.name}</bold> summoned!")
 
     def callback(self, message, data):
+        global bus
         if message == Message.START_OF_TURN:
             ansiprint(f"{self.name}'s current state: {self.state}")
             if self.state == State.ALIVE:
+                for effect in self.buffs + self.debuffs:
+                    if effect.subscribed is False:
+                        effect.register(bus)
                 ansiprint(f"<underline><bold>{self.name}</bold></underline>:")
                 if "Block" not in self.intent:  # Checks the last move(its intent hasn't been updated yet) used to see if the enemy Blocked last turn
-                    if self.buffs["Barricade"] is False:
-                        self.block = 0
-                    else:
-                        if self.active_turns > 1 and self.block > 0:
-                            ansiprint(f"{self.name}'s Block was not removed because of <light-cyan>Barricade</light-cyan")
+                    self.block = 0
                 ei.tick_effects(self)
                 print()
                 self.set_intent()
@@ -617,5 +578,7 @@ class Enemy(Registerable):
             # Needs to be expanded at some point
         elif message == Message.ON_DEATH_OR_ESCAPE:
             event, bus = data
+            for effect in self.buffs + self.debuffs:
+                effect.unsubscribe()
             bus.death_messages.append(event)
 

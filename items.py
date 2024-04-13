@@ -2,11 +2,13 @@ import math
 import random
 from copy import deepcopy
 
+import helper
 from ansi_tags import ansiprint
 from definitions import CardType, DeepCopyTuple, PlayerClass, Rarity, State, TargetType
-from helper import ei, view
 from message_bus_tools import Card, Message, Potion, Relic
 
+ei = helper.ei
+view = helper.view
 
 class IroncladStrike(Card):
     def __init__(self):
@@ -57,7 +59,7 @@ class Bash(Card):
 
     def apply(self, origin, target):
         origin.attack(target, self)
-        ei.apply_effect(target, origin, 'Vulnerable', self.vulnerable)
+        ei.apply_effect(target, origin, helper.Vulnerable, self.vulnerable)
 
 class Anger(Card):
     def __init__(self):
@@ -166,7 +168,7 @@ class Clothesline(Card):
 
     def apply(self, origin, target):
         origin.attack(target, self)
-        ei.apply_effect(target, origin, "Weak", self.weak)
+        ei.apply_effect(target, origin, helper.Weak, self.weak)
 
 class Flex(Card):
     def __init__(self):
@@ -180,7 +182,7 @@ class Flex(Card):
         self.info = "Gain 4 <buff>Strength</buff>. At the end of your turn, lose 4 <buff>Strength</buff>."
 
     def apply(self, origin):
-        ei.apply_effect(origin, None, "Strength", self.strength)
+        ei.apply_effect(origin, None, helper.Strength, self.strength)
         ei.apply_effect(origin, None, "Strength Down", self.strength)
 
 class Havoc(Card):
@@ -519,6 +521,7 @@ class Combust(Card):
     def __init__(self):
         super().__init__("Combust", "At the end of your turn, lose 1 HP and deal 5 damage to ALL enemies.", Rarity.UNCOMMON, PlayerClass.IRONCLAD, CardType.POWER, TargetType.YOURSELF, energy_cost=1)
         self.combust = 5
+        self.times_played = 1
         self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>At the end of your turn, lose 1 HP and deal <green>7</green> damage to ALL enemies.</yellow>"
 
     def upgrade(self):
@@ -528,6 +531,7 @@ class Combust(Card):
 
     def apply(self, origin):
         ei.apply_effect(origin, None, "Combust", self.combust)
+        origin.take_sourceless_dmg(self.times_played)
 
 class DarkEmbrace(Card):
     def __init__(self):

@@ -1,8 +1,9 @@
+from copy import deepcopy
 from enum import StrEnum
 from uuid import uuid4
 
 from ansi_tags import ansiprint
-from definitions import CardType, PlayerClass, Rarity, TargetType
+from definitions import CardType, PlayerClass, Rarity, StackType, TargetType
 
 
 class Message(StrEnum):
@@ -17,6 +18,7 @@ class Message(StrEnum):
     AFTER_BLOCK = 'after_block'
     WHEN_ENTERING_CAMPFIRE = 'when_entering_campfire'
     ON_PLAYER_HEALTH_LOSS = 'on_player_health_loss'
+    ON_ATTACKED = 'on_attacked'
     ON_PICKUP = 'on_pickup' # For relics
     ON_DRAW = 'on_draw'
     ON_EXHAUST = 'on_exhaust'
@@ -58,9 +60,11 @@ class MessageBus():
 
 class Registerable():
     registers = []
+
     def register(self, bus):
         for message in self.registers:
             bus.subscribe(message, self.callback, self.uid)
+        self.subscribed = True
 
     def unsubscribe(self, event_types: list[Message]=None):
         '''Unsubscribes the object from certain events. Unsubscribes from all registers by default.'''
@@ -68,23 +72,45 @@ class Registerable():
             event_types = self.registers
         for message in event_types:
             bus.unsubscribe(message, self.uid)
+        self.subscribed = False
 
 class Effect(Registerable):
-    def __init__(self, stack_type, info, amount=0):
+    def __init__(self, host, name, stack_type: StackType, effect_type, info, amount=0, one_turn=False):
         self.uid = uuid4()
-        self.register(bus=bus)
-        self.name = 'default'
+        self.subscribed = False
+        self.host = host
+        self.name = name
         self.stack_type = stack_type
-        self.info = info
+        self.type = effect_type
+        self.info = info # For convenience purposes, this will be a generalized description of the effect.
         self.amount = amount
+        self.one_turn = one_turn
+
+    def __add__(self, other):
+        if self.name != other.name:
+            raise ValueError(f"Effects of names {self.name} and {other.name} cannot be merged. Addition only works with the same effect.")
+        new_effect = deepcopy(self)
+        new_effect.amount = self.amount + other.amount
+        return new_effect
 
     def pretty_print(self):
         stack_type_colors = {'duration': 'light-blue', 'intensity': 'orange', 'counter': 'magenta', 'no stack': 'white'}
-        return f"<{stack_type_colors[self.type]}>{self.name}</{stack_type_colors[self.type]}>{f' {self.amount}' if self.type != 'no stack' else ''}"
+        return f"<{stack_type_colors[str(self.stack_type)]}>{self.name}</{stack_type_colors[str(self.stack_type)]}>{f' {self.amount}' if self.stack_type != 'none' else ''} | <yellow>{self.info}</yellow>"
+
+    def get_name(self):
+        stack_type_colors = {'duration': 'light-blue', 'intensity': 'orange', 'counter': 'magenta', 'no stack': 'white'}
+        return f"<{stack_type_colors[str(self.stack_type)]}>{self.name}</{stack_type_colors[str(self.stack_type)]}>{f' {self.amount}' if self.stack_type != 'none' else ''}"
+
+    def tick(self):
+        if self.one_turn is True:
+            self.amount = 0
+        elif self.stack_type == StackType.DURATION:
+            self.amount -= 1
 
 class Relic(Registerable):
     def __init__(self, name: str, info: str, flavor_text: str, rarity: Rarity, player_class: PlayerClass=PlayerClass.ANY):
         self.uid = uuid4()
+        self.subscribed = False
         self.name = name
         self.info = info
         self.flavor_text = flavor_text
@@ -98,6 +124,7 @@ class Relic(Registerable):
 class Potion(Registerable):
     def __init__(self, name: str, info: str, rarity: Rarity, target: TargetType, player_class: PlayerClass=PlayerClass.ANY):
         self.name = name
+        self.subscribed = False
         self.info = info
         self.rarity = rarity
         self.target = target

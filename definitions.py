@@ -73,3 +73,14 @@ class State(StrEnum):
     DEAD = 'dead'
     ESCAPED = 'escaped'
     INTANGIBLE = 'intangible' # Enemies that revive have a period where they cannot be attacked and have no intent.
+
+class StackType(StrEnum):
+    DURATION = 'duration'
+    INTENSITY = 'intensity'
+    COUNTER = 'counter'
+    NONE = 'none'
+    DURATION_AND_INTENSITY = 'Duration and Intensity'
+
+class EffectType(StrEnum):
+    DEBUFF = 'debuff'
+    BUFF = 'buff'

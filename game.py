@@ -210,9 +210,7 @@ class Combat:
                 print(f"Turn {self.turn}: ")
                 # Shows the player's potions, cards(in hand), amount of cards in discard and draw pile, and shows the status for you and the enemies.
                 view.display_ui(self.player, self.active_enemies)
-                print(
-                    "1-0: Play card, P: Play Potion, M: View Map, D: View Deck, A: View Draw Pile, S: View Discard Pile, X: View Exhaust Pile, E: End Turn, F: View Debuffs and Buffs"
-                )
+                print("1-0: Play card, P: Play Potion, M: View Map, D: View Deck, A: View Draw Pile, S: View Discard Pile, X: View Exhaust Pile, E: End Turn, F: View Debuffs and Buffs")
                 action = input("> ").lower()
                 other_options = {
                     "d": lambda: view.view_piles(self.player.deck, end=True),
