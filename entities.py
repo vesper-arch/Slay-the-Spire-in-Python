@@ -243,11 +243,12 @@ class Player(Registerable):
 
     def attack(self, target: "Enemy", card: Card=None, dmg=-1):
         # Check if already dead and skip if so
-        dmg = getattr(card, 'damage', None) if card else dmg  # noqa: B009
+        dmg = getattr(card, 'damage', dmg)
         if target.health <= 0:
             return
         if card is not None and card.type not in (CardType.STATUS, CardType.CURSE):
             bus.publish(Message.BEFORE_ATTACK, (self, target, card))
+            dmg = getattr(card, 'damage', dmg)
             if dmg <= target.block:
                 target.block -= dmg
                 dmg = 0

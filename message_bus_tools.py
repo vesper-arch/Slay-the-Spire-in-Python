@@ -193,6 +193,7 @@ class Card(Registerable):
         else:
             self.damage += amount
         self.damage_affected_by.append(context)
+        ansiprint(f"{self.name} had its damage modified by {amount} from {context}.")
 
     def modify_block(self, amount, context: str, permanent=False):
         if permanent:

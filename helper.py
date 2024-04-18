@@ -487,7 +487,7 @@ class EffectInterface:
             if effect.amount >= 1:
                 return True
             else:
-                effect.unregister()
+                effect.unsubscribe()
                 return False
         subject.buffs = list(filter(clean, subject.buffs))
         subject.debuffs = list(filter(clean, subject.debuffs))
