@@ -200,9 +200,7 @@ class Combat:
         while len(self.active_enemies) > 0:
             bus.publish(Message.START_OF_TURN, (self.turn, self.player))
             while True:
-                self.update_death_messages()
-                self.previous_enemy_states = tuple(enemy.state for enemy in self.all_enemies)
-                self.active_enemies = [enemy for enemy in self.all_enemies if enemy.state == State.ALIVE]  # Updates the list
+                self.on_player_move()
                 if all((enemy.state == State.DEAD for enemy in self.all_enemies)):
                     self.end_combat(killed_enemies=True)
                     break
@@ -242,7 +240,7 @@ class Combat:
                 view.clear()
             if self.player.state == State.ESCAPED:
                 self.end_combat(self, escaped=True)
-            bus.publish(Message.END_OF_TURN, data=(self.player, self.all_enemies))  # So far I don't need to have anything passed for data
+            bus.publish(Message.END_OF_TURN, data=(self.player, self.all_enemies))
             self.turn += 1
 
     def end_combat(self, killed_enemies=False, escaped=False, robbed=False):
@@ -273,6 +271,25 @@ class Combat:
         self.player.unsubscribe()
         for enemy in self.active_enemies:
             enemy.unsubscribe()
+
+    def on_player_move(self):
+        self.update_death_messages()
+        self.previous_enemy_states = tuple(enemy.state for enemy in self.all_enemies)
+        self.active_enemies = [enemy for enemy in self.all_enemies if enemy.state == State.ALIVE]  # Updates the list
+
+        def clean_effects(effects):
+            for effect in effects:
+                if effect.amount <= 0:
+                    effect.unsubscribe()
+                    ansiprint(f"{effect.get_name()} wears off.")
+            return [effect for effect in effects if effect.amount >= 1]
+
+        for enemy in self.active_enemies:
+            enemy.buffs = clean_effects(enemy.buffs)
+            enemy.debuffs = clean_effects(enemy.debuffs)
+        self.player.buffs, self.player.debuffs = [
+            clean_effects(effects) for effects in (self.player.buffs, self.player.debuffs)
+        ]
 
     def create_enemies_from_tier(self) -> list[Enemy]:
         act1_normal_encounters = create_act1_normal_encounters(self.all_enemies)
