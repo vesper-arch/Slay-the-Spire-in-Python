@@ -85,6 +85,25 @@ class Card(Registerable):
             ansiprint(f"{self.get_name()}'s <keyword>Block</keyword> was set to {amount} by {context}.")
         self.block_affected_by.append(context)
 
+class Relic(Registerable):
+    def __init__(self, name, info, flavor_text, rarity: Rarity, player_class=PlayerClass.ANY):
+        self.uid = uuid4()
+        self.name = name
+        self.info = info
+        self.flavor_text = flavor_text
+        self.rarity = rarity
+        self.player_class = player_class
+        self.playable = True
+        self.golden_stats = []
+        self.golden_info = ""
+
+    def get_name(self):
+        return f"<{self.rarity.lower()}>{self.name}</{self.rarity.lower()}>"
+
+    def pretty_print(self):
+        color_map = {"Ironclad": 'red', "Silent": 'dark_green', "Defect": 'true-blue', "Watcher": 'watcher_purple', "Any": 'white'}
+        class_color = color_map[self.player_class]
+        return f"{self.get_name()} | <yellow>{self.info}</yellow> | <dark_blue><italic>{self.flavor_text}</italic></dark_blue>{f' | <{class_color}>{self.player_class}</{class_color}>' if self.player_class != PlayerClass.ANY else ''}"
 
 def modify_energy_cost(amount: int, modify_type: str, card: dict):
     assert modify_type in ('Set', 'Adjust'), f"modify_type must be 'Set' or 'Adjust', not {modify_type}"
