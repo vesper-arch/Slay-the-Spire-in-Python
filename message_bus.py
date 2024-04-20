@@ -1,5 +1,4 @@
 from enum import StrEnum
-from uuid import uuid4
 
 from ansi_tags import ansiprint
 
