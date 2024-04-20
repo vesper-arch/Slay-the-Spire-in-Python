@@ -1,5 +1,6 @@
 from enum import StrEnum, auto
 
+
 class CombatTier(StrEnum):
     NORMAL = 'Normal'
     ELITE = 'Elite'
@@ -13,6 +14,14 @@ class EncounterType(StrEnum):
     BOSS = auto()
     SHOP = auto()
     UNKNOWN = auto()
+
+class PlayerClass(StrEnum):
+    IRONCLAD = 'Ironclad'
+    SILENT = 'Silent'
+    DEFECT = 'DEFECT'
+    WATCHER = 'Watcher'
+    COLORLESS = 'Colorless'
+    ANY = 'Any'
 
 class Rarity(StrEnum):
     BASIC ='Basic'
