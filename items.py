@@ -55,13 +55,15 @@ class Card(Registerable):
 
         if modify_type == 'Adjust':
             if permanent:
-                self.base_damage, self.damage += amount
+                self.base_damage += amount
+                self.damage += amount
             else:
                 self.damage += amount
             ansiprint(f"{self.get_name()}'s damage was {'<red>decreased</red>' if amount < 0 else '<green>increased</green>'} by {abs(amount)} because of {context}.")
         elif modify_type == 'Set':
             if permanent:
-                self.base_damage, self.damage = amount
+                self.base_damage += amount
+                self.damage = amount
             else:
                 self.damage = amount
             ansiprint(f"{self.get_name()}'s damage was set to {amount} by {context}.")
@@ -73,13 +75,15 @@ class Card(Registerable):
 
         if modify_type == 'Adjust':
             if permanent:
-                self.base_block, self.block += amount
+                self.base_block += amount
+                self.block += amount
             else:
                 self.block += amount
             ansiprint(f"{self.get_name()}'s <keyword>Block</keyword> was {'<red>decreased</red>' if amount < 0 else '<green>increased</green>'} by {amount} because of {context}.")
         elif modify_type == 'Set':
             if permanent:
-                self.base_block, self.block = amount
+                self.base_block += amount
+                self.block = amount
             else:
                 self.block = amount
             ansiprint(f"{self.get_name()}'s <keyword>Block</keyword> was set to {amount} by {context}.")
