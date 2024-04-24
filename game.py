@@ -1,7 +1,5 @@
 import math
 import random
-from copy import copy, deepcopy
-from functools import partial
 from time import sleep
 
 import game_map
@@ -19,6 +17,163 @@ from items import activate_sacred_bark, cards, potions, relics
 from shop import Shop
 
 cards['Whirlwind']['Energy'] = player.energy
+
+class Game:
+    def __init__(self, seed=None):
+        self.seed = seed
+        self.player = player
+        self.game_map = None
+
+    def start(self, seed=None):
+        if seed is not None:
+            random.seed(seed)
+        gm = game_map.create_first_map()
+        gm.pretty_print()
+        for encounter in gm:
+            self.play(encounter, gm)
+            player.floors += 1
+            gm.pretty_print()
+
+    def play(self, encounter: EncounterType, gm: game_map.GameMap):
+        if encounter.type == EncounterType.START:
+            pass
+        elif encounter.type == EncounterType.REST_SITE:
+            return self.rest_site()
+        elif encounter.type == EncounterType.UNKNOWN:
+            return self.unknown()
+        elif encounter.type == EncounterType.BOSS:
+            return combat(CombatTier.BOSS, gm)
+        elif encounter.type == EncounterType.ELITE:
+            return combat(CombatTier.ELITE, gm)
+        elif encounter.type == EncounterType.NORMAL:
+            return combat(CombatTier.NORMAL, gm)
+        elif encounter.type == EncounterType.SHOP:
+            return Shop(player).loop()
+        else:
+            raise game_map.MapError(f"Encounter type {encounter} is not valid.")
+
+    def rest_site(self):
+        """
+        Actions:
+        Rest: Heal for 30% of you max hp(rounded down)
+        Upgrade: Upgrade 1 card in your deck(Cards can only be upgraded once unless stated otherwise)*
+        Lift: Permanently gain 1 Strength(Requires Girya, can only be used 3 times in a run)*
+        Toke: Remove 1 card from your deck(Requires Peace Pipe)*
+        Dig: Obtain 1 random Relic(Requires Shovel)*
+        Recall: Obtain the Ruby Key(Max 1 use, availible in normal runs when Act 4 is unlocked)*
+        **Not finished
+        """
+        valid_inputs = ['rest', 'smith']
+        if relics['Ancient Tea Set'] in self.player.relics and not self.player.ancient_tea_set:
+            self.player.ancient_tea_set = True
+            ansiprint('<bold>Ancient Tea Set activated</bold>')
+        while True:
+            ansiprint(self.player)
+            ansiprint("You come across a <green>Rest Site</green>")
+            if relics['Eternal Feather'] in self.player.relics:
+                self.player.health_actions(len(self.player.deck) // 5 * 3, "Heal")
+            sleep(1)
+            ansiprint(f"<bold>[Rest]</bold> <green>Heal for 30% of your <light-blue>Max HP</light-blue>({math.floor(self.player.max_health * 0.30 + 15 if relics['Regal Pillow'] in self.player.relics else 0)})</green> \n<bold>[Smith]</bold> <green><keyword>Upgrade</keyword> a card in your deck</green> ")
+            ansiprint("+15 from <bold>Regal Pillow</bold>\n" if relics['Regal Pillow'] in self.player.relics else '', end='')
+            relic_actions = {'Girya': ('lift', "<bold>[Lift]</bold> <green>Gain 1 <light-cyan>Strength</light-cyan></green>"),
+                'Peace Pipe': ('toke', "<bold>[Toke]</bold> <green>Remove a card from your deck</green>"),
+                'Shovel': ('dig', "<bold>[Dig]</bold> <green>Obtain a relic</green>")}
+            for relic_name, (action, message) in relic_actions.items():
+                if relics[relic_name] in self.player.relics:
+                    valid_inputs.append(action)
+                    ansiprint(message, end='')
+            action = input('> ').lower()
+            if action not in valid_inputs:
+                ansiprint("<red>Valid Inputs: " + valid_inputs + "</red>")
+                sleep(1.5)
+                view.clear()
+                continue
+            if action == 'rest':
+                if relics['Coffee Dripper'] in self.player.relics:
+                    ansiprint("<red>You cannot rest because of </red><bold>Coffee Dripper</bold>.")
+                    sleep(1)
+                    view.clear()
+                    continue
+                # heal_amount is equal to 30% of the player's max health rounded down.
+                heal_amount = math.floor(self.player.max_health * 0.30)
+                if relics['Regal Pillow'] in self.player.relics:
+                    heal_amount += 15
+                sleep(1)
+                view.clear()
+                self.player.health_actions(heal_amount, "Heal")
+                if relics['Dream Catcher'] in self.player.relics:
+                    ansiprint('<bold><italic>Dreaming...</italic></bold>')
+                    gen.card_rewards(CombatTier.NORMAL, True, self.player, cards)
+                break
+            if action == 'smith':
+                if relics['Fusion Hammer'] in self.player.relics:
+                    ansiprint("<red>You cannot smith because of <bold>Fusion Hammer</bold>.</red>")
+                    sleep(1.5)
+                    view.clear()
+                    continue
+                upgrade_card = view.list_input('What card do you want to upgrade?', self.player.deck, view.view_piles, lambda card: not card.get("Upgraded") and (card['Type'] not in ("Status", "Curse") or card['Name'] == 'Burn'), "That card is not upgradeable.")
+                self.player.deck[upgrade_card] = self.player.card_actions(self.player.deck[upgrade_card], 'Upgrade', cards)
+                break
+            if action == 'lift':
+                if self.player.girya_charges > 0:
+                    ei.apply_effect(self.player, 'Strength', 1)
+                    self.player.girya_charges -= 1
+                    if self.player.girya_charges == 0:
+                        ansiprint('<bold>Girya</bold> is depleted')
+                    break
+                ansiprint('You cannot use <bold>Girya</bold> anymore')
+                sleep(1.5)
+                view.clear()
+                continue
+            if action == 'toke':
+                option = view.list_input('What card would you like to remove? > ', self.player.deck, view.view_piles, lambda card: card.get("Removable") is False, "That card is not removable.")
+                self.player.deck[option] = self.player.card_actions(self.player.deck[option], 'Remove', cards)
+                break
+            if action == 'dig':
+                gen.claim_relics(False, self.player, 1, relics, None, False)
+                break
+        while True:
+            ansiprint("<bold>[View Deck]</bold> or <bold>[Leave]</bold>")
+            option = input("> ").lower()
+            if option == 'view deck':
+                view.view_piles(self.player.deck)
+                input("Press enter to leave > ")
+                sleep(0.5)
+                view.clear()
+                break
+            if option == 'leave':
+                sleep(1)
+                view.clear()
+                break
+            print("Invalid input")
+            sleep(1.5)
+            view.clear()
+
+    def unknown(self) -> None:
+        # Chances
+        normal_combat: float = 0.1
+        treasure_room: float = 0.02
+        merchant: float = 0.03
+        # Event chance is equal to 1 minus all the previous chances
+        random_number = random.random()
+
+        if random_number < treasure_room:
+            treasure_room = 0.02
+            normal_combat += 0.1
+            merchant += 0.03
+        elif random_number < merchant:
+            merchant = 0.03
+            treasure_room += 0.02
+            normal_combat += 0.1
+        elif random_number < normal_combat:
+            normal_combat = 0.1
+            treasure_room += 0.02
+            merchant += 0.03
+            combat(CombatTier.NORMAL)
+        else:
+            ansiprint(self.player)
+            chosen_event = choose_event()
+            chosen_event()
 
 def combat(tier: CombatTier, current_map) -> None:
     """There's too much to say here."""
@@ -115,103 +270,6 @@ def end_combat(tier, killed_enemies=False, escaped=False, robbed=False):
         view.clear()
         combat_turn = 1
 
-def rest_site():
-    """
-    Actions:
-    Rest: Heal for 30% of you max hp(rounded down)
-    Upgrade: Upgrade 1 card in your deck(Cards can only be upgraded once unless stated otherwise)*
-    Lift: Permanently gain 1 Strength(Requires Girya, can only be used 3 times in a run)*
-    Toke: Remove 1 card from your deck(Requires Peace Pipe)*
-    Dig: Obtain 1 random Relic(Requires Shovel)*
-    Recall: Obtain the Ruby Key(Max 1 use, availible in normal runs when Act 4 is unlocked)*
-    **Not finished
-    """
-    valid_inputs = ['rest', 'smith']
-    if relics['Ancient Tea Set'] in player.relics and not player.ancient_tea_set:
-        player.ancient_tea_set = True
-        ansiprint('<bold>Ancient Tea Set activated</bold>')
-    while True:
-        ansiprint(player)
-        ansiprint("You come across a <green>Rest Site</green>")
-        if relics['Eternal Feather'] in player.relics:
-            player.health_actions(len(player.deck) // 5 * 3, "Heal")
-        sleep(1)
-        ansiprint(f"<bold>[Rest]</bold> <green>Heal for 30% of your <light-blue>Max HP</light-blue>({math.floor(player.max_health * 0.30 + 15 if relics['Regal Pillow'] in player.relics else 0)})</green> \n<bold>[Smith]</bold> <green><keyword>Upgrade</keyword> a card in your deck</green> ")
-        ansiprint("+15 from <bold>Regal Pillow</bold>\n" if relics['Regal Pillow'] in player.relics else '', end='')
-        relic_actions = {'Girya': ('lift', "<bold>[Lift]</bold> <green>Gain 1 <light-cyan>Strength</light-cyan></green>"),
-            'Peace Pipe': ('toke', "<bold>[Toke]</bold> <green>Remove a card from your deck</green>"),
-            'Shovel': ('dig', "<bold>[Dig]</bold> <green>Obtain a relic</green>")}
-        for relic_name, (action, message) in relic_actions.items():
-            if relics[relic_name] in player.relics:
-                valid_inputs.append(action)
-                ansiprint(message, end='')
-        action = input('> ').lower()
-        if action not in valid_inputs:
-            ansiprint("<red>Valid Inputs: " + valid_inputs + "</red>")
-            sleep(1.5)
-            view.clear()
-            continue
-        if action == 'rest':
-            if relics['Coffee Dripper'] in player.relics:
-                ansiprint("<red>You cannot rest because of </red><bold>Coffee Dripper</bold>.")
-                sleep(1)
-                view.clear()
-                continue
-            # heal_amount is equal to 30% of the player's max health rounded down.
-            heal_amount = math.floor(player.max_health * 0.30)
-            if relics['Regal Pillow'] in player.relics:
-                heal_amount += 15
-            sleep(1)
-            view.clear()
-            player.health_actions(heal_amount, "Heal")
-            if relics['Dream Catcher'] in player.relics:
-                ansiprint('<bold><italic>Dreaming...</italic></bold>')
-                gen.card_rewards(CombatTier.NORMAL, True, player, cards)
-            break
-        if action == 'smith':
-            if relics['Fusion Hammer'] in player.relics:
-                ansiprint("<red>You cannot smith because of <bold>Fusion Hammer</bold>.</red>")
-                sleep(1.5)
-                view.clear()
-                continue
-            upgrade_card = view.list_input('What card do you want to upgrade?', player.deck, view.view_piles, lambda card: not card.get("Upgraded") and (card['Type'] not in ("Status", "Curse") or card['Name'] == 'Burn'), "That card is not upgradeable.")
-            player.deck[upgrade_card] = player.card_actions(player.deck[upgrade_card], 'Upgrade', cards)
-            break
-        if action == 'lift':
-            if player.girya_charges > 0:
-                ei.apply_effect(player, 'Strength', 1)
-                player.girya_charges -= 1
-                if player.girya_charges == 0:
-                    ansiprint('<bold>Girya</bold> is depleted')
-                break
-            ansiprint('You cannot use <bold>Girya</bold> anymore')
-            sleep(1.5)
-            view.clear()
-            continue
-        if action == 'toke':
-            option = view.list_input('What card would you like to remove? > ', player.deck, view.view_piles, lambda card: card.get("Removable") is False, "That card is not removable.")
-            player.deck[option] = player.card_actions(player.deck[option], 'Remove', cards)
-            break
-        if action == 'dig':
-            gen.claim_relics(False, player, 1, relics, None, False)
-            break
-    while True:
-        ansiprint("<bold>[View Deck]</bold> or <bold>[Leave]</bold>")
-        option = input("> ").lower()
-        if option == 'view deck':
-            view.view_piles(player.deck)
-            input("Press enter to leave > ")
-            sleep(0.5)
-            view.clear()
-            break
-        if option == 'leave':
-            sleep(1)
-            view.clear()
-            break
-        print("Invalid input")
-        sleep(1.5)
-        view.clear()
-
 def start_combat(combat_tier: CombatTier):
     player.in_combat = True
     # Shuffles the player's deck into their draw pile
@@ -229,32 +287,6 @@ def start_combat(combat_tier: CombatTier):
         active_enemies.append(enemy)
     player.start_of_combat_relics(combat_tier)
     return act1_boss[0].name
-
-def unknown() -> None:
-    # Chances
-    normal_combat: float = 0.1
-    treasure_room: float = 0.02
-    merchant: float = 0.03
-    # Event chance is equal to 1 minus all the previous chances
-    random_number = random.random()
-
-    if random_number < treasure_room:
-        treasure_room = 0.02
-        normal_combat += 0.1
-        merchant += 0.03
-    elif random_number < merchant:
-        merchant = 0.03
-        treasure_room += 0.02
-        normal_combat += 0.1
-    elif random_number < normal_combat:
-        normal_combat = 0.1
-        treasure_room += 0.02
-        merchant += 0.03
-        combat(CombatTier.NORMAL)
-    else:
-        ansiprint(player)
-        chosen_event = choose_event()
-        chosen_event()
 
 def play_potion():
     if len(player.potions) == 0:
@@ -295,30 +327,3 @@ def play_card(card):
         player.use_card(card, active_enemies[target], False, player.hand)
         break
 
-def play(encounter: EncounterType, gm: game_map.GameMap):
-    if encounter.type == EncounterType.START:
-        pass
-    elif encounter.type == EncounterType.REST_SITE:
-        return rest_site()
-    elif encounter.type == EncounterType.UNKNOWN:
-        return unknown()
-    elif encounter.type == EncounterType.BOSS:
-        return combat(CombatTier.BOSS, gm)
-    elif encounter.type == EncounterType.ELITE:
-        return combat(CombatTier.ELITE, gm)
-    elif encounter.type == EncounterType.NORMAL:
-        return combat(CombatTier.NORMAL, gm)
-    elif encounter.type == EncounterType.SHOP:
-        return Shop(player).loop()
-    else:
-        raise game_map.MapError(f"Encounter type {encounter} is not valid.")
-
-def main(seed=None):
-    if seed is not None:
-        random.seed(seed)
-    gm = game_map.create_first_map()
-    gm.pretty_print()
-    for encounter in gm:
-        play(encounter, gm)
-        player.floors += 1
-        gm.pretty_print()
