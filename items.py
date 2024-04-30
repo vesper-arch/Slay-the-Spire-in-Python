@@ -1,11 +1,141 @@
 import random
 from copy import deepcopy
 from time import sleep
+from uuid import uuid4
 
 from ansi_tags import ansiprint
-from definitions import CardType, Rarity, TargetType, PlayerClass
-from helper import ei, view
 
+from definitions import CardType, PlayerClass, Rarity, TargetType
+
+from helper import ei, view
+from message_bus import Message, Registerable
+
+
+class Card(Registerable):
+    def __init__(self, name, info, player_class: PlayerClass, card_type: CardType, rarity: Rarity, target=TargetType.NOTHING, energy_cost=-1, upgradeable=True):
+        self.uid = uuid4()
+        self.name = name
+        self.info = info
+        self.player_class = player_class
+        self.card_type = card_type
+        self.rarity = rarity
+        self.target = target
+        self.base_energy_cost = energy_cost
+        self.energy_cost = energy_cost
+        self.upgradeable = upgradeable
+        self.upgrade_preview = f"{self.get_name()} -> <green>{self.name}+</green> | "
+        self.reset_energy_next_turn = False
+
+    def changed_energy(self):
+        return self.base_energy_cost != self.energy_cost
+
+    def is_upgradeable(self):
+        return not self.upgraded and (self.name == "Burn" or self.type not in (CardType.STATUS, CardType.CURSE))
+
+    def get_name(self):
+        return f"<{self.rarity.lower()}>{self.name}</{self.rarity.lower()}"
+
+    def pretty_print(self):
+        return f"""{self.get_name()} | <{self.card_type.lower()}>{self.card_type}</{self.card_type.lower()}>{f' | <light-red>{"<green>" if self.changed_energy() else ""}{self.energy_cost}{"</green>" if self.changed_energy() else ""} Energy</light-red>' if self.energy_cost >= 0 else ''} | <yellow>{self.info}</yellow>"""
+
+    def modify_energy_cost(self, amount, modify_type='Adjust', temporary=False):
+        assert modify_type in ("Adjust", "Set"), "Argument modify_type has to be either 'Adjust' or 'Set'."
+
+        if not (modify_type == 'Set' and amount != self.energy_cost) or not (modify_type == 'Adjust' and amount != 0):
+            pass
+        if modify_type == 'Adjust':
+            self.energy_cost += amount
+            ansiprint(f"{self.get_name()}'s Energy was {'<green>reduced</green>' if amount < 0 else '<red>increased</red>'} by {abs(amount)}")
+        elif modify_type == 'Set':
+            self.energy_cost = amount
+            ansiprint(f"{self.get_name}'s Energy was set to {amount}.'")
+        self.reset_energy_next_turn = temporary
+
+    def modify_damage(self, amount, modify_type, context, permanent=False):
+        assert getattr(self, 'damage', None) is not None, "Card must have a damage value initialized."
+        assert modify_type in ("Adjust", "Set"), "Argument modify_type has to be either 'Adjust' or 'Set'."
+
+        if modify_type == 'Adjust':
+            if permanent:
+                self.base_damage += amount
+                self.damage += amount
+            else:
+                self.damage += amount
+            ansiprint(f"{self.get_name()}'s damage was {'<red>decreased</red>' if amount < 0 else '<green>increased</green>'} by {abs(amount)} because of {context}.")
+        elif modify_type == 'Set':
+            if permanent:
+                self.base_damage += amount
+                self.damage = amount
+            else:
+                self.damage = amount
+            ansiprint(f"{self.get_name()}'s damage was set to {amount} by {context}.")
+        self.damage_affected_by.append(context)
+
+    def modify_block(self, amount, modify_type, context, permanent=False):
+        assert getattr(self, 'block', None) is not None, "Card must have a block value initialized."
+        assert modify_type in ("Adjust", "Set"), "Argument modify_type has to be either 'Adjust' or 'Set'."
+
+        if modify_type == 'Adjust':
+            if permanent:
+                self.base_block += amount
+                self.block += amount
+            else:
+                self.block += amount
+            ansiprint(f"{self.get_name()}'s <keyword>Block</keyword> was {'<red>decreased</red>' if amount < 0 else '<green>increased</green>'} by {amount} because of {context}.")
+        elif modify_type == 'Set':
+            if permanent:
+                self.base_block += amount
+                self.block = amount
+            else:
+                self.block = amount
+            ansiprint(f"{self.get_name()}'s <keyword>Block</keyword> was set to {amount} by {context}.")
+        self.block_affected_by.append(context)
+
+class Relic(Registerable):
+    def __init__(self, name, info, flavor_text, rarity: Rarity, player_class=PlayerClass.ANY):
+        self.uid = uuid4()
+        self.name = name
+        self.info = info
+        self.flavor_text = flavor_text
+        self.rarity = rarity
+        self.player_class = player_class
+
+    def get_name(self):
+        return f"<{self.rarity.lower()}>{self.name}</{self.rarity.lower()}>"
+
+    def pretty_print(self):
+        color_map = {"Ironclad": 'red', "Silent": 'dark_green', "Defect": 'true-blue', "Watcher": 'watcher_purple', "Any": 'white'}
+        class_color = color_map[self.player_class]
+        return f"{self.get_name()} | <yellow>{self.info}</yellow> | <dark_blue><italic>{self.flavor_text}</italic></dark_blue>{f' | <{class_color}>{self.player_class}</{class_color}>' if self.player_class != PlayerClass.ANY else ''}"
+
+class Potion(Registerable):
+    registers = [Message.ON_RELIC_ADD]
+    def __init__(self, name, info, rarity: Rarity, target_type: TargetType, player_class=PlayerClass.ANY):
+        self.uid = uuid4()
+        self.name = name
+        self.info = info
+        self.rarity = rarity
+        self.target_type = target_type
+        self.player_class = player_class
+        self.playable = True
+        self.golden_stats = []
+        self.golden_info = ""
+
+    def get_name(self):
+        return f"<{self.rarity.lower()}>{self.name}</{self.rarity.lower()}>"
+
+    def pretty_print(self):
+        color_map = {"Ironclad": 'red', "Silent": 'dark_green', "Defect": 'true-blue', "Watcher": 'watcher_purple', "Any": 'white'}
+        class_color = color_map[self.player_class]
+        return f"{self.get_name()} | <yellow>{self.info}</yellow>{f' | <{class_color}>{self.player_class}</{class_color}>' if self.player_class != PlayerClass.ANY else ''}"
+
+    def callback(self, message, data):
+        if message == Message.ON_RELIC_ADD:
+            relic = data
+            if relic.name == "Golden Bark":
+                self.info = self.golden_info
+                for stat in self.golden_stats:
+                    stat *= 2
 
 def modify_energy_cost(amount: int, modify_type: str, card: dict):
     assert modify_type in ('Set', 'Adjust'), f"modify_type must be 'Set' or 'Adjust', not {modify_type}"
