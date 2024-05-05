@@ -1,11 +1,92 @@
 import random
 from copy import deepcopy
 from time import sleep
+from uuid import uuid4
 
 from ansi_tags import ansiprint
-from definitions import CardType, Rarity, TargetType
+from definitions import CardType, Rarity, TargetType, PlayerClass
+from message_bus import Registerable
 from helper import ei, view
 
+
+class Card(Registerable):
+    def __init__(self, name, info, rarity: Rarity, player_class: PlayerClass, card_type: CardType, target: TargetType=TargetType.NOTHING, energy_cost=-1, upgradeable=True):
+        self.uid = uuid4()
+        self.name: str = name
+        self.info: str = info
+        self.rarity = rarity
+        self.player_class = player_class
+        self.card_type = card_type
+        self.target = target
+        self.base_energy_cost: int = energy_cost
+        self.energy_cost: int = energy_cost
+        self.upgraded = False
+        self.upgradeable = upgradeable
+        self.removable = True
+        self.upgrade_preview = f"{self.name} => <green>{self.name}</green> | "
+        self.reset_energy_next_turn = False
+
+    def is_upgradeable(self):
+        return not self.upgraded and (self.name == "Burn" or self.type not in (CardType.STATUS, CardType.CURSE))
+
+    def has_energy_changed(self):
+        return self.base_energy_cost != self.energy_cost
+
+    def get_name(self):
+        rarity_color = self.rarity.lower()
+        return f"<{rarity_color}>{self.name}</{rarity_color}>"
+
+    def pretty_print(self):
+        return f"""{self.get_name()} | <{self.card_type.lower()}>{self.card_type}</{self.card_type.lower()}>{f' | <light-red>{"</green>" if self.has_energy_changed() else ""}{self.energy_cost}{"</green>" if self.has_energy_changed() else ""} Energy</light-red>' if self.energy > -1 else ""} | <yellow>{self.info}</yellow>"""
+
+    def upgrade_markers(self):
+        self.info += "<green>+</green>"
+        self.upgraded = True
+
+    def modify_energy_cost(self, amount, context:str, modify_type='Adjust', one_turn=False):
+        assert modify_type in ("Adjust", "Set"), "Argument modify_type can only be equal to either 'Adjust' or 'Set'."
+        if not (modify_type == 'Set' and amount != self.energy_cost) or not (modify_type == 'Adjust' and amount != 0):
+            return
+        if modify_type == 'Adjust':
+            self.energy_cost += amount
+            ansiprint(f"{self.get_name()} had its energy cost {'<green>reduced</green>' if amount < 0 else "<red>increased</red>"} by {amount:+d} from {context}")
+        elif modify_type == 'Set':
+            self.energy_cost = amount
+            ansiprint(f"{self.get_name()}'s energy was set to {amount}.")
+        if one_turn:
+            self.reset_energy_next_turn = True
+
+    def modify_damage(self, amount, context: str, modify_type: str='Adjust', permanent=False):
+        assert modify_type in ("Adjust", "Set"), "Argument modify_type can only be equal to either 'Adjust' or 'Set'."
+        if not (modify_type == 'Set' and amount != self.damage) or not (modify_type == 'Adjust' and amount != 0):
+            return
+
+        if modify_type == 'Adjust':
+            if permanent:
+                self.base_damage += amount
+            self.damage += amount
+            ansiprint(f"{self.get_name()} had its damage {'<red>reduced</red>' if amount < 0 else '<green>increased</green>'} by {amount:+d} from {context}.")
+        elif modify_type == 'Set':
+            if permanent:
+                self.base_damage = amount
+            self.damage = amount
+            ansiprint(f"{self.get_name()}'s damage was set to {amount} by {context}.")
+
+    def modify_block(self, amount, context: str, modify_type: str='Adjust', permanent=False):
+        assert modify_type in ("Adjust", "Set"), "Argument modify_type can only be equal to either 'Adjust' or 'Set'."
+        if not (modify_type == 'Set' and amount != self.block) or not (modify_type == 'Adjust' and amount != 0):
+            return
+
+        if modify_type == 'Adjust':
+            if permanent:
+                self.base_block += amount
+            self.block += amount
+            ansiprint(f"{self.get_name()} had its <keyword>Block</keyword> {'<red>reduced</red>' if amount < 0 else '<green>increased</green>'} by {amount:+d} from {context}.")
+        elif modify_type == 'Set':
+            if permanent:
+                self.base_block = amount
+            self.block = amount
+            ansiprint(f"{self.get_name()}'s <keyword>Block</keyword> was set to {amount} by {context}.")
 
 def modify_energy_cost(amount: int, modify_type: str, card: dict):
     assert modify_type in ('Set', 'Adjust'), f"modify_type must be 'Set' or 'Adjust', not {modify_type}"

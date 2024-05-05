@@ -1,5 +1,11 @@
 from enum import StrEnum, auto
 
+class PlayerClass(StrEnum):
+    IRONCLAD = 'Ironclad'
+    SILENT = 'Silent'
+    DEFECT = 'Defect'
+    WATCHER = 'Watcher'
+
 class CombatTier(StrEnum):
     NORMAL = 'Normal'
     ELITE = 'Elite'
