@@ -5,6 +5,7 @@ class PlayerClass(StrEnum):
     SILENT = 'Silent'
     DEFECT = 'Defect'
     WATCHER = 'Watcher'
+    ANY = 'Any'
 
 class CombatTier(StrEnum):
     NORMAL = 'Normal'

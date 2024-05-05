@@ -88,6 +88,9 @@ class Card(Registerable):
             self.block = amount
             ansiprint(f"{self.get_name()}'s <keyword>Block</keyword> was set to {amount} by {context}.")
 
+class Relic(Registerable):
+    def __init__(self, name, info, flavor_text, rarity: Rarity, player_class: PlayerClass=PlayerClass.ANY)
+
 def modify_energy_cost(amount: int, modify_type: str, card: dict):
     assert modify_type in ('Set', 'Adjust'), f"modify_type must be 'Set' or 'Adjust', not {modify_type}"
     if card.get("Energy") is None:
