@@ -5,7 +5,7 @@ from uuid import uuid4
 
 from ansi_tags import ansiprint
 from definitions import CardType, Rarity, TargetType, PlayerClass
-from message_bus import Registerable
+from message_bus import Message, Registerable
 from helper import ei, view
 
 
@@ -103,6 +103,36 @@ class Relic(Registerable):
 
     def pretty_print(self):
         return f"{self.get_name()} | <yellow>{self.info}</yellow> | <italic><dark-blue>{self.flavor_text}</dark-blue></italic>"
+
+class Potion(Registerable):
+    registers = [Message.ON_RELIC_ADD]
+    def __init__(self, name, info, rarity: Rarity, target: TargetType, player_class: PlayerClass=PlayerClass.ANY):
+        self.uid = uuid4()
+        self.name: str = name
+        self.info: str = info
+        self.rarity = rarity
+        self.target = target
+        self.player_class = player_class
+        self.playable = True
+        self.golden_stats = []
+        self.golden_info = ""
+
+    def get_name(self):
+        rarity_color = self.rarity.lower()
+        return f"<{rarity_color}>{self.name}</{self.rarity}>"
+
+    def pretty_print(self):
+        color_map = {'Ironclad': 'red', 'Silent': 'dark-green', 'Defect': 'true-blue', 'Watcher': 'watcher-purple', 'Any': 'white'}
+        class_color = color_map[self.player_class]
+        return f"{self.get_name()} | <yellow>{self.info}</yellow>{f' | <{class_color}>{self.player_class}</{class_color}>' if self.player_class != PlayerClass.ANY else ''}"
+
+    def callback(self, message, data):
+        if message == Message.ON_RELIC_ADD:
+            _, relic = data
+            if relic.name == 'Golden Bark':
+                self.info = self.golden_info if self.golden_info else self.info
+                for stat in self.golden_stats:
+                    stat *= 2
 
 def modify_energy_cost(amount: int, modify_type: str, card: dict):
     assert modify_type in ('Set', 'Adjust'), f"modify_type must be 'Set' or 'Adjust', not {modify_type}"
