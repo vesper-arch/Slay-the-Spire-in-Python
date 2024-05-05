@@ -89,7 +89,20 @@ class Card(Registerable):
             ansiprint(f"{self.get_name()}'s <keyword>Block</keyword> was set to {amount} by {context}.")
 
 class Relic(Registerable):
-    def __init__(self, name, info, flavor_text, rarity: Rarity, player_class: PlayerClass=PlayerClass.ANY)
+    def __init__(self, name, info, flavor_text, rarity: Rarity, player_class: PlayerClass=PlayerClass.ANY):
+        self.uid = uuid4()
+        self.name: str = name
+        self.info: str = info
+        self.flavor_text: str = flavor_text
+        self.rarity = rarity
+        self.player_class = player_class
+
+    def get_name(self):
+        rarity_color = self.rarity.lower()
+        return f"<{rarity_color}>{self.name}</{rarity_color}>"
+
+    def pretty_print(self):
+        return f"{self.get_name()} | <yellow>{self.info}</yellow> | <italic><dark-blue>{self.flavor_text}</dark-blue></italic>"
 
 def modify_energy_cost(amount: int, modify_type: str, card: dict):
     assert modify_type in ('Set', 'Adjust'), f"modify_type must be 'Set' or 'Adjust', not {modify_type}"
