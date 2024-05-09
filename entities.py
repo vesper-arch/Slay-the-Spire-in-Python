@@ -151,9 +151,9 @@ class Player:
         if pile is not None:
             if exhaust is True or card.get('Exhaust') is True:
                 ansiprint(f"{card['Name']} was <bold>Exhausted</bold>.")
-                self.move_card(card=card, move_to=self.exhaust_pile, from_location=pile, cost_energy=True)
+                self.move_card(card=card, destination=self.exhaust_pile, start=pile, cost_energy=True)
             else:
-                self.move_card(card=card, move_to=self.discard_pile, from_location=pile, cost_energy=True)
+                self.move_card(card=card, destination=self.discard_pile, start=pile, cost_energy=True)
         if target.buffs["Sharp Hide"] > 0:
             target.attack(target.buffs["Sharp Hide"], 1)
         sleep(0.5)
@@ -396,22 +396,22 @@ class Player:
         sleep(1.5)
         view.clear()
 
-    def move_card(self, card, move_to, from_location, cost_energy, shuffle=False):
+    def move_card(self, card, destination, start, cost_energy=False, shuffle=False):
         if cost_energy is True:
             self.energy -= card['Energy'] if isinstance(card['Energy'], int) else 0
-        from_location.remove(card)
+        start.remove(card)
         if shuffle is True:
-            move_to.insert(random.randint(0, len(move_to) - 1), card)
+            destination.insert(random.randint(0, len(destination) - 1), card)
         else:
-            move_to.append(card)
-        if self.buffs["Dark Embrace"] > 0 and move_to == self.exhaust_pile:
+            destination.append(card)
+        if self.buffs["Dark Embrace"] > 0 and destination == self.exhaust_pile:
             ansiprint("<bold>Dark Embrace</bold> allows you to draw 1 card to your hand.")
             self.draw_cards(True, 1)
-        if relics['Dead Branch'] in self.relics and move_to == self.exhaust_pile:
+        if relics['Dead Branch'] in self.relics and destination == self.exhaust_pile:
             random_card = deepcopy(random.choice([card for card in cards.values() if card.get('Upgraded') is not True and card.get('Class') == self.player_class]))
             ansiprint(f"<bold>Dead Branch</bold> allows you to draw a <bold>{random_card['Name']}</bold> card to your hand.")
             self.hand.append(random_card)
-        if relics["Charon's Ashes"] in self.relics and move_to == self.exhaust_pile:
+        if relics["Charon's Ashes"] in self.relics and destination == self.exhaust_pile:
             for enemy in active_enemies:
                 self.attack(3, enemy)
 

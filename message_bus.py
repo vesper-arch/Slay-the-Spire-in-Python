@@ -9,7 +9,9 @@ class Message(StrEnum):
     END_OF_COMBAT = 'end_of_combat'
     START_OF_TURN = 'start_of_turn'
     END_OF_TURN = 'end_of_turn'
+    ON_CARD_PLAY = 'on_card_play'
     ON_RELIC_ADD = 'on_relic_add'
+    ON_PLAYER_HURT = 'on_player_hurt'
 
 class MessageBus:
     '''

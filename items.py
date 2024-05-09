@@ -310,6 +310,95 @@ class BattleTrance(Card):
     def apply(self, origin):
         origin.draw_cards(cards=self.cards)
 
+class BloodForBlood(Card):
+    '''Costs 1 less Energy for each time you lose HP in combat. Deal 18(22) damage.'''
+    registers = [Message.ON_PLAYER_HURT]
+    def __init__(self):
+        super().__init__("Blood for Blood", "Costs 1 less <keyword>Energy</keyword> for each time you lose HP in combat. Deal 18 damage.", Rarity.UNCOMMON, PlayerClass.IRONCLAD, CardType.ATTACK, TargetType.SINGLE, 4)
+        self.base_damage, self.damage = 18
+        self.damage_affected_by = [f"{self.get_name()}({self.damage} dmg)"]
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Costs 1 less <keyword>Energy</keyword> for each time you lose HP in combat. Deal <green>22</green> damage.</yellow>"
+
+    def upgrade(self):
+        self.upgrade_markers()
+        self.base_damage, self.damage = 22
+        self.info = "Costs 1 less <keyword>Energy</keyword> for each time you lose HP in combat. Deal 22 damage."
+
+    def apply(self, origin, target):
+        origin.attack(target, self)
+
+    def callback(self, message, data):
+        if message == Message.ON_PLAYER_HURT:
+            _ = data
+            self.modify_energy_cost(-1, "Blood for Blood")
+
+class Bloodletting(Card):
+    '''Lose 3 HP. Gain 2(3) Energy.'''
+    def __init__(self):
+        super().__init__("Bloodletting", "Lose 3 HP. Gain 2 <keyword>Energy</keyword>.", Rarity.UNCOMMON, PlayerClass.IRONCLAD, CardType.SKILL, TargetType.YOURSELF, 0)
+        self.energy_gain = 2
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Lose 3 HP. Gain <green>3</green> <keyword>Energy</keyword>.</yellow>"
+
+    def upgrade(self):
+        self.upgrade_markers()
+        self.energy_gain = 3
+        self.info = "Lose 3 HP. Gain 3 <keyword>Energy</keyword>."
+
+    def apply(self, origin):
+        origin.take_sourceless_dmg(3)
+        origin.energy += 3
+
+class BurningPact(Card):
+    '''Exhaust 1 card. Draw 2(3) cards.'''
+    def __init__(self):
+        super().__init__("Burning Pact", "<keyword>Exhaust</keyword> 1 card. Draw 2 cards.", Rarity.UNCOMMON, PlayerClass.IRONCLAD, CardType.SKILL, TargetType.YOURSELF, 1)
+        self.cards = 2
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow><keyword>Exhaust</keyword> 1 card. Draw <green>3</green> cards.</yellow>"
+
+    def upgrade(self):
+        self.upgrade_markers()
+        self.cards = 3
+        self.info = "<keyword>Exhaust</keyword> 1 card. Draw 2 cards."
+
+    def apply(self, origin):
+        option = view.list_input("Choose a card to <keyword>Exhaust</keyword>", origin.hand, view.view_piles)
+        origin.move_card(origin.hand[option], origin.exhaust_pile, origin.hand)
+
+class Carnage(Card):
+    '''Ethereal. Deal 20(28) damage.'''
+    def __init__(self):
+        super().__init__("Carnage", "<keyword>Ethereal</keyword>. Deal 20 damage.", Rarity.UNCOMMON, PlayerClass.IRONCLAD, CardType.ATTACK, TargetType.SINGLE, 2)
+        self.base_damage, self.damage = 20
+        self.damage_affected_by = [f"{self.get_name()}({self.damage} dmg)"]
+        self.ethereal = True
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow><keyword>Ethereal</keyword>. Deal <green>28</green> damage.</yellow>"
+
+    def upgrade(self):
+        self.upgrade_markers()
+        self.base_damage, self.damage = 28
+        self.info = "<keyword>Ethereal</keyword>. Deal 28 damage."
+
+    def apply(self, origin, target):
+        origin.attack(target, self)
+
+class Combust(Card):
+    '''At the end of your turn, lose 1 HP and deal 5(7) damage to ALL enemies.'''
+    def __init__(self):
+        super().__init__("Combust", "At the end of your turn, lose 1 HP and deal 5 damage to ALL enemies.", Rarity.UNCOMMON, PlayerClass.IRONCLAD, CardType.POWER, TargetType.YOURSELF, 1)
+        self.combust = 5
+        self.times_played = 0
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>At the end of your turn, lose 1 HP and deal <green>7</green> damage to ALL enemies.</yellow>"
+
+    def upgrade(self):
+        self.upgrade_markers()
+        self.combust = 7
+        self.info = "At the end of your turn, lose 1 HP and deal 7 damage to ALL enemies."
+
+    def apply(self, origin):
+        ei.apply_effect(origin, None, "Combust", self.combust)
+        self.times_played += 1
+        origin.take_sourceless_dmg(self.times_played)
+
 def use_bodyslam(targeted_enemy, using_card, entity):
     '''Deals damage equal to your Block. Exhaust.(Don't Exhaust)'''
     entity.attack(dmg=entity.block, target=targeted_enemy, card=using_card)
@@ -580,12 +669,12 @@ def use_infernalblade(using_card, entity):
     '''Add a random Attack into your hand. It costs 0 this turn. Exhaust.'''
     _ = using_card
     valid_cards = [card for card in cards.values() if card.get('Type') == 'Attack' and card.get('Class') == entity.player_class]
-    entity.hand.append(modify_energy_cost(0, 'Set', deepcopy(random.choice(valid_cards))))
+    entity.hand.append(random.choice(valid_cards).modify_energy_cost(0, 'Set'))
 
 def use_chrysalis(using_card, entity):
     '''Add 3(5) random Skills into your hand. They cost 0 this turn. Exhaust.'''
     valid_cards = [card for card in cards.values() if card.get('Type') == CardType.SKILL and card.get('Class') == entity.player_class]
-    entity.hand.append(modify_energy_cost(amount=0, modify_type='Set', card=deepcopy(random.choice(valid_cards))))
+    entity.hand.append(random.choice(valid_cards).modify_energy_cost(amount=0, modify_type='Set'))
 
 def use_discovery(using_card, entity):
     '''Choose 1 of 3 random cards to add to your hand. It costs 0 this turn. Exhaust. (Don't Exhaust.)'''
@@ -993,11 +1082,11 @@ relics: dict[str: dict] = {
 }
 cards = {
     # Ironclad cards
-    'Strike': {'Name': 'Strike', 'Damage': 6, 'Energy': 1, 'Rarity': 'Basic', 'Target': 'Single', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ6 damage.', 'Effects+': {'Damage': 9, 'Info': 'Deal Σ9 damage.'}, 'Function': use_strike},
+    'Strike': {'Name': 'Strike', 'Damage': 6, 'Energy': 1, 'Rarity': 'Basic', 'Target': 'Single', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ6 damage.', 'Effects+': {'Damage': 9, 'Info': 'Deal Σ9 damage.'}, 'Function': None},
 
-    'Defend': {'Name': 'Defend', 'Block': 5, 'Energy': 1, 'Target': 'Yourself', 'Rarity': 'Basic', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Gain Ω5 <keyword>Block</keyword>.', 'Effects+': {'Block': 8, 'Info': 'Gain Ω8 <keyword>Block</keyword>'}, 'Function': use_defend},
+    'Defend': {'Name': 'Defend', 'Block': 5, 'Energy': 1, 'Target': 'Yourself', 'Rarity': 'Basic', 'Type': 'Skill', 'Class': 'Ironclad', 'Info': 'Gain Ω5 <keyword>Block</keyword>.', 'Effects+': {'Block': 8, 'Info': 'Gain Ω8 <keyword>Block</keyword>'}, 'Function': None},
 
-    'Bash': {'Name': 'Bash', 'Damage': 8, 'Vulnerable': 2, 'Energy': 2, 'Target': 'Single', 'Rarity': 'Basic', 'Class': 'Ironclad', 'Type': 'Attack', 'Info': 'Deal Σ8 damage. Apply 2 <debuff>Vulnerable</debuff>', 'Effects+': {'Damage': 10, 'Vulnerable': 3, 'Info': 'Deal Σ10 damage. Apply 3 <debuff>Vulnerable</debuff>'}, 'Function': use_bash},
+    'Bash': {'Name': 'Bash', 'Damage': 8, 'Vulnerable': 2, 'Energy': 2, 'Target': 'Single', 'Rarity': 'Basic', 'Class': 'Ironclad', 'Type': 'Attack', 'Info': 'Deal Σ8 damage. Apply 2 <debuff>Vulnerable</debuff>', 'Effects+': {'Damage': 10, 'Vulnerable': 3, 'Info': 'Deal Σ10 damage. Apply 3 <debuff>Vulnerable</debuff>'}, 'Function': None},
 
     'Anger': {'Name': 'Anger', 'Damage': 6, 'Energy': 0,  'Target': 'Single', 'Rarity': 'Common', 'Type': 'Attack', 'Class': 'Ironclad', 'Info': 'Deal Σ6 damage. Add a copy of this card to your discard pile.', 'Effects+': {'Damage': 8, 'Info': 'Deal Σ8 damage. Add a copy of this card to your discard pile.'}, 'Function': use_anger},
 
