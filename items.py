@@ -58,6 +58,8 @@ class Card(Registerable):
 
     def modify_damage(self, amount, context: str, modify_type: str='Adjust', permanent=False):
         assert modify_type in ("Adjust", "Set"), "Argument modify_type can only be equal to either 'Adjust' or 'Set'."
+        assert bool(getattr(self, 'damage', None)) is True, f"Attempted to call modify damage on {self.get_name()}, which doesn't have damage values."
+
         if not (modify_type == 'Set' and amount != self.damage) or not (modify_type == 'Adjust' and amount != 0):
             return
 
@@ -74,6 +76,8 @@ class Card(Registerable):
 
     def modify_block(self, amount, context: str, modify_type: str='Adjust', permanent=False):
         assert modify_type in ("Adjust", "Set"), "Argument modify_type can only be equal to either 'Adjust' or 'Set'."
+        assert bool(getattr(self, 'block', None)) is True, f"Attempted to call modify_block on {self.get_name()}, which doesn't have block values."
+
         if not (modify_type == 'Set' and amount != self.block) or not (modify_type == 'Adjust' and amount != 0):
             return
 
@@ -134,37 +138,177 @@ class Potion(Registerable):
                 for stat in self.golden_stats:
                     stat *= 2
 
-def modify_energy_cost(amount: int, modify_type: str, card: dict):
-    assert modify_type in ('Set', 'Adjust'), f"modify_type must be 'Set' or 'Adjust', not {modify_type}"
-    if card.get("Energy") is None:
-        ansiprint("<red>This card is not playable and therefore its energy cannot be changed.</red>")
-        return
-    if (modify_type == 'Set' and amount != card['Energy']) or (modify_type == 'Adjust' and amount != 0):
-        card['Changed Energy'] = True
-    if modify_type == 'Set':
-        card['Energy'] = amount
-        ansiprint(f"{card['Name']} has its energy cost set to {amount}")
-    elif modify_type == 'Adjust':
-        card['Energy'] += amount
-        ansiprint(f"{card['Name']} got its energy cost {'<green>reduced</green>' if amount < 0 else '<red>increased</red>'} by {abs(amount)}")
-    return card
+class IroncladStrike(Card):
+    '''Deal 6(9) damage.'''
+    def __init__(self):
+        super().__init__("Strike", "Deal 6 damage.", Rarity.BASIC, PlayerClass.IRONCLAD, CardType.ATTACK, TargetType.SINGLE, 1)
+        self.base_damage, self.damage = 6
+        self.damage_affected_by = [f"{self.get_name()}({self.damage} dmg)"]
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Deal <green>9</green> damage.</yellow>"
 
-def use_strike(targeted_enemy: object, using_card, entity):
-    '''Deals 6(9) damage.'''
-    entity.attack(using_card['Damage'], targeted_enemy, using_card)
+    def upgrade(self):
+        self.upgrade_markers()
+        self.base_damage, self.damage = 9
+        self.info = "Deal 9 damage."
 
+    def apply(self, origin, target):
+        origin.attack(target, self)
 
-def use_bash(targeted_enemy: object, using_card, entity):
-    '''Deals 8(10) damage. Apply 2(3) Vulnerable'''
-    print()
-    entity.attack(using_card['Damage'], targeted_enemy, using_card)
-    ei.apply_effect(targeted_enemy, entity, 'Vulnerable', using_card['Vulnerable'])
+class IroncladDefend(Card):
+    '''Gain 5(8) Block.'''
+    def __init__(self):
+        super().__init__("Defend", "Gain 5 <keyword>Block</keyword>.", Rarity.BASIC, PlayerClass.IRONCLAD, CardType.SKILL, TargetType.YOURSELF, 1)
+        self.base_block, self.block = 5
+        self.block_affected_by = [f"{self.get_name()}({self.block} block)"]
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Gain <green>8</green> <keyword>Block</keyword>.</yellow>"
 
+    def upgrade(self):
+        self.upgrade_markers()
+        self.base_block, self.block = 8
+        self.info = "Gain 8 <keyword>Block</keyword>."
 
-def use_defend(using_card, entity):
-    '''Gain 5(8) Block'''
-    entity.blocking(using_card['Block'])
+    def apply(self, origin):
+        origin.blocking(card=self)
 
+class Bash(Card):
+    '''Deal 8(10) damage. Apply 2(3) Vulnerable.'''
+    def __init__(self):
+        super().__init__("Bash", "Deal 8 damage. Apply 2 <debuff>Vulnerable</debuff>.", Rarity.BASIC, PlayerClass.IRONCLAD, CardType.ATTACK, TargetType.SINGLE, 2)
+        self.base_damage, self.damage = 8
+        self.vulnerable = 2
+        self.damage_affected_by = [f"{self.get_name()}({self.damage} dmg)"]
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Deal <green>10</green> damage. Apply <green>3</green> <debuff>Vulnerable</debuff>.</yellow>"
+
+    def upgrade(self):
+        self.upgrade_markers()
+        self.base_damage, self.damage = 10
+        self.vulnerable = 3
+        self.info = "Deal 10 damage. Apply 3 <debuff>Vulnerable</debuff>."
+
+    def apply(self, origin, target):
+        origin.attack(target, self)
+        ei.apply_effect(target, origin, "Vulnerable", self.vulnerable)
+
+class Anger(Card):
+    '''Deal 6(8) damage. Add a copy of this card to your discard pile.'''
+    def __init__(self):
+        super().__init__("Anger", "Deal 6 damage. Add a copy of this card to your discard pile.", Rarity.COMMON, PlayerClass.IRONCLAD, CardType.ATTACK, TargetType.SINGLE, 0)
+        self.base_damage, self.damage = 6
+        self.damage_affected_by = [f"{self.get_name()}({self.damage} dmg)"]
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Deal <green>8</green> damage. Add a copy of this card to your discard pile.</yellow>"
+
+    def upgrade(self):
+        self.upgrade_markers()
+        self.base_damage, self.damage = 8
+        self.info = "Deal 8 damage. Add a copy of this card to your discard pile."
+
+    def apply(self, origin, target):
+        origin.attack(target, self)
+        origin.discard_pile.append(self)
+
+class Armaments(Card):
+    '''Gain 5 Block. Upgrade a(ALL) card(s) in your hand for the rest of combat.'''
+    def __init__(self):
+        super().__init__("Armaments", "Gain 5 <keyword>Block</keyword>. Upgrade a card in your hand for the rest of combat.", Rarity.COMMON, PlayerClass.IRONCLAD, CardType.SKILL, TargetType.YOURSELF, 1)
+        self.base_block, self.block = 5
+        self.block_affected_by = [f"{self.get_name()}({self.block} block)"]
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Gain 5 <keyword>Block</keyword>. Upgrade <green>ALL cards</green> in your hand for the rest of combat.</yellow>"
+
+    def upgrade(self):
+        self.upgrade_markers()
+        self.info = "Gain 5 <keyword>Block</keyword>. Upgrade ALL cards in your hand for the rest of combat."
+
+    def apply(self, origin):
+        origin.blocking(card=self)
+        if self.upgraded:
+            for card in origin.hand:
+                card.upgrade()
+        else:
+            option = view.list_input("Choose a card to <keyword>Upgrade</keyword>", origin.hand, view.view_piles, lambda card: card.is_upgradeable, "That card is either not upgradeable or is already upgraded.")
+            origin.hand[option].upgrade()
+
+class BodySlam(Card):
+    '''Deal damage equal to your current Block.'''
+    def __init__(self):
+        super().__init__("Body Slam", "Deal damage equal to your current <keyword>Block</keyword>.", Rarity.COMMON, PlayerClass.IRONCLAD, CardType.ATTACK, TargetType.SINGLE, 1)
+        self.base_damage, self.damage = 0
+        self.damage_affected_by = [f"{self.get_name()}({self.damage} dmg)"]
+        self.upgrade_preview += f"<light-red>{self.energy_cost} Energy</light-red> -> <light-red><green>0</green> Energy</light-red>"
+
+    def upgrade(self):
+        self.upgrade_markers()
+        self.energy_cost = 0
+
+    def apply(self, origin, target):
+        self.damage = origin.block
+        origin.attack(target, self)
+
+class Clash(Card):
+    '''Can only be played if every card in your hand is an Attack. Deal 14 damage.'''
+    def __init__(self):
+        super().__init__("Clash", "Can only be played if every card in your hand is an <keyword>Attack</keyword>. Deal 14 damage.", Rarity.COMMON, PlayerClass.IRONCLAD, CardType.ATTACK, TargetType.SINGLE, 0)
+        self.base_damage, self.damage = 14
+        self.damage_affected_by = [f"{self.get_name()}({self.damage} dmg)"]
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Can only be played if every card in your hand is an <keyword>Attack</keyword>. Deal <green>18</green>.</yellow>"
+
+    def upgrade(self):
+        self.upgrade_markers()
+        self.base_damage, self.damage = 18
+        self.info = "Can only be played if every card in your hand is an <keyword>Attack</keyword>. Deal 18 damage."
+
+    def apply(self, origin, target):
+        for card in origin.hand:
+            if card.card_type == CardType.ATTACK:
+                ansiprint("You have Attacks in your hand!")
+                return
+        origin.attack(target, self)
+
+class Cleave(Card):
+    '''Deal 8(11) damage to ALL enemies.'''
+    def __init__(self):
+        super().__init__("Cleave", "Deal 8 damage to ALL enemies.", Rarity.COMMON, PlayerClass.IRONCLAD, CardType.ATTACK, TargetType.AREA, 1)
+        self.base_damage, self.damage = 8
+        self.damage_affected_by = [f"{self.get_name()}({self.damage} dmg)"]
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Deal <green>11</green> damage to ALL enemies.</yellow>"
+
+    def upgrade(self):
+        self.upgrade_markers()
+        self.base_damage, self.damage = 11
+        self.info = "Deal 11 damage to ALL enemies."
+
+    def apply(self, origin, enemies):
+        for enemy in enemies:
+            origin.attack(enemy, self)
+
+class Clothesline(Card):
+    '''Deal 12(14) damage. Apply 2(3) Weak.'''
+    def __init__(self):
+        super().__init__("Clothesline", "Deal 12 damage. Apply 2 <debuff>Weak</debuff>.", Rarity.COMMON, PlayerClass.IRONCLAD, CardType.ATTACK, TargetType.SINGLE, 2)
+        self.base_damage, self.damage = 12
+        self.damage_affected_by = [f"{self.get_name()}({self.damage} dmg)"]
+        self.weak = 2
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Deal <green>14</green> damage. Apply <green>3</green> <debuff>Weak</debuff>.</yellow>"
+
+    def upgrade(self):
+        self.upgrade_markers()
+        self.base_damage, self.damage = 14
+        self.weak = 3
+        self.info = "Deal 14 damage. Apply 3 <debuff>Weak</debuff>."
+
+class BattleTrance(Card):
+    '''Draw 3(4) cards. You cannot draw additional cards this turn.'''
+    def __init__(self):
+        super().__init__("Battle Trance", "Draw 3 cards. You can't draw additional cards this turn.", Rarity.UNCOMMON, PlayerClass.IRONCLAD, CardType.SKILL, TargetType.YOURSELF, 0)
+        self.cards = 3
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Draw <green>4</green> cards. You can't draw additional cards this turn."
+
+    def upgrade(self):
+        self.upgrade_markers()
+        self.cards = 4
+        self.info = "Draw 4 cards. You can't draw additional cards this turn."
+
+    def apply(self, origin):
+        origin.draw_cards(cards=self.cards)
 
 def use_bodyslam(targeted_enemy, using_card, entity):
     '''Deals damage equal to your Block. Exhaust.(Don't Exhaust)'''

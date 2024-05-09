@@ -5,7 +5,7 @@ from time import sleep
 from ast import literal_eval
 from copy import deepcopy
 from ansi_tags import ansiprint
-from items import relics, cards, potions, modify_energy_cost, activate_sacred_bark
+from items import Card, relics, cards, potions, modify_energy_cost, activate_sacred_bark
 from helper import active_enemies, combat_turn, view, gen, ei
 from definitions import CombatTier
 
@@ -250,7 +250,7 @@ class Player:
             if self.letter_opener_skills == 3:
                 ansiprint("<bold>Letter Opener</bold> activated")
                 for enemy in active_enemies:
-                    self.attack(5, enemy)
+                    self.attack(enemy, dmg=5)
                 self.letter_opener_skills = 0
         if relics['Mummified Hand'] in self.relics and card.get('Type') == 'Power':
             ansiprint('<bold>Mummified Hand</bold> activated: ', end='')
@@ -276,21 +276,21 @@ class Player:
         if relics['Velvet Choker'] in self.relics:
             self.choker_cards_played += 1
 
-    def draw_cards(self, middle_of_turn: bool, draw_cards: int = 0):
+    def draw_cards(self, middle_of_turn: bool=True, cards: int = 0):
         '''Draws [draw_cards] cards.'''
-        if draw_cards == 0:
-            draw_cards = self.draw_strength
+        if cards == 0:
+            cards = self.draw_strength
         while True:
             if self.debuffs["No Draw"] is True:
                 print("You can't draw any more cards")
                 break
             if middle_of_turn is False:
-                draw_cards += self.buffs["Draw Up"]
+                cards += self.buffs["Draw Up"]
                 if relics['Bag of Preparation'] in self.relics:
-                    draw_cards += 2
+                    cards += 2
                 if relics['Ring of the Snake'] in self.relics:
-                    draw_cards += 2
-            if len(player.draw_pile) < draw_cards:
+                    cards += 2
+            if len(player.draw_pile) < cards:
                 player.draw_pile.extend(random.sample(player.discard_pile, len(player.discard_pile)))
                 player.discard_pile = []
                 if relics['Sundial'] in self.relics:
@@ -300,11 +300,11 @@ class Player:
                         self.energy += 2
                         self.draw_shuffles = 0
                 ansiprint("<bold>Discard pile shuffled into draw pile.</bold>")
-            self.hand.extend(player.draw_pile[-draw_cards:])
+            self.hand.extend(player.draw_pile[-cards:])
             # Removes those cards
-            player.draw_pile = player.draw_pile[:-draw_cards]
-            print(f"Drew {draw_cards} cards.")
-            for card in player.hand[-draw_cards:]:
+            player.draw_pile = player.draw_pile[:-cards]
+            print(f"Drew {cards} cards.")
+            for card in player.hand[-cards:]:
                 if card['Type'] in ('Status', 'Curse') and self.buffs['Fire Breathing'] > 0:
                     for enemy in active_enemies:
                         self.attack(self.buffs['Fire Breathing'], enemy)
@@ -313,9 +313,10 @@ class Player:
                     self.draw_cards(True, self.buffs['Evolve'])
             break
 
-    def blocking(self, block: int, card: bool = True):
+    def blocking(self, block: int=0, card: Card=None):
         '''Gains [block] Block. Cards are affected by Dexterity and Frail.'''
         block_affected_by = ''
+        block = block if not card else card.block
         if card:
             block += self.buffs["Dexterity"]
             if self.buffs["Dexterity"] > 0:
@@ -418,37 +419,13 @@ class Player:
         if cards['Burn'] in self.relics:
             self.take_sourceless_dmg(2)
 
-    def attack(self, dmg,  target: 'Enemy', card=None, ignore_block=False):
+    def attack(self, target: 'Enemy', card=None, dmg: int=0, ignore_block=False):
         dmg_affected_by: str = ''
+        dmg = dmg if not card else card.damage
         # Check if already dead and skip if so
         if target.health <= 0:
             return
-        if card is not None and card.get('Type') not in ('Status', 'Curse'):
-            dmg = dmg + self.buffs['Strength'] * card.get("Strength Multi", 1) + self.buffs['Vigor']
-            if relics['Strike Dummy'] in self.relics and 'strike' in card.get('Name').lower():
-                dmg += 3
-                dmg_affected_by += "<bold>Strike Dummy</bold>(+3 dmg) | "
-            if self.debuffs["Weak"] > 0 and card:
-                dmg = math.floor(dmg * 0.75)
-                dmg_affected_by += "<debuff>Weak</debuff>(x0.75 dmg) | "
-            if target.debuffs["Vulnerable"] > 0:
-                dmg = math.floor(dmg * (1.50 + 0 if relics['Paper Phrog'] not in self.relics else 0.25))
-                dmg_affected_by += f"<debuff>Vulnerable</debuff>(x{'1.5' if relics['Paper Phrog'] not in self.relics else '1.75'} dmg) | "
-            if self.buffs["Vigor"] > 0:
-                dmg_affected_by += f"{self.buffs['Vigor']} <buff>Vigor</buff>(+{self.buffs['Vigor']} dmg) | "
-            if self.buffs["Strength"] != 0:
-                dmg_affected_by += f"{'<buff>' if self.buffs['Strength'] < 0 else '<debuff>'}{self.buffs['Strength']}{'</buff>' if self.buffs['Strength'] < 0 else '</debuff>'} <buff>Strength</buff> | "
-                if "Heavy Blade" in card.get('Name'):
-                    dmg_affected_by += f"Heavy Blade(x{card.get('Strength Multi')} Strength gain) | "
-            if self.buffs["Pen Nib"] > 0:
-                dmg *= 2
-                dmg_affected_by += "<light-cyan>Pen Nib</light-cyan>(x2 dmg) | "
-            if self.buffs['Double Damage'] > 0:
-                dmg *= 2
-                dmg_affected_by += "<bold>Phantasmal Killer</bold>(x2 dmg) | "
-            if target.buffs['Intangible'] > 0:
-                dmg = 1
-                dmg_affected_by = "<buff>Intangible</buff>(ALL damage reduced to 1)"
+        if card is not None and card.get('Type') not in ('Status', 'Curse'):  # noqa: SIM102
             if not ignore_block:
                 if dmg <= target.block:
                     target.block -= dmg
@@ -467,13 +444,6 @@ class Player:
                     ansiprint(f"You dealt {dmg} damage(<light-blue>{target.block} Blocked</light-blue>) to {target.name}")
                     ansiprint(f"Affected by: \n{dmg_affected_by.rstrip(' | ') if dmg_affected_by else 'Nothing'}")
                     target.block = 0
-                    if target.buffs['Curl Up'] > 0:
-                        target.blocking(target.buffs['Curl Up'])
-                        target.buffs['Curl Up'] = 0
-                        ansiprint("<buff>Curl Up</buff> wears off.")
-                    if target.buffs.get('Split'):
-                        if target.name == 'Spike Slime (L)':
-                            target.next_move, target.intent = [("Split", "Split")], "<yellow>Unknown</yellow>"
                     if dmg_affected_by.count(" | ") > 0:
                         sleep(math.log(dmg_affected_by.count(" | "), 12) + 0.2)
                     if target.health <= 0:
@@ -494,6 +464,7 @@ class Player:
         while True:
             valid_cards = [card for card in self.deck if card.get("Type") == card_type]
             for possible_card in self.deck:
+                counter = 1
                 if possible_card in valid_cards:
                     ansiprint(f"{counter}: <blue>{possible_card['Name']}</blue> | <light-black>{possible_card['Type']}</light-black> | <light-red>{possible_card['Energy']} Energy</light-red> | <yellow>{possible_card['Info']}</yellow>")
                     counter += 1
