@@ -49,7 +49,7 @@ class Card(Registerable):
             return
         if modify_type == 'Adjust':
             self.energy_cost += amount
-            ansiprint(f"{self.get_name()} had its energy cost {'<green>reduced</green>' if amount < 0 else "<red>increased</red>"} by {amount:+d} from {context}")
+            ansiprint(f"{self.get_name()} had its energy cost {'<green>reduced</green>' if amount < 0 else '<red>increased</red>'} by {amount:+d} from {context}")
         elif modify_type == 'Set':
             self.energy_cost = amount
             ansiprint(f"{self.get_name()}'s energy was set to {amount}.")
