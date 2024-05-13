@@ -5,7 +5,7 @@ from time import sleep
 from ast import literal_eval
 from copy import deepcopy
 from ansi_tags import ansiprint
-from items import Card, relics, cards, potions, modify_energy_cost, activate_sacred_bark
+from items import Card, relics, cards, potions, activate_sacred_bark
 from helper import active_enemies, combat_turn, view, gen, ei
 from definitions import CombatTier
 
