@@ -413,7 +413,7 @@ class Player:
             self.hand.append(random_card)
         if relics["Charon's Ashes"] in self.relics and destination == self.exhaust_pile:
             for enemy in active_enemies:
-                self.attack(3, enemy)
+                self.attack(enemy, dmg=3)
 
     def curse_status_effects(self):
         if cards['Burn'] in self.relics:
