@@ -157,7 +157,7 @@ class IroncladStrike(Card):
 class IroncladDefend(Card):
     '''Gain 5(8) Block.'''
     def __init__(self):
-        super().__init__("Defend", "Gain 5 <keyword>Block</keyword>.", Rarity.BASIC, PlayerClass.IRONCLAD, CardType.SKILL, TargetType.YOURSELF, 1)
+        super().__init__("Defend", "Gain 5 <keyword>Block</keyword>.", Rarity.BASIC, PlayerClass.IRONCLAD, CardType.SKILL, TargetType.PLAYER, 1)
         self.base_block, self.block = 5
         self.block_affected_by = [f"{self.get_name()}({self.block} block)"]
         self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Gain <green>8</green> <keyword>Block</keyword>.</yellow>"
@@ -209,7 +209,7 @@ class Anger(Card):
 class Armaments(Card):
     '''Gain 5 Block. Upgrade a(ALL) card(s) in your hand for the rest of combat.'''
     def __init__(self):
-        super().__init__("Armaments", "Gain 5 <keyword>Block</keyword>. Upgrade a card in your hand for the rest of combat.", Rarity.COMMON, PlayerClass.IRONCLAD, CardType.SKILL, TargetType.YOURSELF, 1)
+        super().__init__("Armaments", "Gain 5 <keyword>Block</keyword>. Upgrade a card in your hand for the rest of combat.", Rarity.COMMON, PlayerClass.IRONCLAD, CardType.SKILL, TargetType.PLAYER, 1)
         self.base_block, self.block = 5
         self.block_affected_by = [f"{self.get_name()}({self.block} block)"]
         self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Gain 5 <keyword>Block</keyword>. Upgrade <green>ALL cards</green> in your hand for the rest of combat.</yellow>"
@@ -298,7 +298,7 @@ class Clothesline(Card):
 class BattleTrance(Card):
     '''Draw 3(4) cards. You cannot draw additional cards this turn.'''
     def __init__(self):
-        super().__init__("Battle Trance", "Draw 3 cards. You can't draw additional cards this turn.", Rarity.UNCOMMON, PlayerClass.IRONCLAD, CardType.SKILL, TargetType.YOURSELF, 0)
+        super().__init__("Battle Trance", "Draw 3 cards. You can't draw additional cards this turn.", Rarity.UNCOMMON, PlayerClass.IRONCLAD, CardType.SKILL, TargetType.PLAYER, 0)
         self.cards = 3
         self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Draw <green>4</green> cards. You can't draw additional cards this turn."
 
@@ -335,7 +335,7 @@ class BloodForBlood(Card):
 class Bloodletting(Card):
     '''Lose 3 HP. Gain 2(3) Energy.'''
     def __init__(self):
-        super().__init__("Bloodletting", "Lose 3 HP. Gain 2 <keyword>Energy</keyword>.", Rarity.UNCOMMON, PlayerClass.IRONCLAD, CardType.SKILL, TargetType.YOURSELF, 0)
+        super().__init__("Bloodletting", "Lose 3 HP. Gain 2 <keyword>Energy</keyword>.", Rarity.UNCOMMON, PlayerClass.IRONCLAD, CardType.SKILL, TargetType.PLAYER, 0)
         self.energy_gain = 2
         self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Lose 3 HP. Gain <green>3</green> <keyword>Energy</keyword>.</yellow>"
 
@@ -351,7 +351,7 @@ class Bloodletting(Card):
 class BurningPact(Card):
     '''Exhaust 1 card. Draw 2(3) cards.'''
     def __init__(self):
-        super().__init__("Burning Pact", "<keyword>Exhaust</keyword> 1 card. Draw 2 cards.", Rarity.UNCOMMON, PlayerClass.IRONCLAD, CardType.SKILL, TargetType.YOURSELF, 1)
+        super().__init__("Burning Pact", "<keyword>Exhaust</keyword> 1 card. Draw 2 cards.", Rarity.UNCOMMON, PlayerClass.IRONCLAD, CardType.SKILL, TargetType.PLAYER, 1)
         self.cards = 2
         self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow><keyword>Exhaust</keyword> 1 card. Draw <green>3</green> cards.</yellow>"
 
@@ -384,7 +384,7 @@ class Carnage(Card):
 class Combust(Card):
     '''At the end of your turn, lose 1 HP and deal 5(7) damage to ALL enemies.'''
     def __init__(self):
-        super().__init__("Combust", "At the end of your turn, lose 1 HP and deal 5 damage to ALL enemies.", Rarity.UNCOMMON, PlayerClass.IRONCLAD, CardType.POWER, TargetType.YOURSELF, 1)
+        super().__init__("Combust", "At the end of your turn, lose 1 HP and deal 5 damage to ALL enemies.", Rarity.UNCOMMON, PlayerClass.IRONCLAD, CardType.POWER, TargetType.PLAYER, 1)
         self.combust = 5
         self.times_played = 0
         self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>At the end of your turn, lose 1 HP and deal <green>7</green> damage to ALL enemies.</yellow>"
@@ -398,6 +398,94 @@ class Combust(Card):
         ei.apply_effect(origin, None, "Combust", self.combust)
         self.times_played += 1
         origin.take_sourceless_dmg(self.times_played)
+
+class Barricade(Card):
+    '''Block is not removed at the start of your turn.'''
+    def __init__(self):
+        super().__init__("Barricade", "<keyword>Block</keyword> is not removed at the start of your turn.", Rarity.RARE, PlayerClass.IRONCLAD, CardType.POWER, TargetType.PLAYER, 3)
+        self.upgrade_preview += f"<light-red>{self.energy_cost}</light-red> -> <light-red><green>2</green> Energy</light-red>"
+
+    def upgrade(self):
+        self.upgrade_markers()
+        self.energy_cost = 2
+
+    def apply(self, origin):
+        ei.apply_effect(origin, None, "Barricade")
+
+class Berzerk(Card):
+    '''Gain 2(1) Vulnerable. At the start of your turn, gain 1 Energy.'''
+    def __init__(self):
+        super().__init__("Berzerk", "Gain 2 <debuff>Vulnerable</debuff>. At the start of your turn, gain 1 <keyword>Energy</keyword>.", Rarity.RARE, PlayerClass.IRONCLAD, CardType.POWER, TargetType.PLAYER, 0)
+        self.vulnerable = 2
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Gain <green>1</green> <debuff>Vulnerable</debuff>. At the start of your turn, gain 1 <keyword>Energy</keyword>.</yellow>"
+
+    def upgrade(self):
+        self.upgrade_markers()
+        self.vulnerable = 1
+        self.info = "Gain 1 <debuff>Vulnerable</debuff>. At the start of your turn, gain 1 <keyword>Energy</keyword>."
+
+    def apply(self, origin):
+        ei.apply_effect(origin, None, "Vulnerable", self.vulnerable)
+        ei.apply_effect(origin, None, "Berzerk", 1)
+
+class Bludgeon(Card):
+    '''Deal 32(42) damage.'''
+    def __init__(self):
+        super().__init__("Bludgeon", "Deal 32 damage.", Rarity.RARE, PlayerClass.IRONCLAD, CardType.ATTACK, TargetType.SINGLE, 3)
+        self.base_damage, self.damage = 32
+        self.damage_affected_by = [f"{self.get_name()}({self.damage} dmg)"]
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Deal <green>42</green> damage.</yellow>"
+
+    def upgrade(self):
+        self.upgrade_markers()
+        self.base_damage, self.damage = 42
+        self.info = "Deal 42 damage."
+
+    def apply(self, origin, target):
+        origin.attack(target, self)
+
+class Brutality(Card):
+    '''(Innate.) At the start of your turn, lose 1 HP and draw 1 card.'''
+    def __init__(self):
+        super().__init__("Brutality", "At the start of your turn, lose 1 HP and draw 1 card.", Rarity.RARE, PlayerClass.IRONCLAD, CardType.POWER, TargetType.PLAYER, 1)
+        self.innate = False
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow><green><keyword>Innate</keyword>.</green> At the start of your turn, lose 1 HP and draw 1 card.</yellow>"
+
+    def upgrade(self):
+        self.upgrade_markers()
+        self.innate = True
+        self.info = "<keyword>Innate</keyword>. At the start of your turn, lose 1 HP and draw 1 card."
+
+    def apply(self, origin):
+        ei.apply_effect(origin, None, "Brutality", 1)
+
+class Corruption(Card):
+    '''Skills cost 0. Whenever you play a Skill, Exhaust it.'''
+    def __init__(self):
+        super().__init__("Corruption", "<keyword>Skills</keyword> cost 0. Whenever you play a <keyword>Skill</keyword>, <keyword>Exhaust</keyword> it.", Rarity.RARE, PlayerClass.IRONCLAD, CardType.POWER, TargetType.PLAYER, 3)
+        self.upgrade_preview += "<light-red>3 Energy</light-red> -> <light-red><green>2</green> Energy</light-red>"
+
+    def upgrade(self):
+        self.upgrade_markers()
+        self.energy_cost = 2
+
+    def apply(self, origin):
+        ei.apply_effect(origin, None, "Corruption")
+
+class DemonForm(Card):
+    '''At the start of your turn, gain 2 Strength.'''
+    def __init__(self):
+        super().__init__("Demon Form", "At the start of your turn, gain 2 <buff>Strength</buff>.", Rarity.RARE, PlayerClass.IRONCLAD, CardType.POWER, TargetType.PLAYER, 3)
+        self.demon_form = 2
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>At the start of your turn, gain <green>3</green> <buff>Strength</buff>.</yellow>"
+
+    def upgrade(self):
+        self.upgrade_markers()
+        self.demon_form = 3
+        self.info = "At the start of your turn, gain 3 <buff>Strength</buff>."
+
+    def apply(self, origin):
+        ei.apply_effect(origin, None, "Demon Form", self.demon_form)
 
 def use_bodyslam(targeted_enemy, using_card, entity):
     '''Deals damage equal to your Block. Exhaust.(Don't Exhaust)'''
@@ -1291,7 +1379,7 @@ cards = {
     'Writhe': {'Name': 'Writhe', 'Playable': False, 'Innate': True, 'Rarity': 'Curse', 'Type': 'Curse', 'Info': '<keyword>Unplayable. Innate.</keyword>'},
 
     # Colorless Cards
-    "Bandage Up": {"Name": "Bandage Up", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Heal 4(6) HP. Exhaust.", "Exhaust": True, "Target": TargetType.YOURSELF, "Function": use_bandageup},
+    "Bandage Up": {"Name": "Bandage Up", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Heal 4(6) HP. Exhaust.", "Exhaust": True, "Target": TargetType.PLAYER, "Function": use_bandageup},
     "Blind": {"Name": "Blind", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Apply 2 Weak (to ALL enemies).", "Target": TargetType.AREA, "Function": use_blind},
     "Dark Shackles": {"Name": "Dark Shackles", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Enemy loses 9(15) Strength for the rest of this turn. Exhaust.", "Exhaust": True, "Target": TargetType.ENEMY, "Function": use_darkshackles, "Magic Number": 9},
     "Deep Breath": {"Name": "Deep Breath", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Shuffle your discard pile into your draw pile. Draw 1(2) card(s).", "Target": TargetType.NOTHING, "Function": use_deepbreath, "Cards": 1},
@@ -1312,11 +1400,11 @@ cards = {
     # "Swift Strike": {"Name": "Swift Strike", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.ATTACK, "Energy": 0, "Info": "Deal 7(10) damage."},
     # "Trip": {"Name": "Trip", "Class": "Colorless", "Rarity": Rarity.UNCOMMON, "Type": CardType.SKILL, "Energy": 0, "Info": "Apply 2 Vulnerable (to ALL enemies)."},
 
-    "Apotheosis": {"Name": "Apotheosis", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 2, "Energy+": 1, "Info": "Upgrade ALL of your cards for the rest of combat. Exhaust.", "Exhaust": True, "Target": TargetType.YOURSELF, "Function": use_apotheosis},
-    "Chrysalis": {"Name": "Chrysalis", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 2, "Info": "Add 3(5) random Skills into your Draw Pile. They cost 0 this combat. Exhaust.", "Exhaust": True, "Target": TargetType.YOURSELF, "Function": use_chrysalis},
+    "Apotheosis": {"Name": "Apotheosis", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 2, "Energy+": 1, "Info": "Upgrade ALL of your cards for the rest of combat. Exhaust.", "Exhaust": True, "Target": TargetType.PLAYER, "Function": use_apotheosis},
+    "Chrysalis": {"Name": "Chrysalis", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 2, "Info": "Add 3(5) random Skills into your Draw Pile. They cost 0 this combat. Exhaust.", "Exhaust": True, "Target": TargetType.PLAYER, "Function": use_chrysalis},
     "Hand of Greed": {"Name": "Hand of Greed", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.ATTACK, "Energy": 2, "Info": "Deal 20(25) damage. If this kills a non-minion enemy, gain 20(25) Gold.", "Damage": 20, "Gold": 20, "Target": TargetType.ENEMY, "Function": use_handofgreed},
     # "Magnetism": {"Name": "Magnetism", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.POWER, "Energy": 2, "Energy+": 1, "Info": "At the start of each turn, add a random colorless card to your hand."},
-    "Master Of Strategy": {"Name": "Master Of Strategy", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 0, "Info": "Draw 3(4) cards. Exhaust.", "Exhaust": True, "Cards": 3, "Target": TargetType.YOURSELF, "Function": use_masterofstrategy},
+    "Master Of Strategy": {"Name": "Master Of Strategy", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 0, "Info": "Draw 3(4) cards. Exhaust.", "Exhaust": True, "Cards": 3, "Target": TargetType.PLAYER, "Function": use_masterofstrategy},
     # "Mayhem": {"Name": "Mayhem", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.POWER, "Energy": 2, "Energy+": 1, "Info": "At the start of your turn, play the top card of your draw pile."},
     # "Metamorphosis": {"Name": "Metamorphosis", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.SKILL, "Energy": 2, "Info": "Add 3(5) random Attacks into your Draw Pile. They cost 0 this combat. Exhaust.", "Exhaust": True},
     # "Panache": {"Name": "Panache", "Class": "Colorless", "Rarity": Rarity.RARE, "Type": CardType.POWER, "Energy": 0, "Info": "Every time you play 5 cards in a single turn, deal 10(14) damage to ALL enemies."},

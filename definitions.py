@@ -47,7 +47,7 @@ class TargetType(StrEnum):
     NOTHING = 'Nothing'
     RANDOM = 'Random'
     SINGLE = 'Single'
-    YOURSELF = 'Yourself'
+    PLAYER = 'Yourself'
 
 class CardCategory(StrEnum):
     CARD = 'Card'
