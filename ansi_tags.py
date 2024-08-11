@@ -10,8 +10,6 @@ user_tags = {
     "power": "\x1B[38;5;51m",
     "status": "\x1B[38;5;35m",
     "curse": "\x1B[38;5;127m",
-    "status": "\x1B[38;5;35m",
-    "curse": "\x1B[38;5;127m",
     "basic": "\x1B[38;5;245m",
     "common": "\x1B[38;5;245m",
     "uncommon": "\x1B[38;5;45m",
@@ -27,7 +25,10 @@ user_tags = {
     "boss": "\x1B[38;5;124m",
     "event": "\x1B[38;2;254;49;236m",
     "starter": "\x1B[38;5;247m",
+    "orange": "\x1B[38;5;202"
 }
 am = AnsiMarkup(tags=user_tags, strict=True)
 
 ansiprint = am.ansiprint
+strip = am.strip
+parse = am.parse

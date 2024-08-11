@@ -7,11 +7,10 @@ from ansi_tags import ansiprint
 from shop import SellableItem, Shop
 
 
-@pytest.mark.only
 class TestSellableItems():
   def test_cards(self):
     '''See that we can make sellable items out of all cards and that they display correctly'''
-    all_sellable_cards = list(items.cards.values())
+    all_sellable_cards = list(items.cards)
     # all_sellable_cards = [card for card in all_sellable_cards if card["Type"] in ("Attack", "Skill", "Power") and card["Rarity"] not in ("Special")]
     for card in all_sellable_cards:
       sellable = SellableItem(card)
@@ -34,10 +33,9 @@ class TestSellableItems():
       ansiprint(sellable.valid_string())
       ansiprint(sellable.invalid_string())
 
-
 def test_shop(monkeypatch):
   player = entities.create_player()
-  cards = [SellableItem(items.cards[x]) for x in ("Strike","Body Slam","Heavy Blade","Warcry")]
+  cards = [SellableItem(x) for x in items.cards if x.name in ("Strike","Body Slam","Heavy Blade","Warcry")]
   shop = Shop(player, cards)
   responses = iter(['1', '\n', 'e'])
   with monkeypatch.context() as m:

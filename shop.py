@@ -29,20 +29,13 @@ import time
 
 from ansi_tags import ansiprint
 from definitions import CardCategory, Rarity
-from helper import Displayer
+from helper import Displayer, get_attribute
 from items import cards, potions, relics
 
 
 # Helper functions for displaying cards, potions, and relics.
 # These really should be inside the classes for those items
 #------------------------------------------------------------
-def card_pretty_string(card, valid):
-  if valid:
-    changed_energy = 'light-red' if not card.get('Changed Energy') else 'green'
-    return f"<{card['Rarity'].lower()}>{card['Name']}</{card['Rarity'].lower()}> | <{card['Type'].lower()}>{card['Type']}</{card['Type'].lower()}> | <{changed_energy}>{card.get('Energy', 'Unplayable')}{' Energy' if card.get('Energy') is not None else ''}</{changed_energy}> | <yellow>{card['Info']}</yellow>".replace('Σ', '').replace('Ω', '')
-  else:
-    return f"<light-black>{card['Name']} | {card['Type']} | {card.get('Energy', 'Unplayable')}{' Energy' if card.get('Energy') else ''} | {card['Info']}</light-black>".replace('Σ', '').replace('Ω', '')
-
 def relic_pretty_string(relic, valid):
   if valid:
     name_colors = {
@@ -71,12 +64,12 @@ def potion_pretty_string(potion, valid):
 def determine_item_category(item):
   # A massive hack to try to figure out if we've got a card, potion, or relic
   try:
-    name = item['Name']
+    name = get_attribute(item, 'Name')
   except KeyError as e:
     raise KeyError(f'The following item has no Name: {item}') from e
-  card_names = [c['Name'] for c in cards.values()]
-  potion_names = [p['Name'] for p in potions.values()]
-  relic_names = [r['Name'] for r in relics.values()]
+  card_names = [get_attribute(c, 'Name') for c in cards]
+  potion_names = [get_attribute(p, 'Name') for p in potions.values()]
+  relic_names = [get_attribute(r, 'Name') for r in relics.values()]
   if name in card_names:
     return CardCategory.CARD
   elif name in potion_names:
@@ -89,7 +82,7 @@ def determine_item_category(item):
 def category_to_pretty_string(item, valid):
   category = determine_item_category(item)
   if category == CardCategory.CARD:
-    return card_pretty_string(item, valid)
+    return item.pretty_print_valid(valid)
   elif category == CardCategory.POTION:
     return potion_pretty_string(item, valid)
   elif category == CardCategory.RELIC:
@@ -115,20 +108,25 @@ class SellableItem():
         pretty_string = category_to_pretty_string(self.item, valid=True)
         return f"<yellow>{self.price:3d} Gold</yellow> : {pretty_string}"
 
+    def get_rarity(self, item):
+      '''Gets the rarity of an item. Items can be cards which have rarity as a property, or relics which have rarity as a key in the dictionary.'''
+      return get_attribute(item, 'Rarity')
+
     def set_price(self):
         '''Set the price of the item based on its rarity.'''
-        assert "Rarity" in self.item, f"Item {self.item} has no rarity."
-        if self.item["Rarity"] in (Rarity.BASIC, Rarity.COMMON, Rarity.STARTER):
+        assert self.get_rarity(self.item), f"Item {self.item} has no rarity."
+        rarity = self.get_rarity(self.item)
+        if rarity in (Rarity.BASIC, Rarity.COMMON, Rarity.STARTER):
             return random.randint(45, 55)
-        elif self.item["Rarity"] == Rarity.UNCOMMON:
+        elif rarity == Rarity.UNCOMMON:
             return random.randint(68, 82)
-        elif self.item["Rarity"] == Rarity.RARE:
+        elif rarity == Rarity.RARE:
             return random.randint(135, 165)
-        elif self.item["Rarity"] in (Rarity.CURSE, Rarity.SHOP, Rarity.SPECIAL, Rarity.EVENT, Rarity.BOSS):
+        elif rarity in (Rarity.CURSE, Rarity.SHOP, Rarity.SPECIAL, Rarity.EVENT, Rarity.BOSS):
             # Unsure what to do with these. We'll set to some high bogus value for now.
             return 999
         else:
-            raise ValueError(f"Item rarity broken")
+            raise ValueError("Item rarity broken")
 
 class Shop():
     def __init__(self, player, items=None):
@@ -177,7 +175,9 @@ class Shop():
     def buy(self, choice):
       self.player.gold -= self.items[choice].price
       self.player.deck.append(self.items[choice].item)
-      ansiprint(f"<bold>You bought {self.items[choice].item['Name']} for {self.items[choice].price} gold</bold>.")
+      name = get_attribute(self.items[choice].item, "Name")
+      price = self.items[choice].price
+      ansiprint(f"<bold>You bought {name} for {price} gold</bold>.")
       time.sleep(0.5)
       input("Press Enter to continue...")
 

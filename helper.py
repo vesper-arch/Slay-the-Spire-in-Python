@@ -1,54 +1,56 @@
-import random
-import re
 import math
+import random
+from os import name, system
 from time import sleep
-from os import system
-from copy import deepcopy
-from ansi_tags import ansiprint
 from typing import Callable
-from definitions import CombatTier
 
-active_enemies = []
-combat_turn = 1
-potion_dropchance = 40
-class Displayer():
-    '''Displays important info to the player during combat'''
+from ansi_tags import ansiprint, strip
+from definitions import (
+    CardType,
+    CombatTier,
+    EffectType,
+    PlayerClass,
+    Rarity,
+    StackType,
+    State,
+)
+from message_bus_tools import Effect, Message, bus
+
+
+def get_attribute(item, attribute):
+    '''While refactoring, some items (Cards) have properties that are on the object, whereas others have them in a dictionary.
+        This function bridges the difference.
+    '''
+    if isinstance(item, dict):
+        return item[attribute]
+    else:
+        return getattr(item, attribute.lower())
+
+
+class Displayer:
+    """Displays important info to the player during combat"""
+
     def __init__(self):
         pass
 
-    def upgrade_preview(self, pile, validator: Callable=lambda placehold: bool(placehold)):
-        """Print all of the cards in a given pile with their upgraded stats shown. Upgradeable validation is built-in, the validator function adds restrictions."""
-        counter = 1
-        for card in pile:
-            if not card.get("Upgraded") and (card['Type'] not in ("Status", "Curse") or card['Name'] == 'Burn') and validator(card):
-                upgraded_energy = f' <green>-></green> <green>{card["Effects+"].get("Energy")}</green>' if card['Effects+'].get('Energy', card['Energy']) != card['Energy'] else ''
-                upgraded_info = f' <green>-></green> <yellow>{card["Effects+"].get("Info")}</yellow>' if card['Effects+'].get('Info', card['Info']) != card['Info'] else ''
-                ansiprint(f"{counter}: <{card['Type'].lower()}>{card['Name']}</{card['Type'].lower()}> | <light-red>{card.get('Energy', 'Unplayable')} Energy{upgraded_energy}</light-red> | <yellow>{card['Info']}</yellow>{upgraded_info}".replace('Σ', '').replace('Ω', ''))
-            else:
-                ansiprint(f"{counter}: <light-black>{card['Name']} | {card['Type']} | {card.get('Energy', 'Unplayable')}{' Energy' if card.get('Energy') else ''} | {card['Info']}</light-black>".replace('Σ', '').replace('Ω', ''))
-            counter += 1
-            sleep(0.05)
-
-
-    def view_piles(self, pile: list[dict], shuffle=False, end=False, validator: Callable=lambda placehold: bool(placehold)):
+    def view_piles(self, pile: list[dict], shuffle=False, end=False, validator: Callable = lambda placehold: bool(placehold)):
         """Prints a numbered list of all the cards in a certain pile."""
         if len(pile) == 0:
-            ansiprint('<red>This pile is empty</red>.')
+            ansiprint("<red>This pile is empty</red>.")
             sleep(1.5)
             self.clear()
             return
         if shuffle is True:
             pile = random.sample(pile, len(pile))
-            ansiprint("<italic>Cards are not shwon in order.</italic>")
+            ansiprint("<italic>Cards are not shown in order.</italic>")
         counter = 1
         for card in pile:
-            changed_energy = 'light-red' if not card.get('Changed Energy') else 'green'
             if validator(card):
-                ansiprint(f"{counter}: <{card['Rarity'].lower()}>{card['Name']}</{card['Rarity'].lower()}> | <{card['Type'].lower()}>{card['Type']}</{card['Type'].lower()}> | <{changed_energy}>{card.get('Energy', 'Unplayable')}{' Energy' if card.get('Energy') is not None else ''}</{changed_energy}> | <yellow>{card['Info']}</yellow>".replace('Σ', '').replace('Ω', ''))
+                ansiprint(f"{counter}: {card.pretty_print()}")
                 counter += 1
                 sleep(0.05)
             else:
-                ansiprint(f"{counter}: <light-black>{card['Name']} | {card['Type']} | {card.get('Energy', 'Unplayable')}{' Energy' if card.get('Energy') else ''} | {card['Info']}</light-black>".replace('Σ', '').replace('Ω', ''))
+                ansiprint(f"{counter}: <light-black>{strip(card.pretty_print())}</light-black>")
                 counter += 1
                 sleep(0.05)
         if end:
@@ -56,32 +58,26 @@ class Displayer():
             sleep(0.5)
             self.clear()
 
-    def view_relics(self, relic_pool, end=False, validator: Callable=lambda placehold: bool(placehold)):
-        counter = 1
+    def view_relics(self, relic_pool, end=False, validator: Callable = lambda placehold: bool(placehold)):
         for relic in relic_pool:
             if validator(relic):
-                name_colors = {'Starter': 'starter', 'Common': 'white', 'Uncommon': 'uncommon', 'Rare': 'rare', 'Event': 'event'}
-                ansiprint(f"{counter}: <{name_colors[relic['Rarity']]}>{relic['Name']}</{name_colors[relic['Rarity']]}> | {relic['Class']} | <yellow>{relic['Info']}</yellow> | <dark-blue><italic>{relic['Flavor']}</italic></dark-blue>")
-                counter += 1
+                ansiprint(relic.pretty_print())
                 sleep(0.05)
         if end:
             input("Press enter to continue > ")
             sleep(1.5)
             self.clear()
 
-    def view_potions(self, potion_pool, max_potions=3, numbered_list=True, validator: Callable=lambda placehold: bool(placehold)):
-        class_colors = {'Ironclad': 'red', 'Silent': 'dark-green', 'Defect': 'true-blue', 'Watcher': 'watcher-purple', 'Any': 'white'}
-        rarity_colors = {'Common': 'white', 'Uncommon': 'uncommon', 'Rare': 'rare'}
+    def view_potions(self, potion_pool, only_the_potions = False, max_potions=3, numbered_list=True, validator: Callable = lambda placehold: bool(placehold)):
         counter = 1
         for potion in potion_pool:
             if validator(potion):
-                chosen_class_color = class_colors[potion['Class']]
-                chosen_rarity_color = rarity_colors[potion['Rarity']]
-                ansiprint(f"{f'{counter}: ' if numbered_list else ''}<{chosen_rarity_color}>{potion['Name']}</{chosen_rarity_color}> | <{chosen_class_color}>{potion['Class']}</{chosen_class_color}> | <yellow>{potion['Info']}</yellow>")
+                ansiprint(f'{counter}: ' + potion.pretty_print())
                 counter += 1
-        for _ in range(max_potions - len(potion_pool)):
-            ansiprint(f"<light-black>{f'{counter}: ' if numbered_list else ''}(Empty)</light-black>")
-            counter += 1
+        if only_the_potions is False:
+            for _ in range(max_potions - len(potion_pool)):
+                ansiprint(f"<light-black>{f'{counter}: ' if numbered_list else ''}(Empty)</light-black>")
+                counter += 1
 
     def view_map(self, game_map):
         game_map.pretty_print()
@@ -94,11 +90,12 @@ class Displayer():
         ansiprint("<bold>Relics: </bold>")
         self.view_relics(entity.relics)
         ansiprint("<bold>Hand: </bold>")
-        self.view_piles(entity.hand, entity, False, lambda card: (card.get("Energy", float('inf')) if card.get("Energy", float('inf')) != -1 else entity.energy) <= entity.energy)
+        self.view_piles(entity.hand, entity, False, lambda card: (card.energy_cost if card.energy_cost != -1 else entity.energy) <= entity.energy)
         if combat is True:
             counter = 1
             ansiprint("\n<bold>Enemies:</bold>")
-            for enemy in enemies:
+            viewable_enemies = [enemy for enemy in enemies if enemy.state in (State.ALIVE, State.INTANGIBLE)]
+            for enemy in viewable_enemies:
                 ansiprint(f"{counter}: " + repr(enemy))
                 counter += 1
             ansiprint("\n" + repr(entity))
@@ -106,86 +103,76 @@ class Displayer():
             ansiprint(str(entity))
         print()
 
-    def list_input(self, input_string: str, choices: list,
-                    displayer: Callable,
-                    validator: Callable=lambda placehold: bool(placehold),
-                    message_when_invalid: str=None,
-                    extra_allowables=None) -> int | None:
-        '''Allows the player to choose from a certain list of options. Includes validation.'''
+    def list_input(self, input_string: str, choices: list, displayer: Callable, validator: Callable = lambda placehold: bool(placehold), message_when_invalid: str = None, extra_allowables=None) -> int | None:
+        """Allows the player to choose from a certain list of options. Includes validation."""
         if extra_allowables is None:
             extra_allowables = []
         while True:
             try:
                 displayer(choices, validator=validator)
-                ansiprint(input_string + " > ", end='')
+                ansiprint(input_string + " > ", end="")
                 response = input()
                 if response in extra_allowables:
                     return response
                 option = int(response) - 1
                 if not validator(choices[option]):
-                    ansiprint(f"\u001b[1A\u001b[1000D<red>{message_when_invalid}</red>", end='')
+                    ansiprint(f"\u001b[1A\u001b[1000D<red>{message_when_invalid}</red>", end="")
                     sleep(1.5)
                     print("\u001b[2K")
                     continue
             except (IndexError, ValueError):
-                ansiprint(f"\u001b[1A\u001b[100D<red>You have to enter a whole number between 1 and {len(choices)}.</red>", end='')
+                ansiprint(f"\u001b[1A\u001b[100D<red>You have to enter a whole number between 1 and {len(choices)}.</red>", end="")
                 sleep(1)
-                print("\u001b[2K\u001b[100D", end='')
+                print("\u001b[2K\u001b[100D", end="")
                 continue
             break
         return option
 
-    def display_actual_damage(self, string: str, target, entity, card=None) -> tuple[str, str]:
-        if not card:
-            card = {}
-        match = re.search(r"Σ(\d+)", string)
-        affected_by = ''
-        if match:
-            original_damage: str = match.group()
-            damage_value = int(original_damage.replace('Σ', ''))
-            if "Body Slam" in card.get('Name', ''):
-                damage_value += entity.block
-            if "Perfected Strike" in card.get('Name', ''):
-                perfected_strike_dmg = len([card for card in entity.deck if 'strike' in card.get('Name')]) * card.get('Damage Per "Strike"')
-                damage_value += perfected_strike_dmg
-                affected_by += f"Perfected Strike(+{perfected_strike_dmg} dmg)"
-            if entity.buffs['Strength'] != 0:
-                damage_value += entity.buffs['Strength'] * card.get("Strength Multi", 1)
-                affected_by += f"<{'<light-cyan>' if entity.buffs['Strength'] > 0 else '<red>'}Strength{'</light-cyan>' if entity.buffs['Strength'] > 0 else '</red>'}>({'+' if entity.buffs['Strength'] > 0 else '-'}{abs(entity.buffs['Strength']) * card.get('Strength Multi', 1)} dmg) | "
-                if card.get("Strength Multi", 1) > 1:
-                    affected_by += f"Heavy Blade(x{card.get('Strength Multi')} Strength gain)"
-            if entity.buffs.get('Vigor', 0) > 0:
-                damage_value += entity.buffs.get('Vigor')
-                affected_by += f"<light-cyan>Vigor</light-cyan>(+{entity.buffs.get('Vigor')} dmg) | "
-            if target.debuffs['Vulnerable'] > 0:
-                damage_value = math.floor(damage_value * 1.5)
-                affected_by += f'{"Target" if hasattr(entity, "player_class") else "Your"} <debuff>Vulnerable</debuff>(x1.50 dmg) | '
-            if entity.debuffs['Weak'] > 0:
-                damage_value = math.floor(damage_value * 0.75)
-                affected_by += "<red>Weak</red>(x0.75 dmg)"
-            string = string.replace(original_damage, str(damage_value))
-        return string, affected_by
-
-    def display_actual_block(self, string: str, entity) -> tuple[str, str]:
-        match = re.search(r"Ω(\d+)", string)
-        affected_by = ''
-        if match:
-            original_damage = match.group()
-            block_value = int(original_damage.replace('Ω', ''))
-            if entity.buffs["Dexterity"] != 0:
-                block_value += entity.buffs['Dexterity']
-                affected_by += f"{'<light-cyan>' if entity.buffs['Dexterity'] > 0 else '<red>'}Dexterity{'</light-cyan>' if entity.buffs['Dexterity'] > 0 else '<red>'}({'+' if entity.buffs['Dexterity'] > 0 else '-'}{abs(entity.buffs['Dexterity'])} block)"
-            if entity.debuffs['Frail'] > 0:
-                block_value = math.floor(block_value * 0.75)
-                affected_by += "<red>Frail</red>(x0.75 block)"
-            string = string.replace(original_damage, str(block_value))
-        return string, affected_by
+    def multi_input(self, input_string: str, choices: list, displayer: Callable, max_choices: int, strict: bool = False, validator: Callable = lambda placehold: bool(placehold), message_when_invalid: str = None, extra_allowables: list=None):
+        """Basically the same as view.list_input but you can choose multiple cards one at a time. Mainly used for discarding and Exhausting cards."""
+        if not extra_allowables:
+            extra_allowables = []
+        finished = False
+        to_be_moved = []
+        while not finished:
+            while True:
+                try:
+                    displayer(choices, validator=validator)
+                    ansiprint(input_string + "(type 'exit' to finish) > ", end="")
+                    response = input()
+                    if response == 'exit' and (strict and len(to_be_moved) < max_choices):
+                        ansiprint(f"\u001b[1A\u001b[1000D<red>You have to choose exactly {max_choices} items.</red>", end="")
+                        sleep(1)
+                        print("\u001b[2K\u001b[100D", end="")
+                        continue
+                    elif response == 'exit':
+                        finished = True
+                        break
+                    if response in extra_allowables:
+                        return response
+                    option = int(response) - 1
+                    if not validator(choices[option]):
+                        ansiprint(f"\u001b[1A\u001b[1000D<red>{message_when_invalid}</red>", end="")
+                        sleep(1.5)
+                        print("\u001b[2K\u001b[100D")
+                        continue
+                    if len(to_be_moved) == max_choices:
+                        del to_be_moved[0]
+                except (IndexError, ValueError):
+                    ansiprint(f"\u001b[1A\u001b[100D<red>You have to enter a whole number between 1 and {len(choices)}.</red>", end="")
+                    sleep(1)
+                    print("\u001b[2K\u001b[100D", end="")
+                    continue
+                to_be_moved.append(choices[option])
+                break
 
     def clear(self):
-        system('clear')
+        system("cls" if name == "nt" else "clear")
 
-class Generators():
-    '''Generates relic_pool, potions, and cards'''
+
+class Generators:
+    """Generates relic_pool, potions, and cards"""
+
     def __init__(self):
         pass
 
@@ -200,14 +187,14 @@ class Generators():
         Boss combat rewards:
         Rare: 100% | Uncommon: 0% | Common: 0%
         """
-        common_cards = [card for card in card_pool.values() if card.get("Rarity") == "Common" and card.get("Type") not in ('Status', 'Curse') and card.get('Class') == entity.player_class]
-        uncommon_cards = [card for card in card_pool.values() if card.get("Rarity") == "Uncommon" and card.get("Type") not in ('Status', 'Curse') and card.get('Class') == entity.player_class]
-        rare_cards = [card for card in card_pool.values() if card.get("Rarity") == "Rare" and card.get("Type") not in ('Status', 'Curse') and card.get('Class') == entity.player_class]
-        assert len(common_cards) > 0, f"Common pool is empty."
-        assert len(uncommon_cards) > 0, f"Uncommon pool is empty."
-        assert len(rare_cards) > 0, f"Rare pool is empty."
+        common_cards = [card for card in card_pool if card.rarity == Rarity.COMMON and card.type not in (CardType.STATUS, CardType.CURSE) and card.player_class == entity.player_class]
+        uncommon_cards = [card for card in card_pool if card.rarity == Rarity.UNCOMMON and card.type not in (CardType.STATUS, CardType.CURSE) and card.player_class == entity.player_class]
+        rare_cards = [card for card in card_pool if card.rarity == Rarity.RARE and card.type not in (CardType.STATUS, CardType.CURSE) and card.player_class == entity.player_class]
+        assert len(common_cards) > 0, "Common pool is empty."
+        assert len(uncommon_cards) > 0, "Uncommon pool is empty."
+        assert len(rare_cards) > 0, "Rare pool is empty."
 
-        rarities =  [common_cards, uncommon_cards, rare_cards]
+        rarities = [common_cards, uncommon_cards, rare_cards]
         rewards = []
         if reward_tier == CombatTier.NORMAL:
             chances = [0.60, 0.37, 0.03]
@@ -217,20 +204,19 @@ class Generators():
             chances = [0, 0, 1]
         for _ in range(amount):
             chosen_pool = random.choices(rarities, chances, k=1)[0]
-            rewards.append(deepcopy(random.choice(chosen_pool)))
+            rewards.append(random.choice(chosen_pool))
         return rewards
-
 
     def generate_potion_rewards(self, amount: int, entity: object, potion_pool: dict, chance_based=True) -> list[dict]:
         """You have a 40% chance to get a potion at the end of combat.
         -10% when you get a potion.
         +10% when you don't get a potion."""
-        common_potions: list[dict] = [potion for potion in potion_pool.values() if potion.get("Rarity") == "Common" and (potion.get("Class") == "Any" or entity.player_class in potion.get('Class'))]
-        uncommon_potions: list[dict] = [potion for potion in potion_pool.values() if potion.get("Rarity") == "Uncommon" and (potion.get("Class") == "Any" or entity.player_class in potion.get('Class'))]
-        rare_potions: list[dict] = [potion for potion in potion_pool.values() if potion.get("Rarity") == "Rare" and (potion.get("Class") == "Any" or entity.player_class in potion.get('Class'))]
-        assert len(common_potions) > 0, f"Common potions pool is empty."
-        assert len(uncommon_potions) > 0, f"Uncommon potions pool is empty."
-        assert len(rare_potions) > 0, f"Rare potions pool is empty."
+        common_potions: list[dict] = [potion for potion in potion_pool if potion.rarity == Rarity.COMMON and (potion.player_class == PlayerClass.ANY or potion.player_class == entity.player_class)]
+        uncommon_potions: list[dict] = [potion for potion in potion_pool if potion.rarity == Rarity.UNCOMMON and (potion.player_class == PlayerClass.ANY or potion.player_class == entity.player_class)]
+        rare_potions: list[dict] = [potion for potion in potion_pool if potion.rarity == Rarity.RARE and (potion.player_class == PlayerClass.ANY or potion.player_class == entity.player_class)]
+        assert len(common_potions) > 0, "Common potions pool is empty."
+        assert len(uncommon_potions) > 0, "Uncommon potions pool is empty."
+        assert len(rare_potions) > 0, "Rare potions pool is empty."
 
         all_potions = common_potions + uncommon_potions + rare_potions
         rarities = [common_potions, uncommon_potions, rare_potions]
@@ -242,18 +228,22 @@ class Generators():
                 rewards.append(random.choice(all_potions))
         return rewards
 
-
     def generate_relic_rewards(self, source: str, amount: int, entity, relic_pool: dict, chance_based=True) -> list[dict]:
-        common_relics = [relic for relic in relic_pool.values() if (relic.get('Rarity') == 'Common') and (relic.get('Class') == entity.player_class) and (relic not in entity.relics)]
-        uncommon_relics = [relic for relic in relic_pool.values() if (relic.get('Rarity') == 'Uncommon') and (relic.get('Class') == entity.player_class) and (relic not in entity.relics)]
-        rare_relics = [relic for relic in relic_pool.values() if (relic.get('Rarity') == 'Rare') and (relic.get('Class') == entity.player_class) and (relic not in entity.relics)]
+        claimed_relics = [relic.name for relic in entity.relics]
+
+        common_relics = [relic for relic in relic_pool if relic.rarity == Rarity.COMMON and relic.player_class == entity.player_class and relic not in entity.relics and relic.name not in claimed_relics]
+        uncommon_relics = [relic for relic in relic_pool if relic.rarity == Rarity.UNCOMMON and relic.player_class == entity.player_class and relic not in entity.relics and relic.name not in claimed_relics]
+        rare_relics = [relic for relic in relic_pool if relic.rarity == Rarity.RARE and relic.player_class == entity.player_class and relic not in entity.relics and relic.name not in claimed_relics]
+
         all_relic_pool = common_relics + uncommon_relics + rare_relics
         rarities = [common_relics, uncommon_relics, rare_relics]
+
         assert len(common_relics) > 0, "Common relics pool is empty."
         assert len(uncommon_relics) > 0, "Uncommon relics pool is empty."
         assert len(rare_relics) > 0, "Rare relics pool is empty."
+
         rewards = []
-        if source == 'Chest':
+        if source == "Chest":
             percent_common = 0.49
             percent_uncommon = 0.42
             percent_rare = 0.09
@@ -268,79 +258,64 @@ class Generators():
                 rewards.append(random.choice(all_relic_pool))
         return rewards
 
-    def claim_relics(self, choice: bool, entity: object, relic_amount: int, relic_pool: dict=None, rewards: list=None, chance_based=True):
-        relic_pool = relic_pool if not relic_pool else relic_pool
+    def claim_relics(self, choice: bool, entity: object, relic_amount: int, relic_pool: dict = None, rewards: list = None, chance_based=True):
+        relic_pool = relic_pool if relic_pool else relic_pool
         if not rewards:
-            rewards = self.generate_relic_rewards('Other', relic_amount, entity, relic_pool, chance_based)
+            rewards = self.generate_relic_rewards("Other", relic_amount, entity, relic_pool, chance_based)
         if not choice:
             for i in range(relic_amount):
                 entity.relics.append(rewards[i])
                 entity.on_relic_pickup(rewards[i])
-                ansiprint(f"{entity.name} obtained {rewards[i]['Name']} | {rewards[i]['Info']}")
+                ansiprint(f"{entity.name} obtained {rewards[i].name}.")
                 rewards.remove(rewards[i])
                 sleep(0.5)
             sleep(0.5)
         while len(rewards) > 0 and choice:
-            counter = 1
-            for relic in rewards:
-                ansiprint(f"{counter}: {relic['Name']} | {relic['Class']} | <light-black>{relic['Rarity']}</light-black> | <yellow>{relic['Info']}</yellow> | <blue><italic>{relic['Flavor']}</italic></blue>")
-                counter += 1
-                sleep(0.05)
-            option = view.list_input('What relic do you want? > ', rewards, view.view_relics)
+            option = view.list_input("Choose a relic", rewards, view.view_relics)
             if not option:
                 sleep(1.5)
                 view.clear()
                 continue
             entity.relics.append(rewards[option])
-            entity.on_relic_pickup(rewards[option])
-            print(f"{entity.name} obtained {rewards[option]['Name']}.")
+            bus.publish(Message.ON_RELIC_ADD, (rewards[option], entity))
+            print(f"{entity.name} obtained {rewards[option].name}.")
             rewards.remove(rewards[i])
 
-    def claim_potions(self, choice: bool, potion_amount: int, entity,  potion_pool: dict, rewards=None, chance_based=True):
+    def claim_potions(self, choice: bool, potion_amount: int, entity, potion_pool: dict, rewards=None, chance_based=True):
         for relic in entity.relics:
-            if relic['Name'] == 'Sozu':
+            if relic.name == "Sozu":
                 return
         if not rewards:
             rewards = self.generate_potion_rewards(potion_amount, entity, potion_pool, chance_based)
         if not choice:
             for i in range(potion_amount):
-                potion_pool.append(rewards[i])
-                print(f"{entity.name} obtained {rewards[i]['Name']} | {rewards[i]['Info']}")
-                rewards.remove(rewards[i])
-            sleep(1.5)
+                if len(entity.potions) <= entity.max_potions:
+                    entity.potions.append(rewards[i])
+                    print(f"{entity.name} obtained {rewards[i].name} | {rewards[i].info}")
+                    rewards.remove(rewards[i])
+            sleep(1)
             view.clear()
         while len(rewards) > 0:
-            counter = 1
             print(f"Potion Bag: ({len(potion_pool)} / {entity.max_potions})")
-            view.view_potions(entity, False)
+            view.view_potions(entity.potions)
             print()
             print("Potion reward(s):")
-            counter = 1
-            for potion in rewards:
-                ansiprint(f"{counter}: <blue>{potion['Name']}</blue> | <light-black>{potion['Rarity']}</light-black> | <green>{potion['Class']}</green> | <yellow>{potion['Info']}</yellow>")
-                counter += 1
-            print()
-            option = view.list_input('What potion you want? >', rewards, view.view_potions)
+            option = view.list_input("Choose a potion", rewards, lambda potion_pool, validator: view.view_potions(potion_pool, True, validator=validator))
             if len(potion_pool) == entity.max_potions:
-                ansiprint("<red>Potion bag full!")
-                sleep(1)
+                ansiprint("<red>Potion bag full!</red>")
+                sleep(0.5)
                 option = input("Discard a potion?(y|n) > ")
-                if option == 'y':
-                    counter = 1
-                    for potion in potion_pool:
-                        ansiprint(f"{counter}: <light-black>{potion['Rarity']}</light-black> | <green>{potion['Class']}</green> | <blue>{potion['Name']}</blue> | <yellow>{potion['Info']}</yellow>")
-                        counter += 1
-                    option = view.list_input('What potion do you want to discard? > ', potion_pool, view.view_potions)
-                    print(f"Discarded {potion_pool[option]['Name']}.")
-                    potion_pool.remove(potion_pool[option])
-                    sleep(1.5)
+                if option == "y":
+                    option = view.list_input("Choose a potion to discard", entity.potions, view.view_potions,)
+                    print(f"Discarded {entity.potions[option]['Name']}.")
+                    del entity.potions[option]
+                    sleep(1)
                     view.clear()
                 else:
-                    sleep(1.5)
+                    sleep(1)
                     view.clear()
                 continue
-            potion_pool.append(rewards[option])
-            rewards.remove(rewards[option])
+            entity.potions.append(rewards.pop(option))
             sleep(0.2)
             view.clear()
 
@@ -349,291 +324,201 @@ class Generators():
             rewards = self.generate_card_rewards(tier, entity.card_reward_choices, entity, card_pool)
         while True:
             if choice:
-                chosen_reward = view.list_input('What card do you want? > ', rewards, view.view_piles)
-                if (entity.upgrade_attacks or entity.upgrade_skills or entity.upgrade_powers) and rewards[chosen_reward]['Type'] in ['Attack', 'Skill', 'Power']:
-                    entity.card_actions(rewards[chosen_reward], 'Upgrade')
-                for relic in entity.relics:
-                    if relic['Name'] == 'Ceramic Fish':
-                        ansiprint("From <bold>Ceramic Fish</bold>: ", end='')
-                        entity.gain_gold(9)
+                chosen_reward = view.list_input("Choose a card", rewards, view.view_piles)
+                if (
+                    entity.upgrade_attacks and rewards[chosen_reward].type == CardType.ATTACK 
+                    or (entity.upgrade_skills and rewards[chosen_reward].type == CardType.SKILL 
+                    or entity.upgrade_powers and rewards[chosen_reward].type == CardType.POWER
+                )):
+                    rewards[chosen_reward].upgrade()
                 entity.deck.append(rewards[chosen_reward])
-                ansiprint(f"{entity.name} obtained <bold>{rewards[chosen_reward]['Name']}</bold>")
+                ansiprint(f"{entity.name} obtained <bold>{rewards[chosen_reward].name}</bold>")
                 rewards.clear()
                 break
             for card in rewards:
-                if card.get('Type') == 'Curse' and entity.block_curses > 0:
-                    ansiprint(f"{card['Name']} was negated by <bold>Omamori</bold>.")
-                    entity.block_curses -= 1
-                    if entity.block_curses == 0:
-                        ansiprint('<bold>Omamori</bold> is depleted.')
-                    continue
-                if card.get('Type') == 'Curse' and entity.darkstone_health:
-                    ansiprint("<bold>Darkstone Periapt</bold> activated.")
-                    entity.health_actions(6, "Max Health")
+                bus.publish(Message.ON_CARD_ADD, (entity, card))
                 entity.deck.append(card)
-                print(f"{entity.name} obtained {card['Name']}")
+                print(f"{entity.name} obtained {card.name}")
                 rewards.remove(card)
-            if entity.gold_on_card_add:
-                entity.gold += 9
-                ansiprint('You gained 9 <yellow>Gold</yellow> from <bold>Ceramic Fish</bold>.')
             break
         rewards.clear()
         sleep(1)
 
-class EffectInterface():
-    '''Responsible for applying effects, creating buff/debuff dictionaries, and counting down certain effects'''
-    def __init__(self):
-        # Effects that wear off at the start of your turn despite not being duration effects
-        self.REMOVE_ON_TURN = ('Next Turn Block', 'Energized', 'Amplify', 'Burst', 'Double Tap', 'Duplication', 'Flame Barrier', 'Rebound', 'Simmering Rage',
-                               'No Draw', 'Slow', 'Choked', 'Entangled')
-        self.DURATION_EFFECTS = (
-            "Frail", "Poison", "Vulnerable", "Weak", "Draw Reduction", 'Lock On', "No Block", "Intangible", "Blur", "Collect", 'Double Damage',
-            "Equilibrium", "Phantasmal", "Regeneration", "Fading"
-            )
-        self.NON_STACKING_EFFECTS = (
-            "Confused", "No Draw", "Entangled", "Barricade", "Back Attack", "Life Link", "Minion", "Reactive", "Shifting", "Split",
-            "Stasis", "Unawakened", "Blasphemer", "Corruption", "Electro", "Master Reality", "Pen Nib", "Simmering Rage",
-            "Surrounded"
-            )
-        self.PLAYER_BUFFS = {
-            "Artifact": "Negate the next X debuffs",
-            "Barricade": "<bold>Block</bold> is not removed at the start of your turn",
-            "Buffer": "Prevent the next X times you would lose HP",
-            "Dexterity": "Increases <bold>Block</bold> gained from cards by X",
-            "Draw Card": "Draw X aditional cards next turn",
-            "Draw Up": "Draw X additional cards each turn",
-            "Energized": "Gain X additional <bold>Energy</bold> next turn",
-            "Focus": "Increases the effectiveness of <bold>Orbs</bold> by X",
-            "Intangible": "Reduce ALL damage and HP loss to 1 for X turns",
-            "Mantra": "When you gain 10 Mantra, enter <bold>Divinity</bold>",
-            "Metallicize": "At the end of your/its turn, gains X <bold>Block</bold>",
-            "Next Turn Block": "Gain X <bold>Block</bold> next turn",
-            "Plated Armor": "At the end of your/its turn, gain X <bold>Block</bold>. Recieving unblocked attack damage reduces Plated Armor by 1.",
-            "Ritual": "At the end of your/its turn, gains X <bold>Strength</bold>",
-            "Strength": "Increases attack damage by X",
-            "Thorns": "When attacked, deal X damage back",
-            "Vigor": "Your next Attack deals X additional damage",
-            "Accuracy": "<bold>Shivs</bold> deal X additonal damage",
-            "After Image": "Whenever you play a card, gain X <bold>Block</bold>",
-            "Amplify": "Your next X Power cards are played twice",
-            "Battle Hymn": "At the start of each turn, add X <bold>Smites</bold> into your hand",
-            "Berzerk": "At the start of your turn, gain 1 <bold>Energy</bold>",
-            "Blasphemer": "At the start of your turn, die",
-            "Blur": "<bold>Block</bold> is not removed at the start of your next X turns.",
-            "Brutality": "At the start of your turn, lose X HP and draw X card(s)",
-            "Burst": "Your next X Skills are played twice",
-            "Collect": "Put a <bold>Miracle+</bold> into your hand at the start of your next X turns",
-            "Combust": "At the end of your turn, lose 1 HP for each <bold>Combust</bold> played and deal X damage to ALL enemies",
-            "Corruption": "Skills cost 0. Whenever you play a Skill, <bold>Exhaust</bold> it",
-            "Creative AI": "At the start of your turn, add X random <power>Power</power cards into your hand",
-            "Dark Embrace": "Whenever a card is <bold>Exhausted</bold>, draw 1 card.",
-            "Demon Form": "At the start of your turn, gain X <bold>Strength</bold>",
-            "Deva": "At the start of your turn, gain X <bold>Energy</bold> N times and increase X by 1",
-            "Devotion": "At the start of your turn, gain X <bold>Mantra</bold>",
-            "Double Damage": "Attacks deal double damage for X turns",
-            "Double Tap": "Your next X Attacks are played twice",
-            "Duplication": "Your next X cards are played twice",
-            "Echo Form": "The first X cards you play each turn are played twice",
-            "Electro": "<bold>Lightning</bold> hits ALL enemies",
-            "Envenom": "Whenever you deal unblocked attack damage, apply X <bold>Poison</bold>",
-            "Equilibrium": "<bold>Retain</bold> your hand for X turns",
-            "Establishment": "Whenever a card is <bold>Retained</bold>, reduce its cost by X",
-            "Evolve": "Whenever you draw a Status card, draw X cards",
-            "Feel No Pain": "Whenever a card is <bold>Exhausted</bold>, gain X <bold>Block</bold>",
-            "Fire Breathing": "Whenever you draw a Status or Curse card, deal X damage to ALL enemies",
-            "Flame Barrier": "When attacked, deals X damage back. Wears off at the start of your next turn",
-            "Foresight": "At the start of your turn, <bold>Scry</bold> X",
-            "Free Attack Power": "The next X Attacks you play cost 0",
-            "Heatsink": "Whenever you play a Power card, draw X cards",
-            "Hello": "At the start of your turn, add X random Common cards into your hand",
-            "Infinite Blades": "At the start of your turn, add X <bold>Shivs</bold> into your hand",
-            "Juggernaut": "Whenever you gain <bold>Block</bold>, deal X damage to a random enemy",
-            "Like Water": "At the end of your turn, if you are in <bold>Calm</bold>, gain X <bold>Block</bold>",
-            "Loop": "At the start of your turn, trigger the passive ablity of your next orb X times",
-            "Machine Learning": "At the start of your turn, draw X additional cards",
-            "Magnetism": "At the start of your turn, add X random colorless cards into your hand",
-            "Master Reality": "Whenever a card is created during combat, <bold>Upgrade</bold> it",
-            "Mayhem": "At the start of your turn, play the top X cards of your draw pile",
-            "Mental Fortress": "Whenever you switch <bold>Stances</bold>, gain X <bold>Block</bold>",
-            "Nightmare": "Add X of a chosen card into your hand next turn",
-            "Nirvana": "Whenever you <bold>Scry</bold>, gain X <bold>Block</bold>",
-            "Noxious Fumes": "At the start of your turn, apply X <bold>Poison</bold> to ALL enemies",
-            "Omega": "At the end of your turn, deal X damage to ALL enemies",
-            "Panache": "Whenever you play 5 cards in a single turn, deal X damage to ALL enemies",
-            "Pen Nib": "Your next Attack deals double damage",
-            "Phantasmal": "Deal double damage for the next X turns",
-            "Rage": "Whenever you play an Attack, gain X <bold>Block</bold>. Wears off next turn",
-            "Rebound": "The next X cards you play this turn are placed on top of your draw pile",
-            "Regeneration": "At the end of your turn, heal X HP and decrease Regeneration by 1",
-            "Rushdown": "Whenever you enter <bold>Wrath</bold>, draw X cards",
-            "Repair": "At the end of combat, heal X HP",
-            "Rupture": "Whenever you lose HP from a card, gain X <bold>Strength</bold>",
-            "Sadistic": "Whenever you apply a debuff to an enemy, deal X damage to that enemy",
-            "Simmering Rage": "Enter <bold>Wrath</bold> next turn",
-            "Static Discharge": "Whenever you take unblocked attack damage, channel X <bold>Lightning</bold>",
-            "Storm": "Whenever you play a Power card, channel X <bold>Lightning</bold>",
-            "Study": "At the end of your turn, shuffle X <bold>Insights<bold> into your draw pile",
-            "Surrounded": "Recieve 50% more damage when attacked from behind. Use targeting cards or potions to change your orientation",
-            "The Bomb": "At the end of 3 turns, deal X damage to ALL enemies",
-            "Thousand Cuts": "Whenever you play a card, deal X damage to ALL enemies",
-            "Tools of the Trade": "At the start of your turn, draw X cards and discard X cards",
-            "Wave of the Hand": "Whenever you gain <bold>Block</bold> this turn, apply X <bold>Weak</bold> to ALL enemies",
-            "Well-laid Plans": "At the end of your turn, <bold>Retain</bold> up to X cards.",
-        }
-        self.PLAYER_DEBUFFS = {
-            "Confused": "The costs of your cards are randomized on draw, from 0 to 3",
-            "Dexterity Down": "At the end of your turn, lose X <bold>Dexterity</bold>",
-            "Frail": "<bold>Block</bold> gained from cards is reduced by 25%",
-            "No Draw": "You may not draw any more cards this turn",
-            "Strength Down": "At the end of your turn, lose X <bold>Strength</bold>",
-            "Vulnerable": "You/It takes 50% more damage from attacks",
-            "Weak": "You/It deals 25% less damage from attacks",
-            "Bias": "At the start of your turn, lose X <bold>Focus</bold>",
-            "Contricted": "At the end of your turn, take X damage",
-            "Draw Reduction": "Draw 1 less card the next X turns",
-            "Entangled": "You may not play Attacks this turn",
-            "Fasting": "Gain X less Energy at the start of each turn",
-            "Hex": "Whenever you play a non-Attack card, shuffle X <bold>Dazed</bold> into your draw pile",
-            "No Block": "You may not gain <bold>Block</bold> from cards for the next X turns",
-            "Wraith Form": "At the start of your turn, lose X <bold>Dexterity</bold>"
-        }
-        self.ENEMY_BUFFS = {
-            "Artifact": "Negate the next X debuffs",
-            "Barricade": "<bold>Block</bold> is not removed at the start of your turn",
-            "Intangible": "Reduce ALL damage and HP loss to 1 for X turns",
-            "Metallicize": "At the end of your/its turn, gains X <bold>Block</bold>",
-            "Plated Armor": "At the end of your/its turn, gain X <bold>Block</bold>. Recieving unblocked attack damage reduces Plated Armor by 1.",
-            "Ritual": "At the end of your/its turn, gains X <bold>Strength</bold>",
-            "Strength": "Increases attack damage by X",
-            "Regen": "At the end of its turn, heals X HP",
-            "Thorns": "When attacked, deal X damage back",
-            "Angry": "Upon recieving attack damage, gains X <bold>Strength</bold>",
-            "Back Attack": "Deals 50% increased damage as it is attacking you from behind",
-            "Beat of Death": "Whenever you play a card, take X damage",
-            "Curiosity": "Whenever you play a Power card, gains X <bold>Strength</bold>",
-            "Curl Up": "On recieving attack damage, curls up and gains X <bold>Block</bold>(Once per combat)",
-            "Enrage": "Whenever you play a Skill, gains X <bold>Strength</bold>",
-            "Explosive": "Explodes in N turns, dealing X damage",
-            "Fading": "Dies in X turns",
-            "Invincible": "Can only lose X more HP this turn",
-            "Life Link": "If other Darklings are still alive, revives in 2 turns",
-            "Malleable": "On recieving attack damage, gains X <keyword>Block</keyword>. <keyword>Block</keyword> increases by 1 every time it's triggered. Resets to X at the start of your turn",
-            "Minion": "Minions abandon combat without their leader",
-            "Mode Shift": "After recieving X damage, changes to a defensive form",
-            "Painful Stabs": "Whenever you recieve unblocked attack damage from this enemy, add X <status>Wounds</status> into your discard pile",
-            "Reactive": "Upon recieving attack damage, changes its intent",
-            "Sharp Hide": "Whenever you play an Attack, take X damage",
-            "Shifting": "Upon losing HP, loses that much <buff>Strength</buff> until the end of its turn",
-            "Split": "When its HP is at 50% or lower, splits into 2 smaller slimes with its current HP as their Max HP",
-            "Spore Cloud": "On death, applies X <debuff>Vulnerable</debuff>",
-            "Stasis": "On death, returns a stolen card to your hand",
-            "Strength Up": "At the end of its turn, gains X <buff>Strength</buff>",
-            "Thievery": "Steals X <yellow>Gold</yellow> when it attacks",
-            "Time Warp": "Whenever you play N cards, ends your turn and gains X <buff>Strength</buff>",
-            "Unawakened": "This enemy hasn't awakened yet...",
-        }
-        self.ENEMY_DEBUFFS = {
-            "Poison": "At the beginning of its turn, loses X HP and loses 1 stack of Poison",
-            "Shackled": "At the end of its turn, regains X <bold>Strength</bold>",
-            "Slow": "The enemy recieves (X * 10)% more damage from attacks this turn. Whenever you play a card, increase Slow by 1",
-            "Vulnerable": "You/It takes 50% more damage from attacks",
-            "Weak": "You/It deals 25% less damage from attacks",
-            "Block Return": "Whenever you attack this enemy, gain X <bold>Block</bold>",
-            "Choked": "Whenever you play a card this turn, the targeted enemy loses X HP",
-            "Corpse Explosion": "On death, deals X times its Max HP worth of damage to all other enemies",
-            "Lock-On": "<bold>Lightning</bold> and <bold>Dark</bold> orbs deal 50% more damage to the targeted enemy",
-            "Mark": "Whenever you play <bold>Pressure Points</bold>, all enemies with Mark lose X HP"
-        }
 
-        self.ALL_EFFECTS = {**self.PLAYER_BUFFS, **self.PLAYER_DEBUFFS, **self.ENEMY_BUFFS, **self.ENEMY_DEBUFFS}
+class Strength(Effect):
+    registers = [Message.BEFORE_ATTACK]
+    def __init__(self, host, amount):
+        super().__init__(host, 'Strength', StackType.INTENSITY, EffectType.BUFF, "Increases attack damage by X.", amount)
 
-    def init_effects(self, effect_pool: str) -> dict:
-        effect_pool = effect_pool.lower()
-        initialized_effects = {}
-        effect_groups = {'player debuffs': self.PLAYER_DEBUFFS, 'player buffs': self.PLAYER_BUFFS, 'enemy debuffs': self.ENEMY_DEBUFFS, 'enemy buffs': self.ENEMY_BUFFS}
-        for buff in effect_groups[effect_pool]:
-            if buff not in self.NON_STACKING_EFFECTS:
-                initialized_effects[buff] = 0
+    def callback(self, message, data):
+        if message == Message.BEFORE_ATTACK:
+            user, _, damage_dealer = data
+            if 'Player' in str(user) and damage_dealer.__class__ != int:
+                damage_dealer.modify_damage(self.amount, f"<buff>Strength</buff>({'+' if self.amount >= 1 else '-'}{self.amount} dmg)")
             else:
-                initialized_effects[buff] = False
-        return initialized_effects
+                damage_dealer += self.amount
 
-    def apply_effect(self, target, user, effect_name: str,  amount=0, recursion_tag=False) -> None:
-        assert effect_name in self.ALL_EFFECTS, f"{effect_name} is not a valid debuff or buff."
-        champion_belt_activated = False
-        current_relic_pool = [relic.get('Name') for relic in user.relics] if getattr(user, 'player_class', 'placehold') in str(user) else []
-        color = 'debuff' if amount < 0 or (effect_name in self.ENEMY_DEBUFFS or effect_name in self.PLAYER_DEBUFFS) else 'buff'
-        if str(user) == 'Player' and effect_name in ('Weak', 'Frail'):
-            if 'Turnip' in current_relic_pool and effect_name == 'Frail':
-                ansiprint('<debuff>Frail</debuff> was blocked by your <bold>Turnip</bold>.')
-            elif 'Ginger' in current_relic_pool and effect_name == 'Weak':
-                ansiprint('<debuff>Weak</debuff> was blocked by <bold>Ginger</bold>')
+class StrengthDown(Effect):
+    registers = [Message.END_OF_TURN]
+    def __init__(self, host, amount):
+        super().__init__(host, 'Strength Down', StackType.INTENSITY, EffectType.DEBUFF, "At the end of your turn, lose X <buff>Strength</buff>.", amount, one_turn=True)
+
+    def callback(self, message, data):
+        if message == Message.END_OF_TURN:
+            player, _ = data
+            ei.apply_effect(player, None, Strength, -self.amount)
+
+class Vulnerable(Effect):
+    registers = [Message.BEFORE_ATTACK]
+    def __init__(self, host, amount):
+        super().__init__(host, 'Vulnerable', StackType.DURATION, EffectType.DEBUFF, "Target takes 50% more damage from attacks.", amount)
+
+    def callback(self, message, data):
+        if message == Message.BEFORE_ATTACK:
+            user, target, damage_dealer = data
+            if 'Player' in str(user) and damage_dealer.__class__ != int:
+                damage_dealer.modify_damage(math.floor(damage_dealer.damage * 0.5), "<debuff>Vulnerable</debuff>(x1.5 dmg)")
+            else:
+                damage_dealer *= 2
+
+class Weak(Effect):
+    registers = [Message.BEFORE_ATTACK]
+    def __init__(self, host, amount):
+        super().__init__(host, 'Weak', StackType.DURATION, EffectType.DEBUFF, "Target deals 25% less attack damage.", amount)
+
+    def callback(self, message, data):
+        if message == Message.BEFORE_ATTACK:
+            user, target, damage_dealer = data
+            if 'Player' in str(self.host) and damage_dealer.__class_ != int:
+                damage_dealer.modify_damage(-math.floor(damage_dealer.damage * 0.25), "<debuff>Weak</debuff>(x0.75 dmg)")
+            else:
+                damage_dealer *= 0.75
+
+class Frail(Effect):
+    registers = [Message.BEFORE_BLOCK]
+    def __init__(self, host, amount):
+        super().__init__(host, 'Frail', StackType.DURATION, EffectType.DEBUFF, "You gain 25% less <keyword>Block</keyword> from cards.", amount)
+
+    def callback(self, message, data):
+        if message == Message.BEFORE_BLOCK:
+            _, card = data
+            card.modify_block(-math.floor(card.block * 0.25), "<debuff>Frail</debuff>(x0.75 block)")
+
+class CurlUp(Effect):
+    registers = [Message.ON_ATTACKED]
+    def __init__(self, host, amount):
+        # INFO: Due to some very strange bug, the 'C' is interpreted as the end of an escape sequence(^[[?62;4C) which is why it's escaped. wtf
+        super().__init__(host, '\Curl Up', StackType.INTENSITY, EffectType.BUFF, "On recieving attack damage, rolls and gains X <keyword>Block</keyword>. (Once per combat)", amount)  # noqa: W605
+
+    def callback(self, message, data):
+        if message == Message.ON_ATTACKED:
+            target = data
+            if target != self.host:
+                return
+            target.blocking(self.amount)
+            self.amount = 0
+
+class Ritual(Effect):
+    registers = [Message.END_OF_TURN]
+    def __init__(self, host, amount):
+        super().__init__(host, "Ritual", StackType.INTENSITY, EffectType.BUFF, "At the end of its turn, gains X <buff>Strength</buff>.", amount)
+
+    def callback(self, message, data):
+        if message == Message.END_OF_TURN:
+            _ = data
+            ei.apply_effect(self.host, None, Strength, self.amount)
+
+class EffectInterface:
+    """Responsible for applying effects, creating buff/debuff dictionaries, and counting down certain effects"""
+    def __init__(self):
+        pass
+
+    def apply_effect(self, target, user, effect: Effect, amount=0, recursion_tag=False) -> None:
+        """recurstion_tag is only meant for internal use to stop infinite loops with Champion Belt."""
+        current_relic_pool = (
+            [relic.name for relic in user.relics]
+            if getattr(user, "player_class", "placehold") in str(user)
+            else []
+        )
+        effect = effect(target, amount)
+        effect_type = EffectType.DEBUFF if effect.amount < 0 else effect.type
+        if str(user) == "Player" and effect in ("Weak", "Frail"):
+            if "Turnip" in current_relic_pool and effect.name == "Frail":
+                ansiprint("<debuff>Frail</debuff> was blocked by your <bold>Turnip</bold>.")
+            elif "Ginger" in current_relic_pool and effect.name == "Weak":
+                ansiprint("<debuff>Weak</debuff> was blocked by <bold>Ginger</bold>")
             return
-        if ((effect_name in self.ENEMY_DEBUFFS or effect_name in self.PLAYER_DEBUFFS) or amount < 0) and target.buffs['Artifact'] > 0:
-            subject = getattr(target, 'third_person_ref', 'Your')
-            ansiprint(f"<debuff>{effect_name}</debuff> was blocked by {subject} <buff>Artifact</buff>.")
+        if effect_type == EffectType.DEBUFF and "Artifact" in current_relic_pool: # TODO: Make Artifact buff.
+            subject = getattr(target, "third_person_ref", "Your")
+            ansiprint(f"<debuff>{effect.name}</debuff> was blocked by {subject} <buff>Artifact</buff>.")
         else:
-            if effect_name in (*self.ENEMY_DEBUFFS, *self.PLAYER_DEBUFFS):
-                if effect_name in self.NON_STACKING_EFFECTS:
-                    target.debuffs[effect_name] = True
-                else:
-                    target.debuffs[effect_name] += amount
-            elif effect_name in (*self.ENEMY_BUFFS, *self.PLAYER_BUFFS):
-                if effect_name in self.NON_STACKING_EFFECTS:
-                    target.buffs[effect_name] = True
-                else:
-                    target.buffs[effect_name] += amount
-            if target == user and getattr(target, 'player_class', '') in ("Ironclad", "Silent", "Defect", "Watcher"):
-                ansiprint(f"You gained {f'{amount} ' if effect_name not in self.NON_STACKING_EFFECTS else ''}<{color}>{effect_name}</{color}>")
-            elif target == user and str(user) == 'Enemy':
-                ansiprint(f"{target.name} gained {f'{amount} ' if effect_name not in self.NON_STACKING_EFFECTS else ''}<{color}>{effect_name}</{color}>")
-            elif str(user) == 'Enemy' and str(target) != "Enemy":
-                ansiprint(f"{user.name} applied {f'{amount} ' if effect_name not in self.NON_STACKING_EFFECTS else ''}<{color}>{effect_name}</{color}> to you.")
-            elif getattr(user, 'player_class', '') in ("Ironclad", "Silent", "Defect", "Watcher") and str(target) == 'Enemy':
-                ansiprint(f"You applied {f'{amount} ' if effect_name not in self.NON_STACKING_EFFECTS else ''}<{color}>{effect_name}</{color}> to {target.name}")
-            elif str(user) == str(target) and user != target:
-                ansiprint(f"{user.name} applied {f'{amount} ' if effect_name not in self.NON_STACKING_EFFECTS else ''}<{color}>{effect_name}</{color}> to {target.name}.")
-            if 'Champion Belt' in current_relic_pool and 'Player' in str(user) and not recursion_tag:
-                self.apply_effect(target, user, 'Weak', 1, True)
-            if str(user) == 'Enemy' and hasattr(target, 'fresh_effects'):
-                target.fresh_effects.append(effect_name)
+            effect.register(bus)
+            if effect_type == EffectType.DEBUFF:
+                target.debuffs.append(effect)
+                target.debuffs = self.merge_duplicates(target.debuffs)
+            else:
+                target.buffs.append(effect)
+                target.buffs = self.merge_duplicates(target.buffs)
+
+            if 'Player' in str(target) and user is None:
+                # If the player applied an effect to themselves
+                ansiprint(f"You gained {effect.get_name()}")
+            elif ('Enemy' in str(target) and user is None) or (target == user and 'Enemy' in str(target)):
+                # If the enemy applied an effect to itself
+                ansiprint(f"{target.name} gained {effect.get_name()}")
+            elif 'Enemy' in str(user) and 'Player' in str(target):
+                # If the enemy applied an effect to you
+                ansiprint(f"{user.name} applied {effect.get_name()} to you.")
+            elif 'Player' in str(user) and 'Enemy' in str(target):
+                # If the player applied an effect to the enemy
+                ansiprint(f"You applied {effect.get_name()} to {target.name}")
+            elif 'Enemy' in str(user) and 'Enemy' in str(target) and user != target:
+                # If the enemy applied an effect to another enemy
+                ansiprint(f"{user.name} applied {effect.get_name()} to {target.name}.")
+
+            if ("Champion Belt" in current_relic_pool and "Player" in str(user) and not recursion_tag):
+                self.apply_effect(target, user, "Weak", 1, True)
+            if 'Enemy' in str(user) and hasattr(target, "fresh_effects"):
+                target.fresh_effects.append(effect)
 
     def tick_effects(self, subject):
         for buff in subject.buffs:
-            if buff in self.REMOVE_ON_TURN and subject.buffs.get(buff, 0) > 0 and buff not in getattr(subject, 'fresh_effects', []):
-                subject.buffs[buff] = 0
-                ansiprint(f'<buff>{buff}</buff> wears off.')
-            elif buff in self.DURATION_EFFECTS and subject.buffs.get(buff, 0) > 0 and buff not in getattr(subject, 'fresh_effects', []):
-                subject.buffs[buff] -= 1
-                if subject.buffs[buff] == 0:
-                    ansiprint(f"<buff>{buff}</buff> wears off.")
+            buff.tick()
         for debuff in subject.debuffs:
-            if debuff in self.REMOVE_ON_TURN and subject.debuffs.get(debuff, 0) > 0 and debuff not in getattr(subject, 'fresh_effects', []):
-                subject.debuffs[debuff] = 0
-                ansiprint(f'<debuff>{debuff}</debuff> wears off.')
-                continue
-            if debuff in self.DURATION_EFFECTS and subject.debuffs.get(debuff, 0) > 0 and debuff not in getattr(subject, 'fresh_effects', []):
-                subject.debuffs[debuff] -= 1
-                if subject.debuffs[debuff] == 0:
-                    ansiprint(f"<debuff>{debuff}</debuff> wears off.")
+            debuff.tick()
+        def clean(effect):
+            if effect.amount >= 1:
+                return True
+            else:
+                effect.unsubscribe()
+                return False
+        subject.buffs = list(filter(clean, subject.buffs))
+        subject.debuffs = list(filter(clean, subject.debuffs))
+
+    def merge_duplicates(self, effect_list):
+        # Thank you Claude Sonnet
+        result = []
+        seen = {}
+
+        for effect in effect_list:
+            if effect.name in seen:
+                seen[effect.name] += effect
+            else:
+                seen[effect.name] = effect
+                result.append(effect)
+
+        return [seen[effect.name] for effect in result]
 
     def full_view(self, entity, enemies):
         ansiprint(f"<bold>{entity.name}</bold>")
-        for buff in entity.buffs:
-            if int(entity.buffs[buff]) > 0:
-                ansiprint(f"<buff>{buff}</buff>: {self.ALL_EFFECTS[buff].replace('X', str(entity.buffs[buff]))}")
-        for debuff in entity.debuffs:
-            if int(entity.debuffs[debuff]) > 0:
-                ansiprint(f"<debuff>{debuff}</debuff>: {self.ALL_EFFECTS[debuff].replace('X', str(entity.debuff[debuff]))}")
+        for effect in entity.buffs + entity.debuffs:
+            ansiprint(effect.pretty_print())
         for enemy in enemies:
             ansiprint(f"<bold>{enemy.name}</bold>:")
-            for buff in enemy.buffs:
-                if int(enemy.buffs[buff]) > 0:
-                    ansiprint(f"<buff>{buff}</buff>: {self.ALL_EFFECTS[buff].replace('X', str(enemy.buffs[buff]))}")
-            for debuff in enemy.debuffs:
-                if int(enemy.debuffs[debuff]) > 0:
-                    ansiprint(f"<debuff>{debuff}</debuff>: {self.ALL_EFFECTS[debuff].replace('X', str(enemy.debuffs[debuff]))}")
-        input('Press enter to leave > ')
+            for effect in enemy.buffs + enemy.debuffs:
+                ansiprint(effect.pretty_print())
+
+
 ei = EffectInterface()
 gen = Generators()
 view = Displayer()
