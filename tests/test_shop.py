@@ -19,7 +19,7 @@ class TestSellableItems():
 
   def test_potions(self):
     '''See that we can make sellable items out of all potions and that they display correctly'''
-    all_sellable_potions = list(items.potions.values())
+    all_sellable_potions = list(items.potions)
     for potion in all_sellable_potions:
       sellable = SellableItem(potion)
       ansiprint(sellable.valid_string())
@@ -27,14 +27,14 @@ class TestSellableItems():
 
   def test_relics(self):
     '''See that we can make sellable items out of all relics and that they display correctly'''
-    all_sellable_relics = list(items.relics.values())
+    all_sellable_relics = list(items.relics)
     for relic in all_sellable_relics:
       sellable = SellableItem(relic)
       ansiprint(sellable.valid_string())
       ansiprint(sellable.invalid_string())
 
 def test_shop(monkeypatch):
-  player = entities.create_player()
+  player = entities.Player.create_player()
   cards = [SellableItem(x) for x in items.cards if x.name in ("Strike","Body Slam","Heavy Blade","Warcry")]
   shop = Shop(player, cards)
   responses = iter(['1', '\n', 'e'])

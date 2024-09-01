@@ -31,12 +31,13 @@ from ansi_tags import ansiprint
 from definitions import CardCategory, Rarity
 from helper import Displayer, get_attribute
 from items import cards, potions, relics
+from message_bus_tools import Relic, Potion
 
 
 # Helper functions for displaying cards, potions, and relics.
 # These really should be inside the classes for those items
 #------------------------------------------------------------
-def relic_pretty_string(relic, valid):
+def relic_pretty_string(relic: Relic, valid):
   if valid:
     name_colors = {
       'Starter': 'starter',
@@ -47,19 +48,20 @@ def relic_pretty_string(relic, valid):
       'Shop': 'rare',
       'Boss': 'rare',
       'Special': 'rare'}
-    return f"<{name_colors[relic['Rarity']]}>{relic['Name']}</{name_colors[relic['Rarity']]}> | {relic['Class']} | <yellow>{relic['Info']}</yellow> | <dark-blue><italic>{relic['Flavor']}</italic></dark-blue>"
+    # print(f"<{name_colors[relic.rarity]}>{relic.name}</{name_colors[relic.rarity]}> | {relic.player_class} | <yellow>{relic.info}</yellow> | <dark-blue><italic>{relic.flavor_text}</italic></dark-blue>")
+    return f"<{name_colors[relic.rarity]}>{relic.name}</{name_colors[relic.rarity]}> | {relic.player_class} | <yellow>{relic.info}</yellow> | <dark-blue><italic>{relic.flavor_text}</italic></dark-blue>"
   else:
-    return f"<light-black>{relic['Name']} | {relic['Class']} | {relic['Info']} | {relic['Flavor']}</light-black>"
+    return f"<light-black>{relic.name} | {relic.player_class} | {relic.info} | {relic.flavor_text}</light-black>"
 
-def potion_pretty_string(potion, valid):
+def potion_pretty_string(potion: Potion, valid):
   if valid:
     class_colors = {'Ironclad': 'red', 'Silent': 'dark-green', 'Defect': 'true-blue', 'Watcher': 'watcher-purple', 'Any': 'white'}
     rarity_colors = {'Common': 'white', 'Uncommon': 'uncommon', 'Rare': 'rare'}
-    chosen_class_color = class_colors[potion['Class']]
-    chosen_rarity_color = rarity_colors[potion['Rarity']]
-    return f"<{chosen_rarity_color}>{potion['Name']}</{chosen_rarity_color}> | <{chosen_class_color}>{potion['Class']}</{chosen_class_color}> | <yellow>{potion['Info']}</yellow>"
+    chosen_class_color = class_colors[potion.player_class]
+    chosen_rarity_color = rarity_colors[potion.rarity]
+    return f"<{chosen_rarity_color}>{potion.name}</{chosen_rarity_color}> | <{chosen_class_color}>{potion.player_class}</{chosen_class_color}> | <yellow>{potion.info}</yellow>"
   else:
-    return f"<light-black>{potion['Name']} | {potion['Class']} | {potion['Info']}</light-black>"
+    return f"<light-black>{potion.name} | {potion.player_class} | {potion.info}</light-black>"
 
 def determine_item_category(item):
   # A massive hack to try to figure out if we've got a card, potion, or relic
@@ -68,8 +70,8 @@ def determine_item_category(item):
   except KeyError as e:
     raise KeyError(f'The following item has no Name: {item}') from e
   card_names = [get_attribute(c, 'Name') for c in cards]
-  potion_names = [get_attribute(p, 'Name') for p in potions.values()]
-  relic_names = [get_attribute(r, 'Name') for r in relics.values()]
+  potion_names = [get_attribute(p, 'Name') for p in potions]
+  relic_names = [get_attribute(r, 'Name') for r in relics]
   if name in card_names:
     return CardCategory.CARD
   elif name in potion_names:
@@ -82,7 +84,7 @@ def determine_item_category(item):
 def category_to_pretty_string(item, valid):
   category = determine_item_category(item)
   if category == CardCategory.CARD:
-    return item.pretty_print_valid(valid)
+    return item.pretty_print()
   elif category == CardCategory.POTION:
     return potion_pretty_string(item, valid)
   elif category == CardCategory.RELIC:
@@ -139,7 +141,7 @@ class Shop():
     def initialize_items(self) -> list[SellableItem]:
       # TODO: Make this class-specific and include relics and potions
       items = []
-      all_cards = list(cards.values())
+      all_cards = list(cards)
       attack_cards = [c for c in all_cards if c["Type"] == "Attack" and c["Class"] != "Colorless"]
       skill_cards = [c for c in all_cards if c["Type"] == "Skill" and c["Class"] != "Colorless"]
       power_cards = [c for c in all_cards if c["Type"] == "Power" and c["Class"] != "Colorless"]

@@ -970,7 +970,7 @@ class BagOfMarbles(Relic):
 class BlueCandle(Relic):
     registers = [Message.ON_CARD_PLAY]
     def __init__(self):
-        super().__init__("Blue Candle", "<curse>Curse</curse cards can now be played. Playing a <curse>Curse</curse> will make you lose 1 HP and <keyword>Exhaust</keyword> the card.", "The flame ignites when shrouded in darkness.", Rarity.UNCOMMON)
+        super().__init__("Blue Candle", "<curse>Curse</curse> cards can now be played. Playing a <curse>Curse</curse> will make you lose 1 HP and <keyword>Exhaust</keyword> the card.", "The flame ignites when shrouded in darkness.", Rarity.UNCOMMON)
 
     def callback(self, message, data):
         if message == Message.ON_CARD_PLAY:
@@ -1043,7 +1043,7 @@ class Calipers(Relic):
 class CaptainsWheel(Relic):
     registers = [Message.START_OF_TURN]
     def __init__(self):
-        super().__init__("Captain's Wheel", "At the start of your 3rd turn, gain 18 </keyword>Block</keyword>.", "Wooden trinket carved with delicate precision. A name is carved into it but the language is foreign.", Rarity.RARE)
+        super().__init__("Captain's Wheel", "At the start of your 3rd turn, gain 18 <keyword>Block</keyword>.", "Wooden trinket carved with delicate precision. A name is carved into it but the language is foreign.", Rarity.RARE)
 
     def callback(self, message, data):
         if message == Message.START_OF_TURN:

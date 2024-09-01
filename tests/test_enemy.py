@@ -23,4 +23,4 @@ def test_most_enemies_default_move(sleepless):
     print(f"--->Testing: {name}")
     enemy = class_obj()
     enemy.set_intent()
-    enemy.execute_move()
+    enemy.execute_move(enemies=None)

@@ -18,7 +18,8 @@ def all_enemies():
 
 
 class TestDisplayers():
-    # TODO: Find some other thing to test because the display_actual_damage and display_actual_block functions have been removed as of 4/13/24.
+  # TODO: Find some other thing to test because the display_actual_damage and display_actual_block functions have been removed as of 4/13/24.
+  @pytest.mark.skip("These functions have been removed.")
   def test_display_actual_damage(self, all_enemies):
     disp = helper.Displayer()
     player = entities.Player(health=80, block=3, max_energy=3, deck=[])

@@ -147,7 +147,7 @@ class Player(Registerable):
             exhaust = True
         if pile is not None:
             if exhaust is True or getattr(card, "exhaust", False) is True:
-                ansiprint(f"{card['Name']} was <bold>Exhausted</bold>.")
+                ansiprint(f"{card.name} was <bold>Exhausted</bold>.")
                 self.move_card(card=card, move_to=self.exhaust_pile, from_location=pile, cost_energy=True)
                 bus.publish(Message.ON_EXHAUST, (self, card))
             else:

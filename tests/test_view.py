@@ -5,7 +5,7 @@ import entities
 
 def test_view_piles_on_all_cards(monkeypatch):
   all_cards = list(items.cards)
-  entity = entities.create_player()
+  entity = entities.Player.create_player()
   entity.energy = 3
   all_conditions = [(lambda card: card.upgraded is True, "Upgraded"),
                     (lambda card: not card.upgraded and card.type not in ("Status", "Curse") or card.name == 'Burn', "Upgradeable"),

@@ -326,8 +326,8 @@ class Generators:
             if choice:
                 chosen_reward = view.list_input("Choose a card", rewards, view.view_piles)
                 if (
-                    entity.upgrade_attacks and rewards[chosen_reward].type == CardType.ATTACK 
-                    or (entity.upgrade_skills and rewards[chosen_reward].type == CardType.SKILL 
+                    entity.upgrade_attacks and rewards[chosen_reward].type == CardType.ATTACK
+                    or (entity.upgrade_skills and rewards[chosen_reward].type == CardType.SKILL
                     or entity.upgrade_powers and rewards[chosen_reward].type == CardType.POWER
                 )):
                     rewards[chosen_reward].upgrade()
@@ -433,8 +433,9 @@ class EffectInterface:
     def __init__(self):
         pass
 
-    def apply_effect(self, target, user, effect: Effect, amount=0, recursion_tag=False) -> None:
+    def apply_effect(self, target, user, effect, amount=0, recursion_tag=False) -> None:
         """recurstion_tag is only meant for internal use to stop infinite loops with Champion Belt."""
+        assert isinstance(effect, type(Effect)), f"Effect must be an Effect class. You passed {effect} (type: {type(effect)})."
         current_relic_pool = (
             [relic.name for relic in user.relics]
             if getattr(user, "player_class", "placehold") in str(user)
