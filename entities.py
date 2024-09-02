@@ -155,11 +155,14 @@ class Player(Registerable):
         sleep(0.5)
         view.clear()
 
-    def draw_cards(self, middle_of_turn: bool=True, cards: int = 0):
+    def draw_cards(self, middle_of_turn: bool=True, cards: int = -1):
         """Draws [draw_cards] cards."""
         _ = middle_of_turn
-        if cards == 0:
+        if cards == -1:
             cards = self.draw_strength
+        if helper.NoDraw in self.debuffs:
+            ansiprint("You cannot draw any cards because of <debuff>No Draw</debuff>.")
+            return
         while True:
             self.discard_pile.extend(self.hand)
             self.hand.clear()

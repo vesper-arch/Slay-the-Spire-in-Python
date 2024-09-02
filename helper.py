@@ -451,6 +451,12 @@ class Corruption(Effect):
                 # TODO: Exhaust the card
                 pass
 
+class NoDraw(Effect):
+    # The amount is not needed since this effect does not stack.
+    # This effect is essentially just a tag. There is a check in the player's draw_cards method that returns if this effect is found on the player.
+    def __init__(self, host, _):
+        super().__init__(host, "No Draw", StackType.NONE, EffectType.DEBUFF, "You may not draw any more cards this turn.")
+
 class EffectInterface:
     """Responsible for applying effects, creating buff/debuff dictionaries, and counting down certain effects"""
     def __init__(self):

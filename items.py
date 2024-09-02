@@ -446,7 +446,7 @@ class BattleTrance(Card):
 
     def apply(self, origin):
         origin.draw_cards(cards=self.cards)
-        ei.apply_effect(origin, None, "No Draw")
+        ei.apply_effect(origin, None, helper.NoDraw)
 
 class BloodForBlood(Card):
     registers = [Message.ON_PLAYER_HEALTH_LOSS]
