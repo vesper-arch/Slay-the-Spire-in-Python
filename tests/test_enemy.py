@@ -13,6 +13,7 @@ def sleepless(monkeypatch):
 
 
 def test_most_enemies_default_move(sleepless):
+  player = entities.Player.create_player()
   enemies = []
   for name, obj in inspect.getmembers(enemy_catalog):
     # These enemies are too hard to test for some reason
@@ -23,4 +24,4 @@ def test_most_enemies_default_move(sleepless):
     print(f"--->Testing: {name}")
     enemy = class_obj()
     enemy.set_intent()
-    enemy.execute_move(enemies=None)
+    enemy.execute_move(player=player, enemies=None)

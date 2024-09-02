@@ -366,7 +366,7 @@ class Enemy(Registerable):
     def set_intent(self):
         pass
 
-    def execute_move(self, enemies):
+    def execute_move(self, player: Player, enemies: list["Enemy"]):
         moves = 1
         display_name = "DEFAULT: UNKNOWN"
         for action in self.next_move:
@@ -384,7 +384,7 @@ class Enemy(Registerable):
             if action == "Attack":
                 dmg = parameters[0]
                 times = parameters[1] if len(parameters) > 1 else 1
-                self.attack(dmg, times)
+                self.attack(dmg, times, target=player)
             elif action == "Buff":
                 buff = parameters[0]
                 amount = parameters[1] if len(parameters) > 1 else 1
@@ -502,21 +502,21 @@ class Enemy(Registerable):
 
         return True
 
-    def attack(self, dmg: int, times: int):
+    def attack(self, dmg: int, times: int, target: Player):
         for _ in range(times):
-            bus.publish(Message.BEFORE_ATTACK, (self, dmg, self.player.block))
-            if dmg <= self.player.block:
-                self.player.block -= dmg
+            bus.publish(Message.BEFORE_ATTACK, (self, dmg, target.block))
+            if dmg <= target.block:
+                target.block -= dmg
                 dmg = 0
                 ansiprint("<light-blue>Blocked</light-blue>")
-            elif dmg > self.player.block:
-                dmg -= self.player.block
+            elif dmg > target.block:
+                dmg -= target.block
                 dmg = max(0, dmg)
-                ansiprint(f"{self.name} dealt {dmg}(<light-blue>{self.player.block} Blocked</light-blue>) damage to you.")
-                self.player.block = 0
-                self.player.health -= dmg
+                ansiprint(f"{self.name} dealt {dmg}(<light-blue>{target.block} Blocked</light-blue>) damage to you.")
+                target.block = 0
+                target.health -= dmg
                 bus.publish(Message.ON_PLAYER_HEALTH_LOSS, None)
-            bus.publish(Message.AFTER_ATTACK, (self, dmg, self.player.block))
+            bus.publish(Message.AFTER_ATTACK, (self, dmg, target.block))
         sleep(1)
 
     def remove_effect(self, effect_name, effect_type):
@@ -573,9 +573,9 @@ class Enemy(Registerable):
                 print()
                 self.set_intent()
         elif message == Message.END_OF_TURN:
-            _, enemies = data
+            player, enemies = data
             if self.state == State.ALIVE:
-                self.execute_move(enemies)
+                self.execute_move(player, enemies)
             # Needs to be expanded at some point
         elif message == Message.ON_DEATH_OR_ESCAPE:
             event, bus = data

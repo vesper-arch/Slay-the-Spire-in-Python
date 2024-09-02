@@ -353,7 +353,7 @@ class Strength(Effect):
     def callback(self, message, data):
         if message == Message.BEFORE_ATTACK:
             user, _, damage_dealer = data
-            if 'Player' in str(user) and damage_dealer.__class__ != int:
+            if 'Player' in str(user) and not isinstance(damage_dealer, int):
                 damage_dealer.modify_damage(self.amount, f"<buff>Strength</buff>({'+' if self.amount >= 1 else '-'}{self.amount} dmg)")
             else:
                 damage_dealer += self.amount
@@ -376,7 +376,7 @@ class Vulnerable(Effect):
     def callback(self, message, data):
         if message == Message.BEFORE_ATTACK:
             user, target, damage_dealer = data
-            if 'Player' in str(user) and damage_dealer.__class__ != int:
+            if 'Player' in str(user) and not isinstance(damage_dealer, int):
                 damage_dealer.modify_damage(math.floor(damage_dealer.damage * 0.5), "<debuff>Vulnerable</debuff>(x1.5 dmg)")
             else:
                 damage_dealer *= 2
@@ -389,7 +389,7 @@ class Weak(Effect):
     def callback(self, message, data):
         if message == Message.BEFORE_ATTACK:
             user, target, damage_dealer = data
-            if 'Player' in str(self.host) and damage_dealer.__class_ != int:
+            if 'Player' in str(self.host) and not isinstance(damage_dealer, int) or getattr(damage_dealer, "modify_damage", None):
                 damage_dealer.modify_damage(-math.floor(damage_dealer.damage * 0.25), "<debuff>Weak</debuff>(x0.75 dmg)")
             else:
                 damage_dealer *= 0.75
@@ -435,6 +435,9 @@ class EffectInterface:
 
     def apply_effect(self, target, user, effect, amount=0, recursion_tag=False) -> None:
         """recurstion_tag is only meant for internal use to stop infinite loops with Champion Belt."""
+        # HACK HACK HACK Dynamically search for the effect class if it's a string. This is icky and should be avoided.
+        if isinstance(effect, str) and effect in globals():
+            effect = globals()[effect]
         assert isinstance(effect, type(Effect)), f"Effect must be an Effect class. You passed {effect} (type: {type(effect)})."
         current_relic_pool = (
             [relic.name for relic in user.relics]
