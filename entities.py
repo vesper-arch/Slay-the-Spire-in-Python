@@ -403,7 +403,7 @@ class Enemy(Registerable):
                 status = parameters[0]
                 amount = parameters[1]
                 location = parameters[2].lower()
-                self.status(status, amount, location)
+                self.status(status, amount, location, player=player)
             elif action == "Block":
                 block = parameters[0]
                 target = parameters[1] if len(parameters) > 1 else None
@@ -535,11 +535,11 @@ class Enemy(Registerable):
         ansiprint(f"{target.name} gained {block} <blue>Block</blue>")
         sleep(1)
 
-    def status(self, status_card: Card, amount: int, location: str):
+    def status(self, status_card: Card, amount: int, location: str, player: Player):
         locations = {
-            "draw pile": self.player.draw_pile,
-            "discard pile": self.player.discard_pile,
-            "hand": self.player.hand,
+            "draw pile": player.draw_pile,
+            "discard pile": player.discard_pile,
+            "hand": player.hand,
         }
         pile = locations[location]
         status_card = status_card()
@@ -547,7 +547,7 @@ class Enemy(Registerable):
             upper_bound = len(location) - 1 if len(location) > 0 else 1
             insert_index = random.randint(0, upper_bound)
             pile.insert(insert_index, deepcopy(status_card))
-        ansiprint(f"{self.player.name} gained {amount} {status_card.name} \nPlaced into {location}")
+        ansiprint(f"{player.name} gained {amount} {status_card.name} \nPlaced into {location}")
         sleep(1)
 
     def summon(self, enemy, amount: int, random_enemy: bool, enemies):
