@@ -439,6 +439,18 @@ class Enrage(Effect):
             if card.type == CardType.SKILL:
                 ei.apply_effect(origin, None, Strength, self.amount)
 
+class Corruption(Effect):
+    registers = [Message.ON_CARD_PLAY]
+    def __init__(self, host, amount):
+        super().__init__(host, "Corruption", StackType.INTENSITY, EffectType.BUFF, "Whenever you play a Skill, exhaust it.", amount)
+
+    def callback(self, message, data):
+        if message == Message.ON_CARD_PLAY:
+            origin, card, target = data
+            if card.type == CardType.SKILL:
+                # TODO: Exhaust the card
+                pass
+
 class EffectInterface:
     """Responsible for applying effects, creating buff/debuff dictionaries, and counting down certain effects"""
     def __init__(self):
