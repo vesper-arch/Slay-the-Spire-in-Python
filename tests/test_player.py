@@ -23,31 +23,31 @@ def test_all_attack_cards_with_all_relics(monkeypatch):
     relics and play them all against a boss. Sensitive to combat initialization details
     because that logic is not isolated from enemy creation.
     '''
+    assert issubclass(helper.Vulnerable, helper.Effect)
     entities.random.seed(123)
     all_cards = list(items.cards)
 
     # Create uberplayer
     player = entities.Player(health=100, block=0, max_energy=3, deck=all_cards)
-    for relic in items.relics.values():
+    for relic in items.relics:
       player.relics.append(relic)
     player.in_combat = True
     player.draw_pile = deepcopy(player.deck)
 
     # Create boss
     boss = enemy_catalog.SlimeBoss()
-    helper.active_enemies.append(boss)
+    # helper.active_enemies.append(boss)
 
     # Patch some side effects
     with monkeypatch.context() as m:
         m.setattr('builtins.input', patched_input)
         m.setattr(helper, 'sleep', lambda x: None)
         m.setattr(entities, 'sleep', lambda x: None)
-        m.setattr(items, 'sleep', lambda x: None)
         helper.view.clear = replacement_clear_screen
 
         # Let 'er rip!
         for idx, card in enumerate(player.draw_pile):
           stats(player, boss)
           print(f"Playing card {idx} of {len(player.draw_pile)} - {card.name}")
-          player.use_card(card=card, target=boss, exhaust=True, pile=player.draw_pile)
+          player.use_card(card=card, enemies=[boss], target=boss, exhaust=True, pile=player.draw_pile)
 

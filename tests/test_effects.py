@@ -1,14 +1,18 @@
+import random
+
+import pytest
+
+import enemy_catalog
 import entities
 import helper
-import pytest
-import enemy_catalog
-import random
+
 
 @pytest.fixture
 def ei():
   ei = helper.EffectInterface()
   return ei
 
+@pytest.mark.skip("init_effects was removed.")
 class TestEffectInterface():
   def test_init_effects_player_debuffs(self, ei):
     output = ei.init_effects("player debuffs")
@@ -26,10 +30,11 @@ class TestEffectInterface():
     output = ei.init_effects("enemy buffs")
     assert "Sharp Hide" in output
 
+@pytest.mark.skip("init_effects was removed.")
 class TestApplyEffects():
   def test_player_buffs(self, ei):
     buffs = ei.init_effects("player buffs")
-    player = entities.create_player()
+    player = entities.Player.create_player()
     for buff in buffs:
       ei.apply_effect(player, None, buff, random.randint(1, 5))
     # No easy asserts possible
@@ -46,7 +51,7 @@ class TestApplyEffects():
 
   def test_player_debuffs(self, ei):
     debuffs = ei.init_effects("player debuffs")
-    test_player = entities.create_player()
+    test_player = entities.Player.create_player()
     for debuff in debuffs:
       ei.apply_effect(test_player, test_player, debuff, 5)
     # No easy asserts possible

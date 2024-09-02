@@ -380,7 +380,7 @@ class TrueGrit(Card):
             chosen_card = view.list_input("Choose a card to <keyword>Exhaust</keyword>", origin.hand, view.view_piles, lambda card: card.upgradeable is True and card.upgraded is False, "That card is either not upgradeable or is already upgraded.")
             origin.move_card(origin.hand[chosen_card], origin.exhaust_pile, origin.hand, False)
         else:
-            random_card = random.choice((card for card in origin.hand if card.upgradeable is True and card.upgraded is False))
+            random_card = random.choice([card for card in origin.hand if card.upgradeable is True and card.upgraded is False])
             origin.move_card(random_card, origin.exhaust_pile, origin.hand, False)
 
 class TwinStrike(Card):
@@ -431,7 +431,7 @@ class WildStrike(Card):
 
     def apply(self, origin, target):
         origin.attack(target, self)
-        origin.draw_pile.insert(Wound(), random.randint(len(origin.draw_pile) - 1))
+        origin.draw_pile.insert(random.randint(0, len(origin.draw_pile) - 1), Wound())
 
 class BattleTrance(Card):
     def __init__(self):
@@ -970,7 +970,7 @@ class BagOfMarbles(Relic):
 class BlueCandle(Relic):
     registers = [Message.ON_CARD_PLAY]
     def __init__(self):
-        super().__init__("Blue Candle", "<curse>Curse</curse cards can now be played. Playing a <curse>Curse</curse> will make you lose 1 HP and <keyword>Exhaust</keyword> the card.", "The flame ignites when shrouded in darkness.", Rarity.UNCOMMON)
+        super().__init__("Blue Candle", "<curse>Curse</curse> cards can now be played. Playing a <curse>Curse</curse> will make you lose 1 HP and <keyword>Exhaust</keyword> the card.", "The flame ignites when shrouded in darkness.", Rarity.UNCOMMON)
 
     def callback(self, message, data):
         if message == Message.ON_CARD_PLAY:
@@ -1043,7 +1043,7 @@ class Calipers(Relic):
 class CaptainsWheel(Relic):
     registers = [Message.START_OF_TURN]
     def __init__(self):
-        super().__init__("Captain's Wheel", "At the start of your 3rd turn, gain 18 </keyword>Block</keyword>.", "Wooden trinket carved with delicate precision. A name is carved into it but the language is foreign.", Rarity.RARE)
+        super().__init__("Captain's Wheel", "At the start of your 3rd turn, gain 18 <keyword>Block</keyword>.", "Wooden trinket carved with delicate precision. A name is carved into it but the language is foreign.", Rarity.RARE)
 
     def callback(self, message, data):
         if message == Message.START_OF_TURN:
