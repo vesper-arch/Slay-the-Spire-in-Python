@@ -408,7 +408,7 @@ class CurlUp(Effect):
     registers = [Message.ON_ATTACKED]
     def __init__(self, host, amount):
         # INFO: Due to some very strange bug, the 'C' is interpreted as the end of an escape sequence(^[[?62;4C) which is why it's escaped. wtf
-        super().__init__(host, '\Curl Up', StackType.INTENSITY, EffectType.BUFF, "On recieving attack damage, rolls and gains X <keyword>Block</keyword>. (Once per combat)", amount)  # noqa: W605
+        super().__init__(host, 'Curl Up', StackType.INTENSITY, EffectType.BUFF, "On recieving attack damage, rolls and gains X <keyword>Block</keyword>. (Once per combat)", amount)  # noqa: W605
 
     def callback(self, message, data):
         if message == Message.ON_ATTACKED:
