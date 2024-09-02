@@ -20,8 +20,9 @@ def test_most_enemies_default_move(sleepless):
     if inspect.isclass(obj) and name not in ["Enemy", "Hexaghost", "Lagavulin", "Sentry"]:
         enemies.append((name,obj))
 
-  for name, class_obj in enemies:
-    print(f"--->Testing: {name}")
+  print("\n\nTesting the default move for all enemies")
+  for idx, (name, class_obj) in enumerate(enemies):
+    print(f"--->Testing: {name} (Enemy #{idx+1} of {len(enemies)})")
     enemy = class_obj()
     enemy.set_intent()
     enemy.execute_move(player=player, enemies=None)
