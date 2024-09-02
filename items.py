@@ -380,7 +380,7 @@ class TrueGrit(Card):
             chosen_card = view.list_input("Choose a card to <keyword>Exhaust</keyword>", origin.hand, view.view_piles, lambda card: card.upgradeable is True and card.upgraded is False, "That card is either not upgradeable or is already upgraded.")
             origin.move_card(origin.hand[chosen_card], origin.exhaust_pile, origin.hand, False)
         else:
-            random_card = random.choice((card for card in origin.hand if card.upgradeable is True and card.upgraded is False))
+            random_card = random.choice([card for card in origin.hand if card.upgradeable is True and card.upgraded is False])
             origin.move_card(random_card, origin.exhaust_pile, origin.hand, False)
 
 class TwinStrike(Card):
