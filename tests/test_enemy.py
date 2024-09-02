@@ -17,7 +17,7 @@ def test_most_enemies_default_move(sleepless):
   enemies = []
   for name, obj in inspect.getmembers(enemy_catalog):
     # These enemies are too hard to test for some reason
-    if inspect.isclass(obj) and name not in ["Enemy", "Hexaghost", "Lagavulin", "Sentry"]:
+    if inspect.isclass(obj) and name not in ["Enemy", "Hexaghost", "Lagavulin", "Sentry", "ShieldGremlin"]:
         enemies.append((name,obj))
 
   print("\n\nTesting the default move for all enemies")

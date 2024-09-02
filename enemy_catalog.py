@@ -192,7 +192,7 @@ class MadGremlin(Enemy):
         self.next_move, self.intent = [("Scratch", "Attack", (4,))], "<aggresive>Attack</aggresive> 4"
 
 class ShieldGremlin(Enemy):
-    def __init__(self, enemies, ):
+    def __init__(self, enemies):
         super().__init__([12, 15], 0, "Shield Gremlin")
         self.enemies = enemies
 
