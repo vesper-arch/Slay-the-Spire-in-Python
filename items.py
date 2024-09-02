@@ -431,7 +431,7 @@ class WildStrike(Card):
 
     def apply(self, origin, target):
         origin.attack(target, self)
-        origin.draw_pile.insert(Wound(), random.randint(len(origin.draw_pile) - 1))
+        origin.draw_pile.insert(random.randint(len(origin.draw_pile) - 1), Wound())
 
 class BattleTrance(Card):
     def __init__(self):
