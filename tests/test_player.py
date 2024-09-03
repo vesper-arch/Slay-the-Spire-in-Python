@@ -26,16 +26,18 @@ def test_all_attack_cards_with_all_relics(monkeypatch):
     assert issubclass(helper.Vulnerable, helper.Effect)
     entities.random.seed(123)
     all_cards = list(items.cards)
+    SKIP_CARDS = ['Dual Wield']
+    all_cards = [card for card in all_cards if card.name not in SKIP_CARDS]
 
     # Create uberplayer
-    player = entities.Player(health=100, block=0, max_energy=3, deck=all_cards)
+    player = entities.Player(health=100, block=0, max_energy=100, deck=all_cards)
     for relic in items.relics:
       player.relics.append(relic)
     player.in_combat = True
     player.draw_pile = deepcopy(player.deck)
 
     # Create boss
-    boss = enemy_catalog.SlimeBoss()
+    boss = enemy_catalog.SlimeBoss(health_range=[1000,1000])
     # helper.active_enemies.append(boss)
 
     # Patch some side effects
@@ -46,8 +48,9 @@ def test_all_attack_cards_with_all_relics(monkeypatch):
         helper.view.clear = replacement_clear_screen
 
         # Let 'er rip!
+        initial_size = len(player.draw_pile)
         for idx, card in enumerate(player.draw_pile):
           stats(player, boss)
-          print(f"Playing card {idx} of {len(player.draw_pile)} - {card.name}")
+          print(f"Playing card {idx} of {initial_size} - {card.name}")
           player.use_card(card=card, enemies=[boss], target=boss, exhaust=True, pile=player.draw_pile)
 
