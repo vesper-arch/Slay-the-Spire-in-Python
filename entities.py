@@ -236,7 +236,10 @@ class Player(Registerable):
     def move_card(self, card, move_to, from_location, cost_energy=False, shuffle=False):
         if cost_energy is True:
             self.energy -= max(card.energy_cost, 0)
-        from_location.remove(card)
+        if card in from_location:
+            from_location.remove(card)
+        else:
+            ansiprint(f"WARNING: {card.name} was not found in `from_location` in `move_card()` function.")
         if shuffle is True:
             move_to.insert(random.randint(0, len(move_to) - 1), card)
         else:

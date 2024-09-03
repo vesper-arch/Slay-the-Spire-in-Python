@@ -18,6 +18,7 @@ def stats(player, enemy):
     ansiprint(f"<yellow>Player has {player.health} health, {player.block} block, {player.energy} energy, {len(player.hand)} cards in hand, {len(player.draw_pile)} cards in draw pile, {len(player.discard_pile)} cards in discard pile, {len(player.exhaust_pile)} cards in exhaust pile</yellow>")
     ansiprint(f"<red>Enemy has {enemy.health} health, {enemy.block} block</red>")
 
+
 def test_all_attack_cards_with_all_relics(monkeypatch):
     '''A kind of crazy test that will load up a player with all cards and all
     relics and play them all against a boss. Sensitive to combat initialization details
