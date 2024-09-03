@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import math
 import random
 from os import name, system
 from time import sleep
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
 
 from ansi_tags import ansiprint, strip
 from definitions import (
@@ -15,6 +17,10 @@ from definitions import (
     State,
 )
 from message_bus_tools import Effect, Message, bus
+
+if TYPE_CHECKING:
+    from entities import Enemy, Player
+    from items import Card
 
 
 def get_attribute(item, attribute):
