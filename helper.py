@@ -532,6 +532,18 @@ class FlameBarrier(Effect):
             target.health -= 4
 
 
+class Mettalicize(Effect):
+    registers = [Message.END_OF_TURN]
+
+    def __init__(self, host, amount=3):
+        super().__init__(host, "Metallicize", StackType.INTENSITY, EffectType.BUFF, "At the end of your turn, gain 3 <keyword>Block</keyword>.", amount)
+
+    def callback(self, message, data: tuple[Player, list[Enemy]]):
+        if message == Message.END_OF_TURN:
+            player, enemies = data
+            player.blocking(self.amount)
+
+
 class EffectInterface:
     """Responsible for applying effects, creating buff/debuff dictionaries, and counting down certain effects"""
     def __init__(self):
