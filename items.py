@@ -613,8 +613,8 @@ class Entrench(Card):
         self.upgrade_markers()
         self.energy_cost = 1
 
-    def apply(self, origin):
-        origin.blocking(block=origin.block)
+    def apply(self, origin: Player):
+        origin.blocking(block=origin.block, context="Entrench")
 
 class Evolve(Card):
     def __init__(self):
@@ -671,9 +671,9 @@ class FlameBarrier(Card):
         self.base_block, self.block = 14
         self.info = "Gain 14 <keyword>Block</keyword>. Whenever you're attacked this turn, deal 4 damage back."
 
-    def apply(self, origin):
-        origin.blocking(card=self)
-        ei.apply_effect(origin, None, "Flame Barrier", 4)
+    def apply(self, origin: Player):
+        origin.blocking(block=self.block, context="Flame Barrier")
+        ei.apply_effect(origin, None, "FlameBarrier", 4)
 
 class GhostlyArmor(Card):
     def __init__(self):

@@ -182,7 +182,7 @@ class Player(Registerable):
     def blocking(self, card: Card = None, block=0, context: str=None):
         """Gains [block] Block. Cards are affected by Dexterity and Frail."""
         block = getattr(card, 'block', None) if card else block
-        block_affected_by = ', '.join(getattr(card, 'block_affected_by', None) if card else context).rstrip(', ')
+        block_affected_by = ', '.join(getattr(card, 'block_affected_by', []) if card else [context])
         bus.publish(Message.BEFORE_BLOCK, (self, card))
         self.block += block
         ansiprint(f"""{self.name} gained {block} <blue>Block</blue> from {block_affected_by}.""") # f-strings my beloved
