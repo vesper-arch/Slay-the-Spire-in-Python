@@ -81,6 +81,14 @@ class StackType(StrEnum):
     NONE = 'none'
     DURATION_AND_INTENSITY = 'Duration and Intensity'
 
+STACK_TYPE_COLOR_MAPPING = {
+    StackType.DURATION: 'light-blue',
+    StackType.INTENSITY: 'orange',
+    StackType.COUNTER: 'magenta',
+    StackType.NONE: 'white',
+    StackType.DURATION_AND_INTENSITY: 'yellow'
+}
+
 class EffectType(StrEnum):
     DEBUFF = 'debuff'
     BUFF = 'buff'
