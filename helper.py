@@ -360,7 +360,7 @@ class Strength(Effect):
         if message == Message.BEFORE_ATTACK:
             user, _, damage_dealer = data
             if 'Player' in str(user) and not isinstance(damage_dealer, int):
-                damage_dealer.modify_damage(self.amount, f"<buff>Strength</buff>({'+' if self.amount >= 1 else '-'}{self.amount} dmg)")
+                damage_dealer.modify_damage(self.amount, f"<buff>Strength</buff>({self.amount:+d} dmg)")
             else:
                 damage_dealer += self.amount
 
