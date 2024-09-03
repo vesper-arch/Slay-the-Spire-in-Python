@@ -506,6 +506,7 @@ class BurningPact(Card):
     def apply(self, origin):
         chosen_card = view.list_input("Choose a card to <keyword>Exhaust</keyword>", origin.hand, view.view_piles)
         origin.move_card(origin.hand[chosen_card], origin.exhaust_pile, origin.hand, False)
+        origin.draw_cards(cards=self.cards)
 
 class Carnage(Card):
     def __init__(self):
