@@ -535,7 +535,7 @@ class Combust(Card):
 
 class DarkEmbrace(Card):
     def __init__(self):
-        super().__init__("Dark Embrace", "Whenever a card is <keyword>Exhausted</keyword>, draw 1 card.", Rarity.UNCOMMON, PlayerClass.IRONCLAD, CardType.POWER, TargetType.YOURSELF, energy_cost=2)
+        super().__init__(name="Dark Embrace", info="Whenever a card is <keyword>Exhausted</keyword>, draw 1 card.", rarity=Rarity.UNCOMMON, player_class=PlayerClass.IRONCLAD, card_type=CardType.POWER, target=TargetType.YOURSELF, energy_cost=2)
         self.upgrade_preview += f"<light-red>{self.energy_cost} Energy</light-red> -> <light-red><green>1</green> Energy</light-red>"
 
     def upgrade(self):
@@ -543,7 +543,7 @@ class DarkEmbrace(Card):
         self.energy_cost = 1
 
     def apply(self, origin):
-        ei.apply_effect(origin, None, "Dark Embrace")
+        ei.apply_effect(origin, None, "DarkEmbrace")
 
 class Disarm(Card):
     def __init__(self):
@@ -642,7 +642,7 @@ class FeelNoPain(Card):
         self.info = "Whenever a card is <keyword>Exhausted</keyword>, gain 4 <keyword>Block</keyword>."
 
     def apply(self, origin):
-        ei.apply_effect(origin, None, "Feel No Pain", self.feel_no_pain)
+        ei.apply_effect(origin, None, "FeelNoPain", self.feel_no_pain)
 
 class FireBreathing(Card):
     def __init__(self):
@@ -656,7 +656,7 @@ class FireBreathing(Card):
         self.info = "Whenever you draw a <status>Status</status> or <curse>Curse</curse> card, deal 10 damage to ALL enemies."
 
     def apply(self, origin):
-        ei.apply_effect(origin, None, "Fire Breathing", self.fire_breathing)
+        ei.apply_effect(origin, None, "FireBreathing", self.fire_breathing)
 
 class FlameBarrier(Card):
     def __init__(self):
