@@ -1,11 +1,18 @@
+from __future__ import annotations
+
 import math
 import random
 from copy import deepcopy
+from typing import TYPE_CHECKING
 
 import helper
 from ansi_tags import ansiprint
 from definitions import CardType, DeepCopyTuple, PlayerClass, Rarity, State, TargetType
 from message_bus_tools import Card, Message, Potion, Relic
+
+if TYPE_CHECKING:
+    from entities import Player
+    from items import Card
 
 ei = helper.ei
 view = helper.view
