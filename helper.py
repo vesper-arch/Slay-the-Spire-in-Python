@@ -19,7 +19,7 @@ from definitions import (
 from message_bus_tools import Effect, Message, bus
 
 if TYPE_CHECKING:
-    from entities import Enemy, Player
+    from entities import Enemy, Player, Action
     from items import Card
 
 
@@ -458,10 +458,17 @@ class Corruption(Effect):
                 pass
 
 class NoDraw(Effect):
-    # The amount is not needed since this effect does not stack.
-    # This effect is essentially just a tag. There is a check in the player's draw_cards method that returns if this effect is found on the player.
+    registers = [Message.BEFORE_DRAW, Message.END_OF_TURN]
+
     def __init__(self, host, _):
         super().__init__(host, "No Draw", StackType.NONE, EffectType.DEBUFF, "You may not draw any more cards this turn.")
+
+    def callback(self, message, data: tuple[Player, Action]):
+        if message == Message.BEFORE_DRAW:
+            player, action = data
+            action.cancel(reason="You cannot draw any cards because of <debuff>No Draw</debuff>.")
+        if message == Message.END_OF_TURN:
+            self.unsubscribe()
 
 class Combust(Effect):
     registers = [Message.END_OF_TURN]

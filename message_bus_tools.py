@@ -27,6 +27,8 @@ class Message(StrEnum):
     ON_RELIC_ADD = 'on_relic_add'
     ON_DEATH_OR_ESCAPE = 'on_death_or_escape'
     BEFORE_PLAYER_DEATH = 'before_player_death'
+    BEFORE_DRAW = 'before_draw'
+    AFTER_DRAW = 'after_draw'
 
 class MessageBus():
     '''This is a Pub/Sub, or Publish/Subscribe, message bus. It allows components to subscribe to messages,

@@ -14,6 +14,43 @@ from message_bus_tools import Card, Effect, Message, Potion, Registerable, Relic
 ei = helper.ei
 view = helper.view
 
+class Action:
+    def __init__(self, name, action, amount):
+        self.name = name
+        self.action = action
+        self.amount = amount
+        self.executed = False
+        self.cancelled = False
+        self.reason = ""
+
+    def cancel(self, reason=None):
+        self.cancelled = True
+        if not reason:
+            reason = f"{self.name} was cancelled."
+        self.reason = reason
+
+    def set_amount(self, new_amount):
+        self.amount = new_amount
+
+    def modify_amount(self, change):
+        self.amount += change
+
+    def execute(self):
+        if self.executed:
+            print(f"{self.name} already executed.")
+            return
+        if self.cancelled:
+            ansiprint(self.reason)
+            return
+        self.action(self.amount)
+        self.executed = True
+
+    def __str__(self):
+        return f"Action: {self.name} | Amount: {self.amount}"
+
+    def __repr__(self):
+        return self.__str__()
+
 class Player(Registerable):
     """
     Attributes:::
@@ -155,29 +192,30 @@ class Player(Registerable):
         sleep(0.5)
         view.clear()
 
-    def draw_cards(self, middle_of_turn: bool=True, cards: int = -1):
-        """Draws [draw_cards] cards."""
-        _ = middle_of_turn
-        if cards == -1:
+    def draw_cards(self, cards: int = None):
+        """Draws [cards] cards."""
+        if cards is None:
             cards = self.draw_strength
-        if helper.NoDraw in self.debuffs:
-            ansiprint("You cannot draw any cards because of <debuff>No Draw</debuff>.")
-            return
-        while True:
-            self.discard_pile.extend(self.hand)
-            self.hand.clear()
-            if len(self.draw_pile) < cards:
-                self.draw_pile.extend(random.sample(self.discard_pile, len(self.discard_pile)))
-                self.discard_pile = []
-                ansiprint("<bold>Discard pile shuffled into draw pile.</bold>")
-            self.hand.extend(self.draw_pile[-cards:])
-            # Removes those cards
-            self.draw_pile = self.draw_pile[:-cards]
-            for card in self.hand:
-                card.register(bus=bus)
-            print(f"Drew {cards} cards.")
-            # bus.publish(Message.ON_DRAW, (pl))
-            break
+        action = Action(self, self._draw_cards, cards)
+        bus.publish(Message.BEFORE_DRAW, (self, action))
+        action.execute()
+        bus.publish(Message.AFTER_DRAW, (self, action))
+
+
+    def _draw_cards(self, num_cards: int):
+        # Internal function to draw cards
+        self.discard_pile.extend(self.hand)
+        self.hand.clear()
+        if len(self.draw_pile) < num_cards:
+            self.draw_pile.extend(random.sample(self.discard_pile, len(self.discard_pile)))
+            self.discard_pile = []
+            ansiprint("<bold>Discard pile shuffled into draw pile.</bold>")
+        self.hand.extend(self.draw_pile[-num_cards:])
+        # Removes those cards
+        self.draw_pile = self.draw_pile[:-num_cards]
+        for card in self.hand:
+            card.register(bus=bus)
+        print(f"Drew {num_cards} card{'s'[:num_cards^1]}.")  # Cool pluralize hack
 
     def blocking(self, card: Card = None, block=0, context: str=None):
         """Gains [block] Block. Cards are affected by Dexterity and Frail."""
@@ -313,7 +351,7 @@ class Player(Registerable):
             self.energy += self.energy_gain
             # INFO: Both Barricade and Calipers are not accounted for here and will be added later.
             self.block = 0
-            self.draw_cards(False)
+            self.draw_cards()
             self.plays_this_turn = 0
             ei.tick_effects(self)
             self.fresh_effects.clear()

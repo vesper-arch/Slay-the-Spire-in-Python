@@ -314,7 +314,7 @@ class PommelStrike(Card):
 
     def apply(self, origin, target):
         origin.attack(target, self)
-        origin.draw_cards(False, self.cards)
+        origin.draw_cards(self.cards)
 
 class ShrugItOff(Card):
     def __init__(self):
@@ -331,7 +331,7 @@ class ShrugItOff(Card):
 
     def apply(self, origin):
         origin.blocking(card=self)
-        origin.draw_cards(False, 1)
+        origin.draw_cards(1)
 
 class SwordBoomerang(Card):
     def __init__(self):
@@ -419,7 +419,7 @@ class Warcry(Card):
         self.info = "Draw 2 cards. Put a card from your hand on top of your draw pile. <keyword>Exhaust</keyword>."
 
     def apply(self, origin):
-        origin.draw_cards(False, self.cards)
+        origin.draw_cards(self.cards)
         chosen_card = view.list_input("Choose a card to put on top of your draw pile", origin.hand, view.view_piles)
         origin.move_card(origin.hand[chosen_card], origin.draw_pile, origin.hand, False)
 
