@@ -595,6 +595,20 @@ class Berzerk(Effect):
             turn, player = data
             player.energy += 1
 
+
+class Brutality(Effect):
+    # "At the start of your turn, lose 1 HP and draw 1 card."
+    registers = [Message.START_OF_TURN]
+
+    def __init__(self, host, amount=1):
+        super().__init__(host, "Brutality", StackType.NONE, EffectType.BUFF, "At the start of your turn, lose 1 HP and draw 1 card.", amount=amount)
+
+    def callback(self, message, data: tuple[int, Player]):
+        if message == Message.START_OF_TURN:
+            turn, player = data
+            player.take_sourceless_dmg(1)
+            player.draw_cards(1)
+
 class EffectInterface:
     """Responsible for applying effects, creating buff/debuff dictionaries, and counting down certain effects"""
     def __init__(self):
