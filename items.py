@@ -1,11 +1,18 @@
+from __future__ import annotations
+
 import math
 import random
 from copy import deepcopy
+from typing import TYPE_CHECKING
 
 import helper
 from ansi_tags import ansiprint
 from definitions import CardType, DeepCopyTuple, PlayerClass, Rarity, State, TargetType
 from message_bus_tools import Card, Message, Potion, Relic
+
+if TYPE_CHECKING:
+    from entities import Player
+    from items import Card
 
 ei = helper.ei
 view = helper.view
@@ -307,7 +314,7 @@ class PommelStrike(Card):
 
     def apply(self, origin, target):
         origin.attack(target, self)
-        origin.draw_cards(False, self.cards)
+        origin.draw_cards(self.cards)
 
 class ShrugItOff(Card):
     def __init__(self):
@@ -324,7 +331,7 @@ class ShrugItOff(Card):
 
     def apply(self, origin):
         origin.blocking(card=self)
-        origin.draw_cards(False, 1)
+        origin.draw_cards(1)
 
 class SwordBoomerang(Card):
     def __init__(self):
@@ -412,7 +419,7 @@ class Warcry(Card):
         self.info = "Draw 2 cards. Put a card from your hand on top of your draw pile. <keyword>Exhaust</keyword>."
 
     def apply(self, origin):
-        origin.draw_cards(False, self.cards)
+        origin.draw_cards(self.cards)
         chosen_card = view.list_input("Choose a card to put on top of your draw pile", origin.hand, view.view_piles)
         origin.move_card(origin.hand[chosen_card], origin.draw_pile, origin.hand, False)
 
@@ -446,7 +453,7 @@ class BattleTrance(Card):
 
     def apply(self, origin):
         origin.draw_cards(cards=self.cards)
-        ei.apply_effect(origin, None, "No Draw")
+        ei.apply_effect(origin, None, helper.NoDraw)
 
 class BloodForBlood(Card):
     registers = [Message.ON_PLAYER_HEALTH_LOSS]
@@ -499,6 +506,7 @@ class BurningPact(Card):
     def apply(self, origin):
         chosen_card = view.list_input("Choose a card to <keyword>Exhaust</keyword>", origin.hand, view.view_piles)
         origin.move_card(origin.hand[chosen_card], origin.exhaust_pile, origin.hand, False)
+        origin.draw_cards(cards=self.cards)
 
 class Carnage(Card):
     def __init__(self):
@@ -535,7 +543,7 @@ class Combust(Card):
 
 class DarkEmbrace(Card):
     def __init__(self):
-        super().__init__("Dark Embrace", "Whenever a card is <keyword>Exhausted</keyword>, draw 1 card.", Rarity.UNCOMMON, PlayerClass.IRONCLAD, CardType.POWER, TargetType.YOURSELF, energy_cost=2)
+        super().__init__(name="Dark Embrace", info="Whenever a card is <keyword>Exhausted</keyword>, draw 1 card.", rarity=Rarity.UNCOMMON, player_class=PlayerClass.IRONCLAD, card_type=CardType.POWER, target=TargetType.YOURSELF, energy_cost=2)
         self.upgrade_preview += f"<light-red>{self.energy_cost} Energy</light-red> -> <light-red><green>1</green> Energy</light-red>"
 
     def upgrade(self):
@@ -543,7 +551,7 @@ class DarkEmbrace(Card):
         self.energy_cost = 1
 
     def apply(self, origin):
-        ei.apply_effect(origin, None, "Dark Embrace")
+        ei.apply_effect(origin, None, "DarkEmbrace")
 
 class Disarm(Card):
     def __init__(self):
@@ -613,8 +621,8 @@ class Entrench(Card):
         self.upgrade_markers()
         self.energy_cost = 1
 
-    def apply(self, origin):
-        origin.blocking(block=origin.block)
+    def apply(self, origin: Player):
+        origin.blocking(block=origin.block, context="Entrench")
 
 class Evolve(Card):
     def __init__(self):
@@ -642,7 +650,7 @@ class FeelNoPain(Card):
         self.info = "Whenever a card is <keyword>Exhausted</keyword>, gain 4 <keyword>Block</keyword>."
 
     def apply(self, origin):
-        ei.apply_effect(origin, None, "Feel No Pain", self.feel_no_pain)
+        ei.apply_effect(origin, None, "FeelNoPain", self.feel_no_pain)
 
 class FireBreathing(Card):
     def __init__(self):
@@ -656,7 +664,7 @@ class FireBreathing(Card):
         self.info = "Whenever you draw a <status>Status</status> or <curse>Curse</curse> card, deal 10 damage to ALL enemies."
 
     def apply(self, origin):
-        ei.apply_effect(origin, None, "Fire Breathing", self.fire_breathing)
+        ei.apply_effect(origin, None, "FireBreathing", self.fire_breathing)
 
 class FlameBarrier(Card):
     def __init__(self):
@@ -671,9 +679,9 @@ class FlameBarrier(Card):
         self.base_block, self.block = 14
         self.info = "Gain 14 <keyword>Block</keyword>. Whenever you're attacked this turn, deal 4 damage back."
 
-    def apply(self, origin):
-        origin.blocking(card=self)
-        ei.apply_effect(origin, None, "Flame Barrier", 4)
+    def apply(self, origin: Player):
+        origin.blocking(block=self.block, context="Flame Barrier")
+        ei.apply_effect(origin, None, "FlameBarrier", 4)
 
 class GhostlyArmor(Card):
     def __init__(self):

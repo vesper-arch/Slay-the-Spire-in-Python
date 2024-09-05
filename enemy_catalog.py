@@ -377,8 +377,15 @@ class Sentry(Enemy):
             break
 
 class SlimeBoss(Enemy):
-    def __init__(self, ):
-        super().__init__([140, 140], 0, "Slime Boss", {"Split": True})
+    def __init__(self, **kwargs):
+        defaults = {
+            "health_range": [140, 140],
+            "block": 0,
+            "name": "Slime Boss",
+            "powers": {"Split": True}
+        }
+        defaults.update(kwargs)
+        super().__init__(**defaults)
 
     def set_intent(self):
         if self.active_turns in list(range(1, 50 + 1, 3)): # Goop turn

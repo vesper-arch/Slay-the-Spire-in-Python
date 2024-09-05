@@ -14,6 +14,43 @@ from message_bus_tools import Card, Effect, Message, Potion, Registerable, Relic
 ei = helper.ei
 view = helper.view
 
+class Action:
+    def __init__(self, name, action, amount):
+        self.name = name
+        self.action = action
+        self.amount = amount
+        self.executed = False
+        self.cancelled = False
+        self.reason = ""
+
+    def cancel(self, reason=None):
+        self.cancelled = True
+        if not reason:
+            reason = f"{self.name} was cancelled."
+        self.reason = reason
+
+    def set_amount(self, new_amount):
+        self.amount = new_amount
+
+    def modify_amount(self, change):
+        self.amount += change
+
+    def execute(self):
+        if self.executed:
+            print(f"{self.name} already executed.")
+            return
+        if self.cancelled:
+            ansiprint(self.reason)
+            return
+        self.action(self.amount)
+        self.executed = True
+
+    def __str__(self):
+        return f"Action: {self.name} | Amount: {self.amount}"
+
+    def __repr__(self):
+        return self.__str__()
+
 class Player(Registerable):
     """
     Attributes:::
@@ -139,7 +176,9 @@ class Player(Registerable):
             card.apply(origin=self, enemies=enemies)
         elif card.target == TargetType.YOURSELF:
             card.apply(origin=self)
-        bus.publish(Message.ON_CARD_PLAY, (self, card, target))
+        else:
+            raise ValueError(f"Invalid target type: {card.target}")
+        bus.publish(Message.ON_CARD_PLAY, (self, card, target, enemies))
         if (card.type == CardType.STATUS and items.relics["Medical Kit"] in self.player.relics):
             exhaust = True
         elif (card.type == CardType.CURSE and items.relics["Blue Candle"] in self.player.relics):
@@ -155,31 +194,35 @@ class Player(Registerable):
         sleep(0.5)
         view.clear()
 
-    def draw_cards(self, middle_of_turn: bool=True, cards: int = 0):
-        """Draws [draw_cards] cards."""
-        _ = middle_of_turn
-        if cards == 0:
+    def draw_cards(self, cards: int = None):
+        """Draws [cards] cards."""
+        if cards is None:
             cards = self.draw_strength
-        while True:
-            self.discard_pile.extend(self.hand)
-            self.hand.clear()
-            if len(self.draw_pile) < cards:
-                self.draw_pile.extend(random.sample(self.discard_pile, len(self.discard_pile)))
-                self.discard_pile = []
-                ansiprint("<bold>Discard pile shuffled into draw pile.</bold>")
-            self.hand.extend(self.draw_pile[-cards:])
-            # Removes those cards
-            self.draw_pile = self.draw_pile[:-cards]
-            for card in self.hand:
-                card.register(bus=bus)
-            print(f"Drew {cards} cards.")
-            # bus.publish(Message.ON_DRAW, (pl))
-            break
+        action = Action(self, self._draw_cards, cards)
+        bus.publish(Message.BEFORE_DRAW, (self, action))
+        action.execute()
+        bus.publish(Message.AFTER_DRAW, (self, action))
+
+
+    def _draw_cards(self, num_cards: int):
+        # Internal function to draw cards
+        self.discard_pile.extend(self.hand)
+        self.hand.clear()
+        if len(self.draw_pile) < num_cards:
+            self.draw_pile.extend(random.sample(self.discard_pile, len(self.discard_pile)))
+            self.discard_pile = []
+            ansiprint("<bold>Discard pile shuffled into draw pile.</bold>")
+        self.hand.extend(self.draw_pile[-num_cards:])
+        # Removes those cards
+        self.draw_pile = self.draw_pile[:-num_cards]
+        for card in self.hand:
+            card.register(bus=bus)
+        print(f"Drew {num_cards} card{'s'[:num_cards^1]}.")  # Cool pluralize hack
 
     def blocking(self, card: Card = None, block=0, context: str=None):
         """Gains [block] Block. Cards are affected by Dexterity and Frail."""
         block = getattr(card, 'block', None) if card else block
-        block_affected_by = ', '.join(getattr(card, 'block_affected_by', None) if card else context).rstrip(', ')
+        block_affected_by = ', '.join(getattr(card, 'block_affected_by', []) if card else [context])
         bus.publish(Message.BEFORE_BLOCK, (self, card))
         self.block += block
         ansiprint(f"""{self.name} gained {block} <blue>Block</blue> from {block_affected_by}.""") # f-strings my beloved
@@ -233,7 +276,10 @@ class Player(Registerable):
     def move_card(self, card, move_to, from_location, cost_energy=False, shuffle=False):
         if cost_energy is True:
             self.energy -= max(card.energy_cost, 0)
-        from_location.remove(card)
+        if card in from_location:
+            from_location.remove(card)
+        else:
+            ansiprint(f"WARNING: {card.name} was not found in `from_location` in `move_card()` function.")
         if shuffle is True:
             move_to.insert(random.randint(0, len(move_to) - 1), card)
         else:
@@ -307,7 +353,7 @@ class Player(Registerable):
             self.energy += self.energy_gain
             # INFO: Both Barricade and Calipers are not accounted for here and will be added later.
             self.block = 0
-            self.draw_cards(False)
+            self.draw_cards()
             self.plays_this_turn = 0
             ei.tick_effects(self)
             self.fresh_effects.clear()

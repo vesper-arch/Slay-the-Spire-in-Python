@@ -3,7 +3,7 @@ from enum import StrEnum
 from uuid import uuid4
 
 from ansi_tags import ansiprint
-from definitions import CardType, PlayerClass, Rarity, StackType, TargetType
+from definitions import CardType, PlayerClass, Rarity, StackType, TargetType, STACK_TYPE_COLOR_MAPPING
 
 
 class Message(StrEnum):
@@ -27,6 +27,8 @@ class Message(StrEnum):
     ON_RELIC_ADD = 'on_relic_add'
     ON_DEATH_OR_ESCAPE = 'on_death_or_escape'
     BEFORE_PLAYER_DEATH = 'before_player_death'
+    BEFORE_DRAW = 'before_draw'
+    AFTER_DRAW = 'after_draw'
 
 class MessageBus():
     '''This is a Pub/Sub, or Publish/Subscribe, message bus. It allows components to subscribe to messages,
@@ -98,8 +100,10 @@ class Effect(Registerable):
         return f"<{stack_type_colors[str(self.stack_type)]}>{self.name}</{stack_type_colors[str(self.stack_type)]}>{f' {self.amount}' if self.stack_type != 'none' else ''} | <yellow>{self.info}</yellow>"
 
     def get_name(self):
-        stack_type_colors = {'duration': 'light-blue', 'intensity': 'orange', 'counter': 'magenta', 'no stack': 'white'}
-        return f"<{stack_type_colors[str(self.stack_type)]}>{self.name}</{stack_type_colors[str(self.stack_type)]}>{f' {self.amount}' if self.stack_type != 'none' else ''}"
+        # shorter vars for readability
+        c = STACK_TYPE_COLOR_MAPPING
+        st = self.stack_type
+        return f"<{c[st]}>{self.name}</{c[st]}>{f' {self.amount}' if self.stack_type is not None else ''}"
 
     def tick(self):
         if self.one_turn is True:

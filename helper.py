@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import math
 import random
 from os import name, system
 from time import sleep
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
 
 from ansi_tags import ansiprint, strip
 from definitions import (
@@ -15,6 +17,10 @@ from definitions import (
     State,
 )
 from message_bus_tools import Effect, Message, bus
+
+if TYPE_CHECKING:
+    from entities import Enemy, Player, Action
+    from items import Card
 
 
 def get_attribute(item, attribute):
@@ -354,7 +360,7 @@ class Strength(Effect):
         if message == Message.BEFORE_ATTACK:
             user, _, damage_dealer = data
             if 'Player' in str(user) and not isinstance(damage_dealer, int):
-                damage_dealer.modify_damage(self.amount, f"<buff>Strength</buff>({'+' if self.amount >= 1 else '-'}{self.amount} dmg)")
+                damage_dealer.modify_damage(self.amount, f"<buff>Strength</buff>({self.amount:+d} dmg)")
             else:
                 damage_dealer += self.amount
 
@@ -415,7 +421,7 @@ class CurlUp(Effect):
             target = data
             if target != self.host:
                 return
-            target.blocking(self.amount)
+            target.blocking(block=self.amount, context=self.name)
             self.amount = 0
 
 class Ritual(Effect):
@@ -435,7 +441,7 @@ class Enrage(Effect):
 
     def callback(self, message, data):
         if message == Message.ON_CARD_PLAY:
-            origin, card, target = data
+            origin, card, target, enemies = data
             if card.type == CardType.SKILL:
                 ei.apply_effect(origin, None, Strength, self.amount)
 
@@ -446,10 +452,162 @@ class Corruption(Effect):
 
     def callback(self, message, data):
         if message == Message.ON_CARD_PLAY:
-            origin, card, target = data
+            origin, card, target, enemies = data
             if card.type == CardType.SKILL:
                 # TODO: Exhaust the card
                 pass
+
+class NoDraw(Effect):
+    registers = [Message.BEFORE_DRAW, Message.END_OF_TURN]
+
+    def __init__(self, host, _):
+        super().__init__(host, "No Draw", StackType.NONE, EffectType.DEBUFF, "You may not draw any more cards this turn.")
+
+    def callback(self, message, data: tuple[Player, Action]):
+        if message == Message.BEFORE_DRAW:
+            player, action = data
+            action.cancel(reason="You cannot draw any cards because of <debuff>No Draw</debuff>.")
+        if message == Message.END_OF_TURN:
+            self.unsubscribe()
+
+class Combust(Effect):
+    registers = [Message.END_OF_TURN]
+    def __init__(self, host, amount):
+        super().__init__(host, "Combust", StackType.INTENSITY, EffectType.BUFF, "At the end of your turn, deals X damage to ALL enemies.", amount)
+
+    def callback(self, message, data: tuple[Player, list[Enemy]]):
+        if message == Message.END_OF_TURN:
+            player, enemies = data
+            for enemy in enemies:
+                enemy.health -= self.amount
+
+class DarkEmbrace(Effect):
+    registers = [Message.ON_EXHAUST]
+    def __init__(self, target, amount=1):
+        # "Whenever a card is <keyword>Exhausted</keyword>, draw 1 card
+        super().__init__(None, name="Dark Embrace", stack_type=StackType.NONE, effect_type=EffectType.BUFF, info="Whenever a card is <keyword>Exhausted</keyword>, draw 1 card.", amount=amount)
+
+    def callback(self, message, data: tuple[Player, Card]):
+        if message == Message.END_OF_TURN:
+            player, card = data
+            player.draw_cards(self.amount)
+
+class Evolve(Effect):
+    registers = [Message.ON_CARD_PLAY]
+    def __init__(self, host, amount):
+        super().__init__(host, "Evolve", StackType.NONE, EffectType.BUFF, "Whenever you play a Status or Curse, draw 1 card.", amount)
+
+    def callback(self, message, data: tuple[Player, Card, Enemy]):
+        if message == Message.ON_CARD_PLAY:
+            origin, card, target, enemies = data
+            if card.type in (CardType.STATUS, CardType.CURSE):
+                origin.draw_cards(1)
+
+class FeelNoPain(Effect):
+    registers = [Message.ON_CARD_PLAY]
+    def __init__(self, host, amount):
+        super().__init__(host, "Feel No Pain", StackType.INTENSITY, EffectType.BUFF, "Whenever you play a Skill, gain X <keyword>Block</keyword>.", amount)
+
+    def callback(self, message, data):
+        if message == Message.ON_CARD_PLAY:
+            origin, card, target, enemies = data
+            if card.type == CardType.SKILL:
+                origin.blocking(block=self.amount, context=self.name)
+
+class FireBreathing(Effect):
+    registers = [Message.ON_CARD_PLAY]
+    def __init__(self, host, amount):
+        super().__init__(host, "Fire Breathing", StackType.INTENSITY, EffectType.BUFF, "Whenever you play an Attack, deal X damage to ALL enemies.", amount)
+
+    def callback(self, message, data: tuple[Player, Card, Enemy, list[Enemy]]):
+        if message == Message.ON_CARD_PLAY:
+            player, card, target, enemies = data
+            if card.type == CardType.ATTACK:
+                for enemy in enemies:
+                    enemy.health -= self.amount
+
+class FlameBarrier(Effect):
+    # "Gain 12 <keyword>Block</keyword>. Whenever you're attacked this turn, deal 4 damage back."
+    registers = [Message.ON_ATTACKED]
+
+    def __init__(self, host, amount):
+        super().__init__(host, "Flame Barrier", StackType.NONE, EffectType.BUFF, "Gain 12 <keyword>Block</keyword>. Whenever you're attacked this turn, deal 4 damage back.", amount)
+
+    def callback(self, message, data):
+        if message == Message.ON_ATTACKED:
+            target = data
+            target.health -= 4
+
+
+class Mettalicize(Effect):
+    registers = [Message.END_OF_TURN]
+
+    def __init__(self, host, amount=3):
+        super().__init__(host, "Metallicize", StackType.INTENSITY, EffectType.BUFF, "At the end of your turn, gain 3 <keyword>Block</keyword>.", amount)
+
+    def callback(self, message, data: tuple[Player, list[Enemy]]):
+        if message == Message.END_OF_TURN:
+            player, enemies = data
+            player.blocking(block=self.amount, context=self.name)
+
+
+class Rage(Effect):
+    #"Whenever you play an <keyword>Attack</keyword> this turn, gain 3 <keyword>Block</keyword>.""
+    registers = [Message.ON_CARD_PLAY, Message.END_OF_TURN]
+
+    def __init__(self, host, amount=3):
+        super().__init__(host, "Rage", StackType.NONE, EffectType.BUFF, "Whenever you play an <keyword>Attack</keyword> this turn, gain 3 <keyword>Block</keyword>.", amount=amount)
+
+    def callback(self, message, data):
+        if message == Message.ON_CARD_PLAY:
+            player, card, target, enemies = data
+            if card.type == CardType.ATTACK:
+                player.blocking(block=self.amount, context=self.name)
+        elif message == Message.END_OF_TURN:
+            self.unsubscribe()
+
+class Barricade(Effect):
+    # "Barricade", "<keyword>Block</keyword> is not removed at the start of your turn."
+    registers = [Message.BEFORE_BLOCK, Message.END_OF_TURN]
+
+    def __init__(self, host, amount=0):
+        super().__init__(host, "Barricade", StackType.NONE, EffectType.BUFF, "<keyword>Block</keyword> is not removed at the start of your turn.", amount)
+        self.end_of_turn_block = None
+
+    def callback(self, message, data: tuple[Player, Action] | tuple[Player, list[Enemy]]):
+        if message == Message.END_OF_TURN:
+            player, enemies = data
+            self.end_of_turn_block = player.block
+        elif message == Message.BEFORE_BLOCK and self.end_of_turn_block is not None:
+            player, action = data
+            action.set_amount(self.end_of_turn_block)
+            self.unsubscribe()
+
+class Berzerk(Effect):
+    #"Gain 2 <debuff>Vulnerable</debuff>. At the start of your turn, gain 1 <keyword>Energy</keyword>."
+    registers = [Message.START_OF_TURN]
+
+    def __init__(self, host, amount=2):
+        super().__init__(host, "Berzerk", StackType.NONE, EffectType.BUFF, "Gain 2 <debuff>Vulnerable</debuff>. At the start of your turn, gain 1 <keyword>Energy</keyword>.", amount)
+
+    def callback(self, message, data: tuple[int, Player]):
+        if message == Message.START_OF_TURN:
+            turn, player = data
+            player.energy += 1
+
+
+class Brutality(Effect):
+    # "At the start of your turn, lose 1 HP and draw 1 card."
+    registers = [Message.START_OF_TURN]
+
+    def __init__(self, host, amount=1):
+        super().__init__(host, "Brutality", StackType.NONE, EffectType.BUFF, "At the start of your turn, lose 1 HP and draw 1 card.", amount=amount)
+
+    def callback(self, message, data: tuple[int, Player]):
+        if message == Message.START_OF_TURN:
+            turn, player = data
+            player.take_sourceless_dmg(1)
+            player.draw_cards(1)
 
 class EffectInterface:
     """Responsible for applying effects, creating buff/debuff dictionaries, and counting down certain effects"""
