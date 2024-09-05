@@ -176,6 +176,8 @@ class Player(Registerable):
             card.apply(origin=self, enemies=enemies)
         elif card.target == TargetType.YOURSELF:
             card.apply(origin=self)
+        else:
+            raise ValueError(f"Invalid target type: {card.target}")
         bus.publish(Message.ON_CARD_PLAY, (self, card, target, enemies))
         if (card.type == CardType.STATUS and items.relics["Medical Kit"] in self.player.relics):
             exhaust = True
