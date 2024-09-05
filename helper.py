@@ -421,7 +421,7 @@ class CurlUp(Effect):
             target = data
             if target != self.host:
                 return
-            target.blocking(self.amount)
+            target.blocking(block=self.amount, context=self.name)
             self.amount = 0
 
 class Ritual(Effect):
@@ -548,7 +548,7 @@ class Mettalicize(Effect):
     def callback(self, message, data: tuple[Player, list[Enemy]]):
         if message == Message.END_OF_TURN:
             player, enemies = data
-            player.blocking(self.amount)
+            player.blocking(block=self.amount, context=self.name)
 
 
 class Rage(Effect):
@@ -556,13 +556,13 @@ class Rage(Effect):
     registers = [Message.ON_CARD_PLAY, Message.END_OF_TURN]
 
     def __init__(self, host, amount=3):
-        super().__init__(host, "Rage", StackType.NONE, EffectType.BUFF, "Whenever you play an <keyword>Attack</keyword> this turn, gain 3 <keyword>Block</keyword>.", amount)
+        super().__init__(host, "Rage", StackType.NONE, EffectType.BUFF, "Whenever you play an <keyword>Attack</keyword> this turn, gain 3 <keyword>Block</keyword>.", amount=amount)
 
     def callback(self, message, data):
         if message == Message.ON_CARD_PLAY:
             player, card, target, enemies = data
             if card.type == CardType.ATTACK:
-                player.blocking(self.amount)
+                player.blocking(block=self.amount, context=self.name)
         elif message == Message.END_OF_TURN:
             self.unsubscribe()
 
