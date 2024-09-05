@@ -566,6 +566,22 @@ class Rage(Effect):
         elif message == Message.END_OF_TURN:
             self.unsubscribe()
 
+class Barricade(Effect):
+    # "Barricade", "<keyword>Block</keyword> is not removed at the start of your turn."
+    registers = [Message.BEFORE_BLOCK, Message.END_OF_TURN]
+
+    def __init__(self, host, amount=0):
+        super().__init__(host, "Barricade", StackType.NONE, EffectType.BUFF, "<keyword>Block</keyword> is not removed at the start of your turn.", amount)
+        self.end_of_turn_block = None
+
+    def callback(self, message, data: tuple[Player, Action] | tuple[Player, list[Enemy]]):
+        if message == Message.END_OF_TURN:
+            player, enemies = data
+            self.end_of_turn_block = player.block
+        elif message == Message.BEFORE_BLOCK and self.end_of_turn_block is not None:
+            player, action = data
+            action.set_amount(self.end_of_turn_block)
+            self.unsubscribe()
 
 class EffectInterface:
     """Responsible for applying effects, creating buff/debuff dictionaries, and counting down certain effects"""
