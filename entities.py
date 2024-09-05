@@ -10,12 +10,17 @@ import items
 from ansi_tags import ansiprint
 from definitions import CardType, State, TargetType
 from message_bus_tools import Card, Effect, Message, Potion, Registerable, Relic, bus
+from typing import Callable
 
 ei = helper.ei
 view = helper.view
 
-class Action:
-    def __init__(self, name, action, amount):
+class PendingAction:
+    '''
+    A pending action is an action that is created before it is executed. It can be cancelled, modified, and executed.
+
+    '''
+    def __init__(self, name: str, action: Callable, amount: int | float):
         self.name = name
         self.action = action
         self.amount = amount
@@ -23,16 +28,16 @@ class Action:
         self.cancelled = False
         self.reason = ""
 
-    def cancel(self, reason=None):
+    def cancel(self, reason: str = None):
         self.cancelled = True
         if not reason:
             reason = f"{self.name} was cancelled."
         self.reason = reason
 
-    def set_amount(self, new_amount):
+    def set_amount(self, new_amount: int | float):
         self.amount = new_amount
 
-    def modify_amount(self, change):
+    def increase_amount(self, change: int | float):
         self.amount += change
 
     def execute(self):
@@ -42,11 +47,12 @@ class Action:
         if self.cancelled:
             ansiprint(self.reason)
             return
-        self.action(self.amount)
+        result = self.action(self.amount)
         self.executed = True
+        return result
 
     def __str__(self):
-        return f"Action: {self.name} | Amount: {self.amount}"
+        return f"PendingAction: {self.name}({self.amount})"
 
     def __repr__(self):
         return self.__str__()
@@ -198,7 +204,7 @@ class Player(Registerable):
         """Draws [cards] cards."""
         if cards is None:
             cards = self.draw_strength
-        action = Action(self, self._draw_cards, cards)
+        action = PendingAction(self, self._draw_cards, cards)
         bus.publish(Message.BEFORE_DRAW, (self, action))
         action.execute()
         bus.publish(Message.AFTER_DRAW, (self, action))

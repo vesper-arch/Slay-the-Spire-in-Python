@@ -19,7 +19,7 @@ from definitions import (
 from message_bus_tools import Effect, Message, bus
 
 if TYPE_CHECKING:
-    from entities import Enemy, Player, Action
+    from entities import Enemy, Player, PendingAction
     from items import Card
 
 
@@ -463,7 +463,7 @@ class NoDraw(Effect):
     def __init__(self, host, _):
         super().__init__(host, "No Draw", StackType.NONE, EffectType.DEBUFF, "You may not draw any more cards this turn.")
 
-    def callback(self, message, data: tuple[Player, Action]):
+    def callback(self, message, data: tuple[Player, PendingAction]):
         if message == Message.BEFORE_DRAW:
             player, action = data
             action.cancel(reason="You cannot draw any cards because of <debuff>No Draw</debuff>.")
@@ -574,7 +574,7 @@ class Barricade(Effect):
         super().__init__(host, "Barricade", StackType.NONE, EffectType.BUFF, "<keyword>Block</keyword> is not removed at the start of your turn.", amount)
         self.end_of_turn_block = None
 
-    def callback(self, message, data: tuple[Player, Action] | tuple[Player, list[Enemy]]):
+    def callback(self, message, data: tuple[Player, PendingAction] | tuple[Player, list[Enemy]]):
         if message == Message.END_OF_TURN:
             player, enemies = data
             self.end_of_turn_block = player.block
