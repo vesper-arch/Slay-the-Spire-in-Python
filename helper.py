@@ -583,6 +583,18 @@ class Barricade(Effect):
             action.set_amount(self.end_of_turn_block)
             self.unsubscribe()
 
+class Berzerk(Effect):
+    #"Gain 2 <debuff>Vulnerable</debuff>. At the start of your turn, gain 1 <keyword>Energy</keyword>."
+    registers = [Message.START_OF_TURN]
+
+    def __init__(self, host, amount=2):
+        super().__init__(host, "Berzerk", StackType.NONE, EffectType.BUFF, "Gain 2 <debuff>Vulnerable</debuff>. At the start of your turn, gain 1 <keyword>Energy</keyword>.", amount)
+
+    def callback(self, message, data: tuple[int, Player]):
+        if message == Message.START_OF_TURN:
+            turn, player = data
+            player.energy += 1
+
 class EffectInterface:
     """Responsible for applying effects, creating buff/debuff dictionaries, and counting down certain effects"""
     def __init__(self):
