@@ -107,7 +107,7 @@ class Game:
                     "What card do you want to upgrade?",
                     self.player.deck,
                     view.view_piles,
-                    lambda card: not card.get("Upgraded")
+                    lambda card: not card.upgraded
                     and (card["Type"] not in ("Status", "Curse") or card.name == "Burn"),
                     "That card is not upgradeable.",
                 )
