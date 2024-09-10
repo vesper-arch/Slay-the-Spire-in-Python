@@ -900,7 +900,7 @@ class Slimed(Card):
         self.exhaust = True
         self.upgradeable = False
 
-    def apply(self, _):
+    def apply(self, *args, **kwargs):
         pass
 
 class Wound(Card):
