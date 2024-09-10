@@ -574,11 +574,14 @@ class Enemy(Registerable):
         else:
             effect_types[effect_type][effect_name] = False
 
-    def blocking(self, block: int, target: "Enemy" = None):
+    def blocking(self, block: int, target: "Enemy" = None, context: str=None):
         if not target:
             target = self
         target.block += block
-        ansiprint(f"{target.name} gained {block} <blue>Block</blue>")
+        if context:
+            ansiprint(f"{target.name} gained {block} <blue>Block</blue> from {context}")
+        else:
+            ansiprint(f"{target.name} gained {block} <blue>Block</blue>")
         sleep(1)
 
     def status(self, status_card: Card, amount: int, location: str, player: Player):
