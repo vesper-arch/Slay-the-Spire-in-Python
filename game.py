@@ -91,7 +91,7 @@ class Game:
                     ansiprint(message, end="")
             action = input("> ").lower()
             if action not in valid_inputs:
-                ansiprint("<red>Valid Inputs: " + valid_inputs + "</red>")
+                ansiprint("<red>Valid Inputs: " + str(valid_inputs) + "</red>")
                 sleep(1.5)
                 view.clear()
                 continue
