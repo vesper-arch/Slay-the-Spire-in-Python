@@ -499,4 +499,4 @@ def create_act1_elites():
     return [random.choice([gremlin_nob, sentries, lagavulin])() for _ in range(4)]
 
 def create_act1_boss():
-    return [random.choice([SlimeBoss(), Hexaghost(), Guardian()])]
+    return [[random.choice([SlimeBoss(), Hexaghost(), Guardian()])]]
