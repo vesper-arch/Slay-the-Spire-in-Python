@@ -1,4 +1,3 @@
-
 # The shop contains:
 # 5 Colored cards:
 #  - 2 Attack cards, 2 skill cards, and 1 Power card
@@ -31,7 +30,7 @@ from ansi_tags import ansiprint
 from definitions import CardCategory, Rarity
 from helper import Displayer, get_attribute
 from items import cards, potions, relics
-from message_bus_tools import Relic, Potion
+from message_bus_tools import Relic, Potion, Card
 
 
 # Helper functions for displaying cards, potions, and relics.
@@ -141,10 +140,10 @@ class Shop():
     def initialize_items(self) -> list[SellableItem]:
       # TODO: Make this class-specific and include relics and potions
       items = []
-      all_cards = list(cards)
-      attack_cards = [c for c in all_cards if c["Type"] == "Attack" and c["Class"] != "Colorless"]
-      skill_cards = [c for c in all_cards if c["Type"] == "Skill" and c["Class"] != "Colorless"]
-      power_cards = [c for c in all_cards if c["Type"] == "Power" and c["Class"] != "Colorless"]
+      all_cards:list[Card] = list(cards)
+      attack_cards = [c for c in all_cards if c.type == "Attack" and c.player_class != "Colorless"]
+      skill_cards = [c for c in all_cards if c.type == "Skill" and c.player_class != "Colorless"]
+      power_cards = [c for c in all_cards if c.type == "Power" and c.player_class != "Colorless"]
       if len(attack_cards) >= 2:
         items.extend(random.sample(attack_cards, 2))
       if len(skill_cards) >= 2:
@@ -152,9 +151,9 @@ class Shop():
       if len(power_cards) >= 1:
         items.extend(random.sample(power_cards, 1))
 
-      colorless_cards = [c for c in all_cards if "Class" in c and c["Class"] == "Colorless"]
-      colorless_uncommon = [c for c in colorless_cards if c["Rarity"] == Rarity.UNCOMMON]
-      colorless_rare = [c for c in colorless_cards if c["Rarity"] == Rarity.RARE]
+      colorless_cards = [c for c in all_cards if c.player_class == "Colorless"]
+      colorless_uncommon = [c for c in colorless_cards if c.rarity == Rarity.UNCOMMON]
+      colorless_rare = [c for c in colorless_cards if c.rarity == Rarity.RARE]
       if len(colorless_uncommon) >= 1:
         items.extend(random.sample(colorless_uncommon, 1))
       if len(colorless_rare) >= 1:
