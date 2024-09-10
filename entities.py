@@ -235,7 +235,7 @@ class Player(Registerable):
             self.health += heal
             self.health = min(self.health, self.max_health)
             ansiprint(f"You heal <green>{min(self.max_health - self.health, heal)}</green> <light-blue>HP</light-blue>")
-            if (self.health >= math.floor(self.health * 0.5) and items.relics["Red Skull"] in self.relics):
+            if (self.health >= math.floor(self.health * 0.5) and any(["Red Skull" in relic.name for relic in self.relics])):
                 ansiprint("<red><bold>Red Skull</bold> deactivates</red>.")
                 self.starting_strength -= 3
         elif heal_type == "max health":
