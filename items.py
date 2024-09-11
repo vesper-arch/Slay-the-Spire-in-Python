@@ -763,17 +763,17 @@ class Intimidate(Card):
 
 class Metallicize(Card):
     def __init__(self):
-        super().__init__("Mettalicize", "At the end of your turn, gain 3 <keyword>Block</keyword>.", Rarity.UNCOMMON, PlayerClass.IRONCLAD, CardType.POWER, TargetType.YOURSELF, energy_cost=1)
-        self.mettalicize = 3
+        super().__init__("Metallicize", "At the end of your turn, gain 3 <keyword>Block</keyword>.", Rarity.UNCOMMON, PlayerClass.IRONCLAD, CardType.POWER, TargetType.YOURSELF, energy_cost=1)
+        self.amount = 3
         self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>At the end of your turn, gain <green>4</green> <keyword>Block</keyword>.</yellow>"
 
     def upgrade(self):
         self.upgrade_markers()
-        self.mettalicize = 4
+        self.amount = 4
         self.info = "At the end of your turn, gain 4 <keyword>Block</keyword>."
 
     def apply(self, origin):
-        ei.apply_effect(origin, None, "Mettalicize", self.mettalicize)
+        ei.apply_effect(origin, None, "Metallicize", self.amount)
 
 class PowerThrough(Card):
     def __init__(self):
@@ -1237,13 +1237,13 @@ class AncientPotion(Potion):
 
 class HeartOfIron(Potion):
     def __init__(self):
-        super().__init__("Heart of Iron", "Gain 6 <buff>Mettalicize</buff>.", Rarity.RARE, TargetType.YOURSELF)
-        self.mettalicize = 6
-        self.golden_stats = [self.mettalicize]
-        self.golden_info = "Gain 12 <buff>Mettalicize</buff>."
+        super().__init__("Heart of Iron", "Gain 6 <buff>Metallicize</buff>.", Rarity.RARE, TargetType.YOURSELF)
+        self.amount = 6
+        self.golden_stats = [self.amount]
+        self.golden_info = f"Gain {self.amount} <buff>Metallicize</buff>."
 
     def apply(self, origin):
-        ei.apply_effect(origin, None, "Mettalicize", self.mettalicize)
+        ei.apply_effect(origin, None, "Metallicize", self.amount)
 
 class FruitJuice(Potion):
     def __init__(self):

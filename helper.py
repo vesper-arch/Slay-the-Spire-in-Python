@@ -539,7 +539,7 @@ class FlameBarrier(Effect):
             target.health -= 4
 
 
-class Mettalicize(Effect):
+class Metallicize(Effect):
     registers = [Message.END_OF_TURN]
 
     def __init__(self, host, amount=3):
