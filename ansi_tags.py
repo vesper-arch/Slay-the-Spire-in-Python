@@ -25,7 +25,7 @@ user_tags = {
     "boss": "\x1B[38;5;124m",
     "event": "\x1B[38;2;254;49;236m",
     "starter": "\x1B[38;5;247m",
-    "orange": "\x1B[38;5;202"
+    "orange": parse("<fg #d78700>")
 }
 am = AnsiMarkup(tags=user_tags, strict=True)
 
