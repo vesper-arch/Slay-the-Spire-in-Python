@@ -27,7 +27,7 @@ class IroncladStrike(Card):
 
     def upgrade(self):
         self.upgrade_markers()
-        self.base_damage, self.damage = 9
+        self.base_damage, self.damage = 9, 9
         self.info = 'Deal 9 damage.'
 
     def apply(self, origin, target):
@@ -43,7 +43,7 @@ class IroncladDefend(Card):
 
     def upgrade(self):
         self.upgrade_markers()
-        self.base_block, self.block = 8
+        self.base_block, self.block = 8, 8
         self.info = "Gain 8 <keyword>Block</keyword>."
 
     def apply(self, origin):
@@ -60,7 +60,7 @@ class Bash(Card):
 
     def upgrade(self):
         self.upgrade_markers()
-        self.base_damage, self.damage = 10
+        self.base_damage, self.damage = 10, 10
         self.vulnerable = 3
         self.info = "Deal 10 damage. Apply 3 <debuff>Vulnerable</debuff>."
 
@@ -78,7 +78,7 @@ class Anger(Card):
 
     def upgrade(self):
         self.upgrade_markers()
-        self.base_damage, self.damage = 8
+        self.base_damage, self.damage = 8, 8
         self.info = "Deal 8 damage. Add a copy of this card to your discard pile."
 
     def apply(self, origin, target):
@@ -91,7 +91,7 @@ class Armaments(Card):
         self.base_block = 5
         self.block = self.base_block
         self.block_affected_by = [f"Armaments({self.block} block)"]
-        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Gain 5 <keyword>Block</keyword>. Upgrade <green>ALL cards</green> in your hand for the rest of combat."
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Gain 5 <keyword>Block</keyword>. Upgrade <green>ALL cards</green> in your hand for the rest of combat.</yellow>"
 
     def upgrade(self):
         self.upgrade_markers()
@@ -132,7 +132,7 @@ class Clash(Card):
 
     def upgrade(self):
         self.upgrade_markers()
-        self.base_damage, self.damage = 18
+        self.base_damage, self.damage = 18, 18
         self.info = "Can only be played if every card in your hand is an <keyword>Attack</keyword>. Deal 18 damage."
 
     def apply(self, origin, target):
@@ -151,7 +151,7 @@ class Cleave(Card):
 
     def upgrade(self):
         self.upgrade_markers()
-        self.base_damage, self.damage = 11
+        self.base_damage, self.damage = 11, 11
         self.info = "Deal 11 damage to ALL enemies."
 
     def apply(self, origin, enemies):
@@ -169,7 +169,7 @@ class Clothesline(Card):
 
     def upgrade(self):
         self.upgrade_markers()
-        self.base_damage, self.damage = 14
+        self.base_damage, self.damage = 14, 14
         self.weak = 3
         self.info = "Deal 14 damage. Apply 3 <debuff>Weak</debuff>."
 
@@ -216,11 +216,11 @@ class Headbutt(Card):
         self.base_damage = 9
         self.damage = self.base_damage
         self.damage_affected_by = [f"Headbutt({self.damage} dmg)"]
-        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Deal <green>12</green> damage. Put a card from your discard pile on top of your draw pile."
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Deal <green>12</green> damage. Put a card from your discard pile on top of your draw pile.</yellow>"
 
     def upgrade(self):
         self.upgrade_markers()
-        self.base_damage, self.damage = 12
+        self.base_damage, self.damage = 12, 12
         self.info = "Deal 12 damage. Put a card from your discard pile on top of your draw pile."
 
     def apply(self, origin, target):
@@ -264,9 +264,9 @@ class IronWave(Card):
 
     def upgrade(self):
         self.upgrade_markers()
-        self.base_damage, self.damage = 7
-        self.base_block, self.block = 7
-        self.info = "Deal 7 damage. Gain 7 </keyword>Block</keyword>."
+        self.base_damage, self.damage = 7, 7
+        self.base_block, self.block = 7, 7
+        self.info = "Deal 7 damage. Gain 7 <keyword>Block</keyword>."
 
     def apply(self, origin, target):
         origin.attack(target, self)
@@ -308,7 +308,7 @@ class PommelStrike(Card):
 
     def upgrade(self):
         self.upgrade_markers()
-        self.base_damage, self.damage = 10
+        self.base_damage, self.damage = 10, 10
         self.cards = 2
         self.info = "Deal 10 damage. Draw 2 cards."
 
@@ -322,11 +322,11 @@ class ShrugItOff(Card):
         self.base_block = 8
         self.block = self.base_block
         self.block_affected_by = [f"Shrug It Off({self.block} block)"]
-        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Gain <green>11</green> <keyword>Block</keyword>. Draw 1 card."
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Gain <green>11</green> <keyword>Block</keyword>. Draw 1 card.</yellow>"
 
     def upgrade(self):
         self.upgrade_markers()
-        self.block, self.base_block = 11
+        self.base_block, self.block = 11, 11
         self.info = "Gain 11 <keyword>Block</keyword>. Draw 1 card."
 
     def apply(self, origin):
@@ -357,11 +357,11 @@ class Thunderclap(Card):
         self.base_damage = 4
         self.damage = self.base_damage
         self.damage_affected_by = [f"Thunderclap({self.damage} dmg)"]
-        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Deal <green>7</green> damage and apply 1 <debuff>Vulnerable</debuff> to ALL enemies."
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Deal <green>7</green> damage and apply 1 <debuff>Vulnerable</debuff> to ALL enemies.</yellow>"
 
     def upgrade(self):
         self.upgrade_markers()
-        self.base_damage, self.damage = 7
+        self.base_damage, self.damage = 7, 7
         self.info = "Deal 7 damage and apply 1 <debuff>Vulnerable</debuff> to ALL enemies."
 
     def apply(self, origin, enemies):
@@ -374,11 +374,11 @@ class TrueGrit(Card):
         self.base_block = 7
         self.block = self.base_block
         self.block_affected_by = [f"True Grit({self.block} block)"]
-        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Gain <green>9</green> <keyword>Block</keyword>. <keyword>Exhaust</keyword> a card in your hand."
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Gain <green>9</green> <keyword>Block</keyword>. <keyword>Exhaust</keyword> a card in your hand.</yellow>"
 
     def upgrade(self):
         self.upgrade_markers()
-        self.base_block, self.block = 9
+        self.base_block, self.block = 9, 9
         self.info = "Gain 9 <keyword>Block</keyword>. <keyword>Exhaust</keyword> a card in your hand."
 
     def apply(self, origin):
@@ -400,7 +400,7 @@ class TwinStrike(Card):
 
     def upgrade(self):
         self.upgrade_markers()
-        self.base_damage, self.damage = 7
+        self.base_damage, self.damage = 7, 7
         self.info = "Deal 7 damage twice."
 
     def apply(self, origin, target):
@@ -433,7 +433,7 @@ class WildStrike(Card):
 
     def upgrade(self):
         self.upgrade_markers()
-        self.base_damage, self.damage = 17
+        self.base_damage, self.damage = 17, 17
         self.info = "Deal 17 damage. Shuffle a <status>Wound</status> into your draw pile."
 
     def apply(self, origin, target):
@@ -466,7 +466,7 @@ class BloodForBlood(Card):
 
     def upgrade(self):
         self.upgrade_markers()
-        self.base_damage, self.damage = 22
+        self.base_damage, self.damage = 22, 22
         self.info = "Costs 1 less <keyword>Energy</keyword> for each time you lose HP in combat. Deal 22 damage."
 
     def apply(self, origin, target):
@@ -519,7 +519,7 @@ class Carnage(Card):
 
     def upgrade(self):
         self.upgrade_markers()
-        self.base_damage, self.damage = 28
+        self.base_damage, self.damage = 28, 28
         self.info = "<keyword>Ethereal</keyword>. Deal 28 damage."
 
     def apply(self, origin, target):
@@ -579,7 +579,7 @@ class Dropkick(Card):
 
     def upgrade(self):
         self.upgrade_markers()
-        self.base_damage, self.damage = 8
+        self.base_damage, self.damage = 8, 8
         self.info = "Deal 8 damage. If the enemy has <debuff>Vulnerable</debuff>, gain 1 <keyword>Energy</keyword> and draw 1 card."
 
     def apply(self, origin, target):
@@ -672,11 +672,11 @@ class FlameBarrier(Card):
         self.base_block = 12
         self.block = self.base_block
         self.block_affected_by = [f"Flame Barrier({self.block} block)"]
-        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Gain <green>14</green> <keyword>Block</keyword>. Whenever you're attacked this turn, deal 4 damage back."
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Gain <green>14</green> <keyword>Block</keyword>. Whenever you're attacked this turn, deal 4 damage back.</yellow>"
 
     def upgrade(self):
-        self.upgrade_preview()
-        self.base_block, self.block = 14
+        self.upgrade_markers()
+        self.base_block, self.block = 14, 14
         self.info = "Gain 14 <keyword>Block</keyword>. Whenever you're attacked this turn, deal 4 damage back."
 
     def apply(self, origin: Player):
@@ -694,7 +694,7 @@ class GhostlyArmor(Card):
 
     def upgrade(self):
         self.upgrade_markers()
-        self.base_block, self.block = 13
+        self.base_block, self.block = 13, 13
         self.info = "<keyword>Ethereal</keyword>. Gain 13 <keyword>Block</keyword>"
 
     def apply(self, origin):
@@ -710,7 +710,7 @@ class Hemokinesis(Card):
 
     def upgrade(self):
         self.upgrade_markers()
-        self.base_damage, self.damage = 20
+        self.base_damage, self.damage = 20, 20
         self.info = "Lose 2 HP. Deal 20 damage."
 
     def apply(self, origin, target):
@@ -785,7 +785,7 @@ class PowerThrough(Card):
 
     def upgrade(self):
         self.upgrade_markers()
-        self.base_block, self.block = 20
+        self.base_block, self.block = 20, 20
         self.info = "Add 2 <status>Wounds</status> into your hand. Gain 20 <keyword>Block</keyword>."
 
     def apply(self, origin):
@@ -845,6 +845,7 @@ class Berzerk(Card):
         self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Gain <green>1</green> <debuff>Vulnerable</debuff>. At the start of your turn, gain 1 <keyword>Energy</keyword>.</yellow>"
 
     def upgrade(self):
+        self.upgrade_markers()
         self.self_vulnerable = 1
         self.info = "Gain 1 <debuff>Vulnerable</debuff>. At the start of your turn, gain 1 <keyword>Energy</keyword>."
 
@@ -862,7 +863,7 @@ class Bludgeon(Card):
 
     def upgrade(self):
         self.upgrade_markers()
-        self.base_damage, self.damage = 42
+        self.base_damage, self.damage = 42, 42
         self.info = "Deal 42 damage."
 
     def apply(self, origin, target):
