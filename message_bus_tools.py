@@ -244,7 +244,7 @@ class Card(Registerable):
             self.block += amount
         self.block_affected_by.append(context)
 
-    def is_upgradeadble(self) -> bool:
+    def is_upgradeable(self) -> bool:
         return not self.upgraded and (self.name == "Burn" or self.type not in (CardType.STATUS, CardType.CURSE))
 
 bus = MessageBus(debug=False)

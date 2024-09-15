@@ -17,8 +17,8 @@ local_copy_of_cards = get_all_cards()
 @pytest.mark.parametrize("card", local_copy_of_cards, ids=[card.name for card in local_copy_of_cards])
 def test_all_cards_can_upgrade(card):
     print(f"Upgrading   {card.name}")
-    ansiprint(f"  - IsUpgradeble: {card.is_upgradeadble()}")
-    if not card.is_upgradeadble():
+    ansiprint(f"  - IsUpgradeble: {card.is_upgradeable()}")
+    if not card.is_upgradeable():
         return
     ansiprint(f"  - Before : {card.pretty_print()}")
     ansiprint(f"  - Preview: {card.upgrade_preview}")
