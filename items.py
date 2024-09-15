@@ -845,6 +845,7 @@ class Berzerk(Card):
         self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Gain <green>1</green> <debuff>Vulnerable</debuff>. At the start of your turn, gain 1 <keyword>Energy</keyword>.</yellow>"
 
     def upgrade(self):
+        self.upgrade_markers()
         self.self_vulnerable = 1
         self.info = "Gain 1 <debuff>Vulnerable</debuff>. At the start of your turn, gain 1 <keyword>Energy</keyword>."
 
