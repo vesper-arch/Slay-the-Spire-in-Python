@@ -91,7 +91,7 @@ class Armaments(Card):
         self.base_block = 5
         self.block = self.base_block
         self.block_affected_by = [f"Armaments({self.block} block)"]
-        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Gain 5 <keyword>Block</keyword>. Upgrade <green>ALL cards</green> in your hand for the rest of combat."
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Gain 5 <keyword>Block</keyword>. Upgrade <green>ALL cards</green> in your hand for the rest of combat.</yellow>"
 
     def upgrade(self):
         self.upgrade_markers()
@@ -216,7 +216,7 @@ class Headbutt(Card):
         self.base_damage = 9
         self.damage = self.base_damage
         self.damage_affected_by = [f"Headbutt({self.damage} dmg)"]
-        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Deal <green>12</green> damage. Put a card from your discard pile on top of your draw pile."
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Deal <green>12</green> damage. Put a card from your discard pile on top of your draw pile.</yellow>"
 
     def upgrade(self):
         self.upgrade_markers()
@@ -266,7 +266,7 @@ class IronWave(Card):
         self.upgrade_markers()
         self.base_damage, self.damage = 7, 7
         self.base_block, self.block = 7, 7
-        self.info = "Deal 7 damage. Gain 7 </keyword>Block</keyword>."
+        self.info = "Deal 7 damage. Gain 7 <keyword>Block</keyword>."
 
     def apply(self, origin, target):
         origin.attack(target, self)
@@ -322,11 +322,11 @@ class ShrugItOff(Card):
         self.base_block = 8
         self.block = self.base_block
         self.block_affected_by = [f"Shrug It Off({self.block} block)"]
-        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Gain <green>11</green> <keyword>Block</keyword>. Draw 1 card."
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Gain <green>11</green> <keyword>Block</keyword>. Draw 1 card.</yellow>"
 
     def upgrade(self):
         self.upgrade_markers()
-        self.block, self.base_block = 11
+        self.base_block, self.block = 11, 11
         self.info = "Gain 11 <keyword>Block</keyword>. Draw 1 card."
 
     def apply(self, origin):
@@ -357,7 +357,7 @@ class Thunderclap(Card):
         self.base_damage = 4
         self.damage = self.base_damage
         self.damage_affected_by = [f"Thunderclap({self.damage} dmg)"]
-        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Deal <green>7</green> damage and apply 1 <debuff>Vulnerable</debuff> to ALL enemies."
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Deal <green>7</green> damage and apply 1 <debuff>Vulnerable</debuff> to ALL enemies.</yellow>"
 
     def upgrade(self):
         self.upgrade_markers()
@@ -374,7 +374,7 @@ class TrueGrit(Card):
         self.base_block = 7
         self.block = self.base_block
         self.block_affected_by = [f"True Grit({self.block} block)"]
-        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Gain <green>9</green> <keyword>Block</keyword>. <keyword>Exhaust</keyword> a card in your hand."
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Gain <green>9</green> <keyword>Block</keyword>. <keyword>Exhaust</keyword> a card in your hand.</yellow>"
 
     def upgrade(self):
         self.upgrade_markers()
@@ -672,10 +672,10 @@ class FlameBarrier(Card):
         self.base_block = 12
         self.block = self.base_block
         self.block_affected_by = [f"Flame Barrier({self.block} block)"]
-        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Gain <green>14</green> <keyword>Block</keyword>. Whenever you're attacked this turn, deal 4 damage back."
+        self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>Gain <green>14</green> <keyword>Block</keyword>. Whenever you're attacked this turn, deal 4 damage back.</yellow>"
 
     def upgrade(self):
-        self.upgrade_preview()
+        self.upgrade_markers()
         self.base_block, self.block = 14, 14
         self.info = "Gain 14 <keyword>Block</keyword>. Whenever you're attacked this turn, deal 4 damage back."
 
