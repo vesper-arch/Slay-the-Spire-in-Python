@@ -543,19 +543,10 @@ class Enemy(Registerable):
         Not finished
         """
 
-    def move_spam_check(self, target_move, max_count):
+    def move_spam_check(self, target_move, max_count) -> bool:
         """Returns False if the move occurs [max_count] times in a row. Otherwise returns True"""
-        use_count = 0
-
-        for move in self.past_moves:
-            if move == target_move:
-                use_count += 1
-                if use_count == max_count:
-                    return False
-            else:
-                use_count = 0
-
-        return True
+        enough_moves = len(self.past_moves) >= max_count
+        return not(enough_moves and all(move == target_move for move in self.past_moves[-max_count:]))
 
     def attack(self, dmg: int, times: int, target: Player):
         for _ in range(times):
