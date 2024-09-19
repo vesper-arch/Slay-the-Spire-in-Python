@@ -8,7 +8,7 @@ from entities import Enemy
 
 class AcidSlimeL(Enemy):
     def __init__(self, ):
-        super().__init__([65, 69], 0, 'Acid Slime (L)', {"Split": True})
+        super().__init__([65, 69], 0, 'Acid Slime (L)', [helper.Split(self, 1)])
 
     def set_intent(self):
         move_roll = random.random()
@@ -44,7 +44,7 @@ class AcidSlimeM(Enemy):
 
 class AcidSlimeS(Enemy):
     def __init__(self, ):
-        super().__init__([8, 12], 0, "Acid Slime (S)", )
+        super().__init__([8, 12], 0, "Acid Slime (S)")
 
     def set_intent(self):
         while True:
@@ -63,7 +63,7 @@ class AcidSlimeS(Enemy):
 
 class SpikeSlimeL(Enemy):
     def __init__(self, ):
-        super().__init__([64, 70], 0, "Spike Slime (L)", {"Split": True})
+        super().__init__([64, 70], 0, "Spike Slime (L)", [helper.Split(self, 1)])
 
     def set_intent(self):
         while True:
@@ -80,7 +80,7 @@ class SpikeSlimeL(Enemy):
 
 class SpikeSlimeM(Enemy):
     def __init__(self, ):
-        super().__init__([28, 32], 0, "Spike Slime (M)", )
+        super().__init__([28, 32], 0, "Spike Slime (M)")
 
     def set_intent(self):
         while True:
@@ -164,7 +164,7 @@ class GreenLouse(Enemy):
 
 class FungiBeast(Enemy):
     def __init__(self, ):
-        super().__init__([22, 28], 0, "Fungi Beast", {"Spore Cloud": 2})
+        super().__init__([22, 28], 0, "Fungi Beast", [helper.SporeCloud(self, 2)])
 
     def set_intent(self):
         while True:
@@ -186,7 +186,7 @@ class FatGremlin(Enemy): # Fatass
 
 class MadGremlin(Enemy):
     def __init__(self, ):
-        super().__init__([20, 24], 0, "Mad Gremlin", {"Anger": 1})
+        super().__init__([20, 24], 0, "Mad Gremlin", [helper.Angry(self, 1)])
 
     def set_intent(self):
         self.next_move, self.intent = [("Scratch", "Attack", (4,))], "<aggresive>Attack</aggresive> 4"
@@ -229,7 +229,7 @@ class WizardGremlin(Enemy):
 class Looter(Enemy):
     def __init__(self, ):
         self.escaped = False
-        super().__init__([44, 48], 0, "Looter", {"Theivery": 15})
+        super().__init__([44, 48], 0, "Looter", [helper.Thievery(self,15)])
 
     def set_intent(self):
         while True:
@@ -253,7 +253,7 @@ class Looter(Enemy):
 class Mugger(Enemy):
     def __init__(self, ):
         self.escaped = False
-        super().__init__([44, 48], 0, "Looter", {"Theivery": 15})
+        super().__init__([44, 48], 0, "Looter", [helper.Thievery(self,15)])
 
     def set_intent(self):
         while True:
@@ -338,27 +338,22 @@ class GremlinNob(Enemy):
 
 class Lagavulin(Enemy):
     def __init__(self, ):
-        super().__init__([109, 111], 0, "Lagavulin", {"Asleep": True, "Metallicize": 8})
+        super().__init__([109, 111], 0, "Lagavulin", [helper.Asleep(host=self, amount=3), helper.Metallicize(host=self, amount=8)])
 
     def set_intent(self):
-        while True:
-            if self.debuffs["Asleep"]:
-                self.next_move, self.intent = [("Sleeping", "Sleeping", ("..."))], "<yellow>Asleep</yellow>"
-            elif not self.debuffs['Asleep'] and self.health < self.max_health:
-                self.next_move, self.intent = [("Stunned", "Stunned")], "<yellow>Stunned</yellow>" # Fix later
-            elif not self.debuffs['Asleep']:
-                if self.awake_turns in (i * 3 for i in range(4, 50)):
-                    self.next_move, self.intent = [("Attack", "Attack", (18,))], "<aggresive>Attack</aggresive> 18"
-                else:
-                    self.next_move, self.intent = [("Siphon Soul", "Debuff", ("Dexterity", -1)), ("Debuff", (helper.Strength, -1))], "<debuff>Debuff</debuff>"
-            else:
-                continue
-            break
+        # if self.debuffs["Asleep"]:
+            # self.next_move, self.intent = [("Sleeping", "Sleeping", ("..."))], "<yellow>Asleep</yellow>"
+        # elif not self.debuffs['Asleep'] and self.health < self.max_health:
+            # self.next_move, self.intent = [("Stunned", "Stunned")], "<yellow>Stunned</yellow>" # Fix later
+        if self.active_turns % 3 == 0:
+            self.next_move, self.intent = [("Siphon Soul", "Debuff", (helper.Dexterity, -1)), ("Debuff", (helper.Strength, -1))], "<debuff>Debuff</debuff>"
+        else:
+            self.next_move, self.intent = [("Attack", "Attack", (18,))], "<aggresive>Attack</aggresive> 18"
 
 class Sentry(Enemy):
     def __init__(self, state):
         self.state = state
-        super().__init__([38, 42], 0, "Sentry", {"Artifact": 1})
+        super().__init__([38, 42], 0, "Sentry", [helper.Artifact(1)])
 
     def set_intent(self):
         while True:
@@ -366,10 +361,10 @@ class Sentry(Enemy):
                 if self.state == 'Beam':
                     self.next_move, self.intent = [("Beam", "Attack", (9,))], "<aggresive>Attack</aggresive> 9"
                 elif self.state == 'Bolt':
-                    self.next_move, self.intent = [("Bolt", "Status", ("Dazed", 2, 'discard pile'))], "<debuff>Debuff</debuff>"
+                    self.next_move, self.intent = [("Bolt", "Status", (items.Dazed, 2, 'discard pile'))], "<debuff>Debuff</debuff>"
             elif self.active_turns > 1:
                 if self.past_moves[-1] == 'Beam':
-                    self.next_move, self.intent = [("Bolt", "Status", ("Dazed", 2, 'discard pile'))], "<debuff>Debuff</debuff>"
+                    self.next_move, self.intent = [("Bolt", "Status", (items.Dazed, 2, 'discard pile'))], "<debuff>Debuff</debuff>"
                 else:
                     self.next_move, self.intent = [("Beam", "Attack", (9,))], "<aggresive>Attack</aggresive> 9"
             else:
@@ -382,7 +377,7 @@ class SlimeBoss(Enemy):
             "health_range": [140, 140],
             "block": 0,
             "name": "Slime Boss",
-            "powers": {"Split": True}
+            "powers": [helper.Split(1)]
         }
         defaults.update(kwargs)
         super().__init__(**defaults)
@@ -401,7 +396,7 @@ class Guardian(Enemy):
         self.offensive_turns = 1
         self.defensive_turns = 1
         self.mode_shift_base = 30
-        super().__init__([240, 240], 0, "Guardian", {"Mode Shift": 30})
+        super().__init__([240, 240], 0, "Guardian")
 
     def set_intent(self):
         if self.mode == 'Offensive':
@@ -428,12 +423,12 @@ class Hexaghost(Enemy):
     def __init__(self, ):
         self.flames = 0
         self.upgrade_burn = False
-        self.divider_dmg = (self.player.health / 12) + 1
+        self.divider_dmg = (self.player.health // 12) + 1
         super().__init__([250, 250], 0, "Hexaghost", )
 
     def set_intent(self):
         if self.active_turns == 1:
-            self.next_move, self.intent = [("Activate", "Charging", (""))], "<yellow>Unknown</yellow>"
+            self.next_move, self.intent = [("Activate", "Charging", ("..."))], "<yellow>Unknown</yellow>"
         elif self.active_turns == 2:
             self.next_move, self.intent = [("Divider", "Attack", (self.divider_dmg, 6))], f"<aggresive>Attack</aggresive> Σ{self.divider_dmg}x6"
         elif self.active_turns > 2:

@@ -29,6 +29,10 @@ class Message(StrEnum):
     BEFORE_PLAYER_DEATH = 'before_player_death'
     BEFORE_DRAW = 'before_draw'
     AFTER_DRAW = 'after_draw'
+    BEFORE_APPLY_EFFECT = 'before_apply'
+    AFTER_APPLY_EFFECT = 'after_apply'
+    BEFORE_SET_INTENT = 'before_intent'
+    AFTER_SET_INTENT = 'after_intent'
 
 class MessageBus():
     '''This is a Pub/Sub, or Publish/Subscribe, message bus. It allows components to subscribe to messages,
