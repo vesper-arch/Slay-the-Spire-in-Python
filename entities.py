@@ -314,7 +314,7 @@ class Player(Registerable):
                 target.health -= dmg
                 ansiprint(f"You dealt {dmg} damage(<light-blue>{target.block} Blocked</light-blue>) to {target.name} with {' | '.join(card.damage_affected_by)}")
                 target.block = 0
-                bus.publish(Message.AFTER_ATTACK, (self, target, card))
+                bus.publish(Message.AFTER_ATTACK, (self, target, dmg))
                 if target.health <= 0:
                     target.die()
                 bus.publish(Message.ON_ATTACKED, (target))
@@ -576,7 +576,7 @@ class Enemy(Registerable):
                 target.block = 0
                 target.health -= dmg
                 bus.publish(Message.ON_PLAYER_HEALTH_LOSS, None)
-            bus.publish(Message.AFTER_ATTACK, (self, dmg, target.block))
+            bus.publish(Message.AFTER_ATTACK, (self, target, dmg))
         sleep(1)
 
     def remove_effect(self, effect_name, effect_type):

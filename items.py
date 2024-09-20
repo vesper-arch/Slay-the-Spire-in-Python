@@ -11,7 +11,7 @@ from definitions import CardType, DeepCopyTuple, PlayerClass, Rarity, State, Tar
 from message_bus_tools import Card, Message, Potion, Relic
 
 if TYPE_CHECKING:
-    from entities import Player
+    from entities import Player, Enemy
     from items import Card
 
 ei = helper.ei
@@ -568,7 +568,6 @@ class Disarm(Card):
         ei.apply_effect(target, origin, "Strength", -self.strength_loss)
 
 class Dropkick(Card):
-    registers = [Message.AFTER_ATTACK]
     def __init__(self):
         super().__init__("Dropkick", "Deal 5 damage. If the enemy has <debuff>Vulnerable</debuff>, gain 1 <keyword>Energy</keyword> and draw 1 card.", Rarity.UNCOMMON, PlayerClass.IRONCLAD, CardType.ATTACK, TargetType.SINGLE, energy_cost=1)
         self.base_damage = 5
@@ -581,15 +580,17 @@ class Dropkick(Card):
         self.base_damage, self.damage = 8, 8
         self.info = "Deal 8 damage. If the enemy has <debuff>Vulnerable</debuff>, gain 1 <keyword>Energy</keyword> and draw 1 card."
 
-    def apply(self, origin, target):
+    def apply(self, origin: Player, target: Enemy):
         origin.attack(target, self)
+        if helper.effect_amount(helper.Vulnerable, target.debuffs) >= 1:
+            origin.energy += 1
+            origin.draw_cards(cards=1)
 
     def callback(self, message, data):
-        if message == Message.AFTER_ATTACK:
-            player, enemy, _ = data
-            if enemy.debuffs['Vulnerable'] >= 1:
-                player.energy += 1
-                player.draw_cards(cards=1)
+        # Unnecessary. We can modify the energy and draw a card directly in the apply method
+        # Generally, callbacks are used for effects that are not directly tied to a card's application
+        pass
+
 
 class DualWield(Card):
     def __init__(self):
@@ -954,19 +955,21 @@ class AncientTeaSet(Relic):
             player.ancient_tea_set = True
 
 class ArtOfWar(Relic):
-    registers = [Message.AFTER_ATTACK, Message.START_OF_TURN]
+    registers = [Message.ON_CARD_PLAY, Message.START_OF_TURN]
     def __init__(self):
         super().__init__("Art of War", "If you do not play attacks during your turn, gain an extra <keyword>Energy</keyword> next turn.", "The ancient manuscript contains wisdom from a past age.", Rarity.COMMON)
+        self.player_attacked_this_turn = False   # Relics can store data like this - no need to put it on the player
 
     def callback(self, message, data):
-        if message == Message.AFTER_ATTACK:
-            player, _, card = data
-            if getattr(card, 'type', None) == CardType.ATTACK: # This is to make sure that it was a actually a card that dealt damage.
-                player.attacks_played_this_turn = True
+        if message == Message.ON_CARD_PLAY:
+            player, card, target, enemies = data
+            if player == self.host and card.type == CardType.ATTACK:
+                self.player_attacked_this_turn = True
         elif message == Message.START_OF_TURN:
             _, player = data
-            if not player.attacks_played_this_turn:
+            if not self.player_attacked_this_turn:
                 player.energy += 1
+                self.player_attacked_this_turn = False   # reset for next turn
                 ansiprint(f"You gained 1 <keyword>Energy</keyword> from <keyword>{self.name}</keyword>.")
 
 class BagOfMarbles(Relic):
