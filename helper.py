@@ -32,6 +32,9 @@ def get_attribute(item, attribute):
     else:
         return getattr(item, attribute.lower())
 
+def effect_amount(effect: type[Effect], buffs_or_debuffs: list[Effect]) -> int:
+    ''' Returns the total amounts of a specific effect in a given list of effects.'''
+    return sum([e.amount for e in buffs_or_debuffs if isinstance(e, effect)])
 
 class Displayer:
     """Displays important info to the player during combat"""
