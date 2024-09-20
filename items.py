@@ -907,6 +907,11 @@ class Wound(Card):
     def __init__(self):
         super().__init__("Wound", "<keyword>Unplayable</keyword>.", Rarity.COMMON, PlayerClass.ANY, CardType.STATUS, TargetType.NOTHING)
         self.playable = False
+
+class Dazed(Card):
+    def __init__(self):
+        super().__init__("Dazed", "<keyword>Unplayable</keyword>.", Rarity.COMMON, PlayerClass.ANY, CardType.STATUS, TargetType.NOTHING)
+        self.playable = False
 #####---END OF CARDS SECTION---#####
 
 class BurningBlood(Relic):
