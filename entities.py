@@ -14,6 +14,13 @@ from message_bus_tools import Card, Effect, Message, Potion, Registerable, Relic
 ei = helper.ei
 view = helper.view
 
+class Damage:
+    def __init__(self, dmg: int):
+        self.damage = dmg
+    def modify_damage(self, change: int, context: str, *args, **kwargs):
+        new_dmg = self.damage + change
+        ansiprint(f"Damage modified from {self.damage} --> {new_dmg} by {context}.")
+        self.damage = new_dmg
 class Action:
     def __init__(self, name, action, amount):
         self.name = name
@@ -50,6 +57,8 @@ class Action:
 
     def __repr__(self):
         return self.__str__()
+
+
 
 class Player(Registerable):
     """
@@ -550,7 +559,12 @@ class Enemy(Registerable):
 
     def attack(self, dmg: int, times: int, target: Player):
         for _ in range(times):
-            bus.publish(Message.BEFORE_ATTACK, (self, dmg, target.block))
+            if target.state == State.DEAD:
+                ansiprint(f"{self.name} stopped attacking: {target.name} is already dead.")
+                return
+            modifiable_dmg = Damage(dmg)
+            bus.publish(Message.BEFORE_ATTACK, (self, target, modifiable_dmg))  # allows for damage modification from relics/effects
+            dmg = modifiable_dmg.damage
             if dmg <= target.block:
                 target.block -= dmg
                 dmg = 0

@@ -229,7 +229,6 @@ class Headbutt(Card):
         origin.draw_pile.append(origin.discard_pile.pop(chosen_card))
 
 class HeavyBlade(Card):
-    registers = [Message.BEFORE_ATTACK]
     def __init__(self):
         super().__init__("Heavy Blade", "Deal 14 damage. <buff>Strength</buff> affects this card 3 times.", Rarity.COMMON, PlayerClass.IRONCLAD, CardType.ATTACK, TargetType.SINGLE, energy_cost=2)
         self.base_damage = 14
@@ -243,13 +242,14 @@ class HeavyBlade(Card):
         self.strength_multi = 5
         self.info = "Deal 14 damage. <buff>Strength</buff> affects this card 5 times."
 
-    def apply(self, origin, target):
+    def apply(self, origin: Player, target):
+        player_strength = helper.effect_amount(helper.Strength, origin.buffs)
+        self.modify_damage(player_strength * self.strength_multi,
+                           f"(+{player_strength * self.strength_multi} dmg from {player_strength} <buff>Strength</buff>)")
         origin.attack(target, self)
 
     def callback(self, message, data):
-        if message == Message.BEFORE_ATTACK:
-            player, _, card = data
-            card.modify_damage(player.buffs['Strength'] * self.strength_multi, f"Heavy Blade(+{player.buffs['Strength'] * self.strength_multi} dmg)")
+        pass # Unnecessary. We can just modify the damage directly in the apply method.
 
 class IronWave(Card):
     def __init__(self):
@@ -273,7 +273,6 @@ class IronWave(Card):
         origin.blocking(card=self)
 
 class PerfectedStrike(Card):
-    registers = [Message.BEFORE_ATTACK]
     def __init__(self):
         super().__init__("Perfected Strike", "Deal 6 damage. Deals 2 additional damage for ALL your cards containing <italic>\"Strike\"</italic>.", Rarity.COMMON, PlayerClass.IRONCLAD, CardType.ATTACK, TargetType.SINGLE, energy_cost=2)
         self.base_damage = 6
@@ -287,15 +286,15 @@ class PerfectedStrike(Card):
         self.dmg_per_strike = 3
         self.info = "Deal 6 damage. Deals 3 additional damage for ALL your cards containing <italic>\"Strike\"</italic>."
 
-    def apply(self, origin, target):
+    def apply(self, origin: Player, target):
+        player = origin
+        strike_cards = sum([1 for card in player.hand if 'strike' in card.name.lower()])
+        extra_damage = strike_cards * self.dmg_per_strike
+        self.modify_damage(extra_damage, f"Perfected Strike(+{extra_damage} dmg)")
         origin.attack(target, self)
 
     def callback(self, message, data):
-        if message == Message.BEFORE_ATTACK:
-            player = data
-            if len((card for card in player.hand if 'strike' in card.name.lower())) > 0:
-                extra_damage = len((card for card in player.hand if 'strike' in card.name.lower())) * self.dmg_per_strike
-                self.modify_damage(extra_damage, f"Perfected Strike(+{extra_damage} dmg)")
+        pass # Unnecessary. We can just modify the damage directly in the apply method.
 
 class PommelStrike(Card):
     def __init__(self):
