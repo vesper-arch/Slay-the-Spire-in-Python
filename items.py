@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import math
 import random
 from copy import deepcopy
 from typing import TYPE_CHECKING
@@ -1113,7 +1112,7 @@ class BloodPotion(Potion):
         self.golden_info = "Heal for 40% of your Max HP."
 
     def apply(self, origin):
-        origin.health_actions(math.round(origin.max_health * self.hp_gain), "Heal")
+        origin.health_actions(round(origin.max_health * self.hp_gain), "Heal")
 
 class AttackPotion(Potion):
     def __init__(self):
