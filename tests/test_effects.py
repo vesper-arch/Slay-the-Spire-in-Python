@@ -6,11 +6,32 @@ import enemy_catalog
 import entities
 import helper
 
+from unittest.mock import Mock
+
 
 @pytest.fixture
 def ei():
   ei = helper.EffectInterface()
   return ei
+
+def test_helper_effect_amount_empty():
+  assert helper.effect_amount(helper.Strength, []) == 0
+
+def test_helper_effect_amount_single():
+  effects = [helper.Vulnerable(host=Mock(), amount=5)]
+  assert helper.effect_amount(helper.Strength, effects) == 0
+  assert helper.effect_amount(helper.Vulnerable, effects) == 5
+
+def test_helper_effect_amount_multiple():
+  effects = [helper.Vulnerable(host=Mock(), amount=5),
+             helper.Strength(host=Mock(), amount=3),
+             helper.Strength(host=Mock(), amount=2)]
+  assert helper.effect_amount(helper.Weak, effects) == 0
+  assert helper.effect_amount(helper.Strength, effects) == 5
+  assert helper.effect_amount(helper.Vulnerable, effects) == 5
+
+
+
 
 @pytest.mark.skip("init_effects was removed.")
 class TestEffectInterface():

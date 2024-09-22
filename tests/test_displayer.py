@@ -16,6 +16,11 @@ def all_enemies():
         enemies.append((name,obj))
   return enemies
 
+def test_colors():
+  from ansi_tags import user_tags
+  for key, v in user_tags.items():
+      ansiprint(f'Color {key:15s}: <{key}>1234567890abcdefghijklmnopqrstuvwxyz</{key}>')
+
 
 class TestDisplayers():
   # TODO: Find some other thing to test because the display_actual_damage and display_actual_block functions have been removed as of 4/13/24.

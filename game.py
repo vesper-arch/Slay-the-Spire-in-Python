@@ -14,7 +14,7 @@ from enemy_catalog import (
 from entities import Enemy, Player
 from events import choose_event
 from helper import ei, gen, view
-from message_bus_tools import Message, bus
+from message_bus_tools import Message, bus, Card, CardType
 from shop import Shop
 
 
@@ -91,7 +91,7 @@ class Game:
                     ansiprint(message, end="")
             action = input("> ").lower()
             if action not in valid_inputs:
-                ansiprint("<red>Valid Inputs: " + valid_inputs + "</red>")
+                ansiprint("<red>Valid Inputs: " + str(valid_inputs) + "</red>")
                 sleep(1.5)
                 view.clear()
                 continue
@@ -107,11 +107,12 @@ class Game:
                     "What card do you want to upgrade?",
                     self.player.deck,
                     view.view_piles,
-                    lambda card: not card.get("Upgraded")
-                    and (card["Type"] not in ("Status", "Curse") or card.name == "Burn"),
+                    lambda card: not card.upgraded
+                    and (card.type not in (CardType.STATUS, CardType.CURSE) or card.name == "Burn"),
                     "That card is not upgradeable.",
                 )
-                self.player.deck[upgrade_card] = self.player.card_actions(self.player.deck[upgrade_card], "Upgrade", items.cards)
+                if upgrade_card is not None:
+                    self.player.deck[upgrade_card].upgrade()
                 break
             if action == "lift":
                 if self.player.girya_charges > 0:
@@ -132,10 +133,10 @@ class Game:
                     lambda card: card.get("Removable") is False,
                     "That card is not removable.",
                 )
-                self.player.deck[option] = self.player.card_actions(self.player.deck[option], "Remove", items.cards)
+                self.player.deck[option] = self.player.card_actions(self.player.deck[option], "Remove", items.create_all_cards())
                 break
             if action == "dig":
-                gen.claim_relics(False, self.player, 1, items.relics, None, False)
+                gen.claim_relics(False, self.player, 1, items.create_all_relics(), None, False)
                 break
         while True:
             ansiprint("<bold>[View Deck]</bold> or <bold>[Leave]</bold>")
@@ -249,11 +250,11 @@ class Combat:
             ansiprint("<green>Combat finished!</green>")
             self.player.gain_gold(random.randint(10, 20))
             if (potion_roll < self.player.potion_dropchance):
-                gen.claim_potions(True, 1, self.player, items.potions)
+                gen.claim_potions(True, 1, self.player, items.create_all_potions())
                 self.player.potion_dropchance -= 10
             else:
                 self.player.potion_dropchance += 10
-            gen.card_rewards(self.tier, True, self.player, items.cards)
+            gen.card_rewards(self.tier, True, self.player, items.create_all_cards())
             view.clear()
         elif escaped is True:
             print("Escaped...")

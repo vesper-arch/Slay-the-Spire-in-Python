@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import math
 import random
 from copy import deepcopy
 from typing import TYPE_CHECKING
@@ -11,7 +10,7 @@ from definitions import CardType, DeepCopyTuple, PlayerClass, Rarity, State, Tar
 from message_bus_tools import Card, Message, Potion, Relic
 
 if TYPE_CHECKING:
-    from entities import Player
+    from entities import Player, Enemy
     from items import Card
 
 ei = helper.ei
@@ -190,7 +189,7 @@ class Flex(Card):
 
     def apply(self, origin):
         ei.apply_effect(origin, None, helper.Strength, self.strength)
-        ei.apply_effect(origin, None, "Strength Down", self.strength)
+        ei.apply_effect(origin, None, helper.StrengthDown, self.strength)
 
 class Havoc(Card):
     def __init__(self):
@@ -229,7 +228,6 @@ class Headbutt(Card):
         origin.draw_pile.append(origin.discard_pile.pop(chosen_card))
 
 class HeavyBlade(Card):
-    registers = [Message.BEFORE_ATTACK]
     def __init__(self):
         super().__init__("Heavy Blade", "Deal 14 damage. <buff>Strength</buff> affects this card 3 times.", Rarity.COMMON, PlayerClass.IRONCLAD, CardType.ATTACK, TargetType.SINGLE, energy_cost=2)
         self.base_damage = 14
@@ -243,13 +241,14 @@ class HeavyBlade(Card):
         self.strength_multi = 5
         self.info = "Deal 14 damage. <buff>Strength</buff> affects this card 5 times."
 
-    def apply(self, origin, target):
+    def apply(self, origin: Player, target):
+        player_strength = helper.effect_amount(helper.Strength, origin.buffs)
+        self.modify_damage(player_strength * self.strength_multi,
+                           f"(+{player_strength * self.strength_multi} dmg from {player_strength} <buff>Strength</buff>)")
         origin.attack(target, self)
 
     def callback(self, message, data):
-        if message == Message.BEFORE_ATTACK:
-            player, _, card = data
-            card.modify_damage(player.buffs['Strength'] * self.strength_multi, f"Heavy Blade(+{player.buffs['Strength'] * self.strength_multi} dmg)")
+        pass # Unnecessary. We can just modify the damage directly in the apply method.
 
 class IronWave(Card):
     def __init__(self):
@@ -273,7 +272,6 @@ class IronWave(Card):
         origin.blocking(card=self)
 
 class PerfectedStrike(Card):
-    registers = [Message.BEFORE_ATTACK]
     def __init__(self):
         super().__init__("Perfected Strike", "Deal 6 damage. Deals 2 additional damage for ALL your cards containing <italic>\"Strike\"</italic>.", Rarity.COMMON, PlayerClass.IRONCLAD, CardType.ATTACK, TargetType.SINGLE, energy_cost=2)
         self.base_damage = 6
@@ -287,15 +285,15 @@ class PerfectedStrike(Card):
         self.dmg_per_strike = 3
         self.info = "Deal 6 damage. Deals 3 additional damage for ALL your cards containing <italic>\"Strike\"</italic>."
 
-    def apply(self, origin, target):
+    def apply(self, origin: Player, target):
+        player = origin
+        strike_cards = sum([1 for card in player.hand if 'strike' in card.name.lower()])
+        extra_damage = strike_cards * self.dmg_per_strike
+        self.modify_damage(extra_damage, f"Perfected Strike(+{extra_damage} dmg)")
         origin.attack(target, self)
 
     def callback(self, message, data):
-        if message == Message.BEFORE_ATTACK:
-            player = data
-            if len((card for card in player.hand if 'strike' in card.name.lower())) > 0:
-                extra_damage = len((card for card in player.hand if 'strike' in card.name.lower())) * self.dmg_per_strike
-                self.modify_damage(extra_damage, f"Perfected Strike(+{extra_damage} dmg)")
+        pass # Unnecessary. We can just modify the damage directly in the apply method.
 
 class PommelStrike(Card):
     def __init__(self):
@@ -505,8 +503,9 @@ class BurningPact(Card):
 
     def apply(self, origin):
         chosen_card = view.list_input("Choose a card to <keyword>Exhaust</keyword>", origin.hand, view.view_piles)
-        origin.move_card(origin.hand[chosen_card], origin.exhaust_pile, origin.hand, False)
-        origin.draw_cards(cards=self.cards)
+        if chosen_card is not None:
+            origin.move_card(origin.hand[chosen_card], origin.exhaust_pile, origin.hand, False)
+            origin.draw_cards(cards=self.cards)
 
 class Carnage(Card):
     def __init__(self):
@@ -569,7 +568,6 @@ class Disarm(Card):
         ei.apply_effect(target, origin, "Strength", -self.strength_loss)
 
 class Dropkick(Card):
-    registers = [Message.AFTER_ATTACK]
     def __init__(self):
         super().__init__("Dropkick", "Deal 5 damage. If the enemy has <debuff>Vulnerable</debuff>, gain 1 <keyword>Energy</keyword> and draw 1 card.", Rarity.UNCOMMON, PlayerClass.IRONCLAD, CardType.ATTACK, TargetType.SINGLE, energy_cost=1)
         self.base_damage = 5
@@ -582,15 +580,17 @@ class Dropkick(Card):
         self.base_damage, self.damage = 8, 8
         self.info = "Deal 8 damage. If the enemy has <debuff>Vulnerable</debuff>, gain 1 <keyword>Energy</keyword> and draw 1 card."
 
-    def apply(self, origin, target):
+    def apply(self, origin: Player, target: Enemy):
         origin.attack(target, self)
+        if helper.effect_amount(helper.Vulnerable, target.debuffs) >= 1:
+            origin.energy += 1
+            origin.draw_cards(cards=1)
 
     def callback(self, message, data):
-        if message == Message.AFTER_ATTACK:
-            player, enemy, _ = data
-            if enemy.debuffs['Vulnerable'] >= 1:
-                player.energy += 1
-                player.draw_cards(cards=1)
+        # Unnecessary. We can modify the energy and draw a card directly in the apply method
+        # Generally, callbacks are used for effects that are not directly tied to a card's application
+        pass
+
 
 class DualWield(Card):
     def __init__(self):
@@ -728,6 +728,7 @@ class InfernalBlade(Card):
         self.energy_cost = 0
 
     def apply(self, origin):
+        cards = create_all_cards()
         attack_cards = [card for card in cards if card.type == CardType.ATTACK]
         origin.hand.append(random.choice(attack_cards).modify_energy_cost(0, "Set", True))
 
@@ -763,17 +764,17 @@ class Intimidate(Card):
 
 class Metallicize(Card):
     def __init__(self):
-        super().__init__("Mettalicize", "At the end of your turn, gain 3 <keyword>Block</keyword>.", Rarity.UNCOMMON, PlayerClass.IRONCLAD, CardType.POWER, TargetType.YOURSELF, energy_cost=1)
-        self.mettalicize = 3
+        super().__init__("Metallicize", "At the end of your turn, gain 3 <keyword>Block</keyword>.", Rarity.UNCOMMON, PlayerClass.IRONCLAD, CardType.POWER, TargetType.YOURSELF, energy_cost=1)
+        self.amount = 3
         self.upgrade_preview += f"<yellow>{self.info}</yellow> -> <yellow>At the end of your turn, gain <green>4</green> <keyword>Block</keyword>.</yellow>"
 
     def upgrade(self):
         self.upgrade_markers()
-        self.mettalicize = 4
+        self.amount = 4
         self.info = "At the end of your turn, gain 4 <keyword>Block</keyword>."
 
     def apply(self, origin):
-        ei.apply_effect(origin, None, "Mettalicize", self.mettalicize)
+        ei.apply_effect(origin, None, "Metallicize", self.amount)
 
 class PowerThrough(Card):
     def __init__(self):
@@ -900,12 +901,17 @@ class Slimed(Card):
         self.exhaust = True
         self.upgradeable = False
 
-    def apply(self, _):
+    def apply(self, *args, **kwargs):
         pass
 
 class Wound(Card):
     def __init__(self):
         super().__init__("Wound", "<keyword>Unplayable</keyword>.", Rarity.COMMON, PlayerClass.ANY, CardType.STATUS, TargetType.NOTHING)
+        self.playable = False
+
+class Dazed(Card):
+    def __init__(self):
+        super().__init__("Dazed", "<keyword>Unplayable</keyword>.", Rarity.COMMON, PlayerClass.ANY, CardType.STATUS, TargetType.NOTHING)
         self.playable = False
 #####---END OF CARDS SECTION---#####
 
@@ -950,19 +956,21 @@ class AncientTeaSet(Relic):
             player.ancient_tea_set = True
 
 class ArtOfWar(Relic):
-    registers = [Message.AFTER_ATTACK, Message.START_OF_TURN]
+    registers = [Message.ON_CARD_PLAY, Message.START_OF_TURN]
     def __init__(self):
         super().__init__("Art of War", "If you do not play attacks during your turn, gain an extra <keyword>Energy</keyword> next turn.", "The ancient manuscript contains wisdom from a past age.", Rarity.COMMON)
+        self.player_attacked_this_turn = False   # Relics can store data like this - no need to put it on the player
 
     def callback(self, message, data):
-        if message == Message.AFTER_ATTACK:
-            player, _, card = data
-            if getattr(card, 'type', None) == CardType.ATTACK: # This is to make sure that it was a actually a card that dealt damage.
-                player.attacks_played_this_turn = True
+        if message == Message.ON_CARD_PLAY:
+            player, card, target, enemies = data
+            if player == self.host and card.type == CardType.ATTACK:
+                self.player_attacked_this_turn = True
         elif message == Message.START_OF_TURN:
             _, player = data
-            if not player.attacks_played_this_turn:
+            if not self.player_attacked_this_turn:
                 player.energy += 1
+                self.player_attacked_this_turn = False   # reset for next turn
                 ansiprint(f"You gained 1 <keyword>Energy</keyword> from <keyword>{self.name}</keyword>.")
 
 class BagOfMarbles(Relic):
@@ -983,7 +991,7 @@ class BlueCandle(Relic):
 
     def callback(self, message, data):
         if message == Message.ON_CARD_PLAY:
-            player, card, _ = data
+            player, card, target, enemies = data
             if card.type == CardType.CURSE:
                 player.take_sourceless_dmg(1)
 
@@ -1068,6 +1076,7 @@ class DeadBranch(Relic):
     def callback(self, message, data):
         if message == Message.ON_EXHAUST:
             player, _ = data
+            cards = create_all_cards()
             valid_cards = [card for card in cards if card.player_class == player.player_class and card.type not in (CardType.CURSE, CardType.STATUS) and card.rarity != Rarity.SPECIAL]
             player.hand.append(random.choice(valid_cards))
 
@@ -1103,7 +1112,7 @@ class BloodPotion(Potion):
         self.golden_info = "Heal for 40% of your Max HP."
 
     def apply(self, origin):
-        origin.health_actions(math.round(origin.max_health * self.hp_gain), "Heal")
+        origin.health_actions(round(origin.max_health * self.hp_gain), "Heal")
 
 class AttackPotion(Potion):
     def __init__(self):
@@ -1113,10 +1122,12 @@ class AttackPotion(Potion):
         self.golden_info = "Add 2 copies of 1 of 3 random <keyword>Attack</keyword> cards to your hand. They cost 0 this turn."
 
     def apply(self, origin):
+        cards = create_all_cards()
         valid_cards = random.choices([card for card in cards if card.type == CardType.ATTACK], k=3)
         chosen_card = view.list_input("Choose a card", valid_cards, view.view_piles)
-        for _ in range(self.copies):
-            origin.hand.append(chosen_card)
+        if chosen_card is not None:
+            for _ in range(self.copies):
+                origin.hand.append(deepcopy(valid_cards[chosen_card]))
 
 class SkillPotion(Potion):
     def __init__(self):
@@ -1126,10 +1137,12 @@ class SkillPotion(Potion):
         self.golden_info = "Add 2 copies of 1 of 3 random <keyword>Skill</keyword> cards to your hand. They cost 0 this turn."
 
     def apply(self, origin):
+        cards = create_all_cards()
         valid_cards = random.choices([card for card in cards if card.type == CardType.SKILL], k=3)
         chosen_card = view.list_input("Choose a card", valid_cards, view.view_piles)
-        for _ in range(self.copies):
-            origin.hand.append(chosen_card)
+        if chosen_card is not None:
+            for _ in range(self.copies):
+                origin.hand.append(deepcopy(valid_cards[chosen_card]))
 
 class PowerPotion(Potion):
     def __init__(self):
@@ -1139,10 +1152,12 @@ class PowerPotion(Potion):
         self.golden_info = "Add 2 copies of 1 of 3 random <keyword>Power</keyword> cards to your hand. They cost 0 this turn."
 
     def apply(self, origin):
+        cards = create_all_cards()
         valid_cards = random.choices([card for card in cards if card.type == CardType.POWER], k=3)
         chosen_card = view.list_input("Choose a card", valid_cards, view.view_piles)
-        for _ in range(self.copies):
-            origin.hand.append(chosen_card)
+        if chosen_card is not None:
+            for _ in range(self.copies):
+                origin.hand.append(deepcopy(valid_cards[chosen_card]))
 
 class ColorlessPotion(Potion):
     def __init__(self):
@@ -1152,10 +1167,13 @@ class ColorlessPotion(Potion):
         self.golden_info = "Add 2 copies of 1 of 3 random <keyword>Colorless</keyword> cards to your hand. They cost 0 this turn."
 
     def apply(self, origin):
-        valid_cards = random.choices([card for card in cards if card.player_class == PlayerClass.COLORLESS], k=3)
+        cards = create_all_cards()
+        colorless_cards = [card for card in cards if card.player_class == PlayerClass.COLORLESS]
+        valid_cards = random.choices(colorless_cards, k=min(len(colorless_cards), 3))
         chosen_card = view.list_input("Choose a card", valid_cards, view.view_piles)
-        for _ in range(self.copies):
-            origin.hand.append(chosen_card)
+        if chosen_card is not None:
+            for _ in range(self.copies):
+                origin.hand.append(deepcopy(valid_cards[chosen_card]))
 
 class BlessingOfTheForge(Potion):
     def __init__(self):
@@ -1169,20 +1187,28 @@ class Elixir(Potion):
     def __init__(self):
         super().__init__("Elixir", "<keyword>Exhaust</keyword> any number of cards in your hand.", Rarity.UNCOMMON, TargetType.YOURSELF, PlayerClass.IRONCLAD)
 
-    def apply(self, origin):
-        chosen_cards = view.multi_input("Choose any number of cards to <keyword>Exhaust</keyword>", origin.hand, view.view_piles, len(origin.hand))
-        for i in chosen_cards:
-            origin.move_card(origin.hand[i], origin.exhaust_pile, origin.hand)
+    def apply(self, origin: Player):
+        chosen_cards = view.multi_input(input_string="Choose any number of cards to <keyword>Exhaust</keyword>",
+                                        choices=origin.hand,
+                                        displayer=view.view_piles,
+                                        max_choices=len(origin.hand))
+        if chosen_cards is not None:
+            for i in chosen_cards:
+                origin.move_card(origin.hand[i], origin.exhaust_pile, origin.hand)
 
 class GamblersBrew(Potion):
     def __init__(self):
         super().__init__("Gambler's Brew", "Discard any number of cards, then draw that many.", Rarity.UNCOMMON, TargetType.YOURSELF)
 
-    def apply(self, origin):
-        chosen_cards = view.multi_input("Choose any number of cards to discard", origin.hand, view.view_piles)
-        for i in chosen_cards:
-            origin.move_card(origin.hand[i], origin.discard_pile, origin.hand)
-        origin.draw_cards(cards=len(chosen_cards))
+    def apply(self, origin: Player):
+        chosen_cards = view.multi_input(input_string="Choose any number of cards to discard",
+                                        choices=origin.hand,
+                                        displayer=view.view_piles,
+                                        max_choices=len(origin.hand))
+        if chosen_cards is not None:
+            for i in chosen_cards:
+                origin.move_card(origin.hand[i], origin.discard_pile, origin.hand)
+            origin.draw_cards(cards=len(chosen_cards))
 
 class LiquidMemories(Potion):
     def __init__(self):
@@ -1191,11 +1217,15 @@ class LiquidMemories(Potion):
         self.golden_stats = [self.cards]
         self.golden_info = "Choose 2 cards in your discard pile and return them to your hand. They cost 0 this turn."
 
-    def apply(self, origin):
-        chosen_cards = view.multi_input(f"Choose {'a' if self.cards == 1 else '2'} card{'' if self.cards == 1 else 's'} to return to your hand", origin.discard_pile, view.view_piles, self.cards)
-        for i in chosen_cards:
-            chosen_cards[i].modify_energy_cost(0, "Set", one_turn=True)
-            origin.move_card(chosen_cards[i], origin.hand, origin.discard_pile)
+    def apply(self, origin: Player):
+        chosen_cards = view.multi_input(input_string=f"Choose {'a' if self.cards == 1 else '2'} card{'' if self.cards == 1 else 's'} to return to your hand",
+                                        choices=origin.discard_pile,
+                                        displayer=view.view_piles,
+                                        max_choices=self.cards)
+        if chosen_cards is not None:
+            for i in chosen_cards:
+                origin.discard_pile[i].modify_energy_cost(0, "Set", one_turn=True)
+                origin.move_card(chosen_cards[i], origin.hand, origin.discard_pile)
 
 class DistilledChaos(Potion):
     def __init__(self):
@@ -1237,13 +1267,13 @@ class AncientPotion(Potion):
 
 class HeartOfIron(Potion):
     def __init__(self):
-        super().__init__("Heart of Iron", "Gain 6 <buff>Mettalicize</buff>.", Rarity.RARE, TargetType.YOURSELF)
-        self.mettalicize = 6
-        self.golden_stats = [self.mettalicize]
-        self.golden_info = "Gain 12 <buff>Mettalicize</buff>."
+        super().__init__("Heart of Iron", "Gain 6 <buff>Metallicize</buff>.", Rarity.RARE, TargetType.YOURSELF)
+        self.amount = 6
+        self.golden_stats = [self.amount]
+        self.golden_info = f"Gain {self.amount} <buff>Metallicize</buff>."
 
     def apply(self, origin):
-        ei.apply_effect(origin, None, "Mettalicize", self.mettalicize)
+        ei.apply_effect(origin, None, "Metallicize", self.amount)
 
 class FruitJuice(Potion):
     def __init__(self):
@@ -1277,6 +1307,7 @@ class EntropicBrew(Potion):
         super().__init__("Entropic Brew", "Fill all your empty potion slots with random potions.", Rarity.RARE, TargetType.YOURSELF)
 
     def apply(self, origin):
+        potions = create_all_potions()
         for _ in range(origin.max_potions - len(origin.potions)):
             origin.potions.append(random.choice(potion for potion in potions if potion.player_class == origin.player_class))
 
@@ -1299,41 +1330,47 @@ class SneckoOil(Potion):
         for card in origin.hand:
             card.modify_energy_cost(random.randint(0, 3), "Set")
 
-relics = DeepCopyTuple(relic() for relic in (
-    # Starter Relics
-    BurningBlood,
-    # Common Relics
-    Akabeko, Anchor, AncientTeaSet, ArtOfWar, BagOfMarbles,
-    # Uncommon Relics
-    BlueCandle, BottledFlame, BottledLighting, BottledTornado, DarkstonePeriapt,
-    # Rare Relics
-    BirdFacedUrn, Calipers, CaptainsWheel, DeadBranch, DuVuDoll,
-    # Event Relics
-    WarpedTongs,
-))
+def create_all_relics() -> list[Relic]:
+    relics = [relic() for relic in (
+        # Starter Relics
+        BurningBlood,
+        # Common Relics
+        Akabeko, Anchor, AncientTeaSet, ArtOfWar, BagOfMarbles,
+        # Uncommon Relics
+        BlueCandle, BottledFlame, BottledLighting, BottledTornado, DarkstonePeriapt,
+        # Rare Relics
+        BirdFacedUrn, Calipers, CaptainsWheel, DeadBranch, DuVuDoll,
+        # Event Relics
+        WarpedTongs,
+    )]
+    return relics
 
-cards = DeepCopyTuple(card() for card in (
-    # ----------IRONCLAD CARDS------------
-    # Starter(basic) cards
-    IroncladStrike, IroncladDefend, Bash,
-    # Common Cards
-    Anger, Armaments, BodySlam, Clash, Cleave, Clothesline, Flex, Havoc,
-    Headbutt, HeavyBlade, IronWave, PerfectedStrike, PommelStrike, ShrugItOff, SwordBoomerang, Thunderclap, TrueGrit, TwinStrike, Warcry, WildStrike,
-    # Uncommon Cards
-    BattleTrance, BloodForBlood, Bloodletting, BurningPact, Carnage, Combust, DarkEmbrace, Disarm, Dropkick, DualWield, Entrench, Evolve, FeelNoPain,
-    FireBreathing, FlameBarrier, GhostlyArmor, Hemokinesis, InfernalBlade, Inflame, Intimidate, Metallicize, PowerThrough, Pummel, Rage,
-    # Rare Cards
-    Barricade, Berzerk, Bludgeon, Brutality, Corruption
-))
+def create_all_cards() -> list[Card]:
+    cards = [card() for card in (
+        # ----------IRONCLAD CARDS------------
+        # Starter(basic) cards
+        IroncladStrike, IroncladDefend, Bash,
+        # Common Cards
+        Anger, Armaments, BodySlam, Clash, Cleave, Clothesline, Flex, Havoc,
+        Headbutt, HeavyBlade, IronWave, PerfectedStrike, PommelStrike, ShrugItOff, SwordBoomerang, Thunderclap, TrueGrit, TwinStrike, Warcry, WildStrike,
+        # Uncommon Cards
+        BattleTrance, BloodForBlood, Bloodletting, BurningPact, Carnage, Combust, DarkEmbrace, Disarm, Dropkick, DualWield, Entrench, Evolve, FeelNoPain,
+        FireBreathing, FlameBarrier, GhostlyArmor, Hemokinesis, InfernalBlade, Inflame, Intimidate, Metallicize, PowerThrough, Pummel, Rage,
+        # Rare Cards
+        Barricade, Berzerk, Bludgeon, Brutality, Corruption
+    )]
+    return cards
 
-potions = DeepCopyTuple(potion() for potion in (
-    # Common Potions
-    BloodPotion, AttackPotion, SkillPotion, PowerPotion, ColorlessPotion, BlessingOfTheForge,
-    # Uncommon Potions
-    Elixir, GamblersBrew, LiquidMemories, DistilledChaos, DuplicationPotion, AncientPotion,
-    # Rare Potions
-    HeartOfIron, FruitJuice, FairyInABottle, CultistPotion, EntropicBrew, SmokeBomb, SneckoOil,
-))
+def create_all_potions() -> list[Potion]:
+    potions = [potion() for potion in (
+        # Common Potions
+        BloodPotion, AttackPotion, SkillPotion, PowerPotion, ColorlessPotion, BlessingOfTheForge,
+        # Uncommon Potions
+        Elixir, GamblersBrew, LiquidMemories, DistilledChaos, DuplicationPotion, AncientPotion,
+        # Rare Potions
+        HeartOfIron, FruitJuice, FairyInABottle, CultistPotion, EntropicBrew, SmokeBomb, SneckoOil,
+    )]
+    return potions
 
 sacred_multi: int = 1
 def activate_sacred_bark():

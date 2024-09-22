@@ -1,4 +1,3 @@
-
 # The shop contains:
 # 5 Colored cards:
 #  - 2 Attack cards, 2 skill cards, and 1 Power card
@@ -29,9 +28,9 @@ import time
 
 from ansi_tags import ansiprint
 from definitions import CardCategory, Rarity
-from helper import Displayer, get_attribute
-from items import cards, potions, relics
-from message_bus_tools import Relic, Potion
+from helper import Displayer, get_attribute, sleep
+from items import create_all_cards, create_all_potions, create_all_relics
+from message_bus_tools import Relic, Potion, Card
 
 
 # Helper functions for displaying cards, potions, and relics.
@@ -69,9 +68,9 @@ def determine_item_category(item):
     name = get_attribute(item, 'Name')
   except KeyError as e:
     raise KeyError(f'The following item has no Name: {item}') from e
-  card_names = [get_attribute(c, 'Name') for c in cards]
-  potion_names = [get_attribute(p, 'Name') for p in potions]
-  relic_names = [get_attribute(r, 'Name') for r in relics]
+  card_names = [c.name for c in create_all_cards()]
+  potion_names = [p.name for p in create_all_potions()]
+  relic_names = [r.name for r in create_all_relics()]
   if name in card_names:
     return CardCategory.CARD
   elif name in potion_names:
@@ -141,10 +140,10 @@ class Shop():
     def initialize_items(self) -> list[SellableItem]:
       # TODO: Make this class-specific and include relics and potions
       items = []
-      all_cards = list(cards)
-      attack_cards = [c for c in all_cards if c["Type"] == "Attack" and c["Class"] != "Colorless"]
-      skill_cards = [c for c in all_cards if c["Type"] == "Skill" and c["Class"] != "Colorless"]
-      power_cards = [c for c in all_cards if c["Type"] == "Power" and c["Class"] != "Colorless"]
+      all_cards:list[Card] = create_all_cards()
+      attack_cards = [c for c in all_cards if c.type == "Attack" and c.player_class != "Colorless"]
+      skill_cards = [c for c in all_cards if c.type == "Skill" and c.player_class != "Colorless"]
+      power_cards = [c for c in all_cards if c.type == "Power" and c.player_class != "Colorless"]
       if len(attack_cards) >= 2:
         items.extend(random.sample(attack_cards, 2))
       if len(skill_cards) >= 2:
@@ -152,9 +151,9 @@ class Shop():
       if len(power_cards) >= 1:
         items.extend(random.sample(power_cards, 1))
 
-      colorless_cards = [c for c in all_cards if "Class" in c and c["Class"] == "Colorless"]
-      colorless_uncommon = [c for c in colorless_cards if c["Rarity"] == Rarity.UNCOMMON]
-      colorless_rare = [c for c in colorless_cards if c["Rarity"] == Rarity.RARE]
+      colorless_cards = [c for c in all_cards if c.player_class == "Colorless"]
+      colorless_uncommon = [c for c in colorless_cards if c.rarity == Rarity.UNCOMMON]
+      colorless_rare = [c for c in colorless_cards if c.rarity == Rarity.RARE]
       if len(colorless_uncommon) >= 1:
         items.extend(random.sample(colorless_uncommon, 1))
       if len(colorless_rare) >= 1:
@@ -180,7 +179,7 @@ class Shop():
       name = get_attribute(self.items[choice].item, "Name")
       price = self.items[choice].price
       ansiprint(f"<bold>You bought {name} for {price} gold</bold>.")
-      time.sleep(0.5)
+      sleep(0.5)
       input("Press Enter to continue...")
 
     def validator(self, item):

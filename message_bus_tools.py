@@ -29,6 +29,10 @@ class Message(StrEnum):
     BEFORE_PLAYER_DEATH = 'before_player_death'
     BEFORE_DRAW = 'before_draw'
     AFTER_DRAW = 'after_draw'
+    BEFORE_APPLY_EFFECT = 'before_apply'
+    AFTER_APPLY_EFFECT = 'after_apply'
+    BEFORE_SET_INTENT = 'before_intent'
+    AFTER_SET_INTENT = 'after_intent'
 
 class MessageBus():
     '''This is a Pub/Sub, or Publish/Subscribe, message bus. It allows components to subscribe to messages,
@@ -37,27 +41,61 @@ class MessageBus():
     def __init__(self, debug=True):
         self.subscribers = dict(dict())  # noqa: C408
         self.debug = debug
-        self.death_messages = []
+        self.death_messages = []  # what is this?
+        self.unsubscribe_set = set()
+        self.subscribe_set = set()
+        self.lock_count = 0
+
+    def _clear_subscribes(self):
+        if self.lock_count > 0:
+            return
+        for event_type, callback, uid in self.subscribe_set:
+            self.subscribe(event_type, callback, uid)
+        self.subscribe_set.clear()
 
     def subscribe(self, event_type: Message, callback, uid):
-        if event_type not in self.subscribers:
-            self.subscribers[event_type] = {}
-        self.subscribers[event_type][uid] = callback
-        if self.debug:
-            ansiprint(f"<basic>MESSAGEBUS</basic>: <blue>{event_type}</blue> | Subscribed <bold>{callback.__qualname__}</bold>")
+        if self.lock_count > 0:
+            if self.debug:
+                ansiprint(f"<basic>MESSAGEBUS</basic>: <blue>{event_type}</blue> | Locked. Adding <bold>{callback.__qualname__}</bold> to subscribe list.")
+            self.subscribe_set.add((event_type, callback, uid))
+        else:
+            if event_type not in self.subscribers:
+                self.subscribers[event_type] = {}
+            self.subscribers[event_type][uid] = callback
+            if self.debug:
+                ansiprint(f"<basic>MESSAGEBUS</basic>: <blue>{event_type}</blue> | Subscribed <bold>{callback.__qualname__}</bold>")
+
+    def _clear_unsubscribes(self):
+        if self.lock_count > 0:
+            return
+        for event_type, uid in self.unsubscribe_set:
+            if self.debug:
+                ansiprint(f"<basic>MESSAGEBUS</basic>: Unsubscribing <bold>{self.subscribers[event_type][uid].__qualname__}</bold> from {', '.join(event_type).replace(', ', '')}")
+            self.unsubscribe(event_type, uid)
+        self.unsubscribe_set.clear()
 
     def unsubscribe(self, event_type, uid):
-        if self.debug:
-            ansiprint(f"<basic>MESSAGEBUS</basic>: Unsubscribed <bold>{self.subscribers[event_type][uid].__qualname__}</bold> from {', '.join(event_type).replace(', ', '')}")
-        del self.subscribers[event_type][uid]
+        if self.lock_count > 0:
+            if self.debug:
+                ansiprint(f"<basic>MESSAGEBUS</basic>: Locked. Adding <bold>{self.subscribers[event_type][uid].__qualname__}</bold> to unsubscribe list.")
+            self.unsubscribe_set.add((event_type, uid))
+        else:
+            if uid in self.subscribers[event_type]:
+                if self.debug:
+                    ansiprint(f"<basic>MESSAGEBUS</basic>: Unsubscribed <bold>{self.subscribers[event_type][uid].__qualname__}</bold> from {', '.join(event_type).replace(', ', '')}")
+                del self.subscribers[event_type][uid]
 
     def publish(self, event_type: Message, data):
+        self.lock_count += 1
         if event_type in self.subscribers:
             for uid, callback in self.subscribers[event_type].items():
                 _ = uid
                 if self.debug:
                     ansiprint(f"<basic>MESSAGEBUS</basic>: <blue>{event_type}</blue> | Calling <bold>{callback.__qualname__}</bold>")
                 callback(event_type, data)
+        self.lock_count -= 1
+        self._clear_subscribes()
+        self._clear_unsubscribes()
         return data
 
 class Registerable():
@@ -96,8 +134,7 @@ class Effect(Registerable):
         return new_effect
 
     def pretty_print(self):
-        stack_type_colors = {'duration': 'light-blue', 'intensity': 'orange', 'counter': 'magenta', 'no stack': 'white'}
-        return f"<{stack_type_colors[str(self.stack_type)]}>{self.name}</{stack_type_colors[str(self.stack_type)]}>{f' {self.amount}' if self.stack_type != 'none' else ''} | <yellow>{self.info}</yellow>"
+        return f"{self.get_name()} | <yellow>{self.info}</yellow>"
 
     def get_name(self):
         # shorter vars for readability
@@ -120,6 +157,16 @@ class Relic(Registerable):
         self.flavor_text = flavor_text
         self.rarity = rarity
         self.player_class = player_class
+
+    def __eq__(self, other: object) -> bool:
+        '''This is a custom __eq__ method that allows for comparison of relics by name, class, or object.'''
+        if type(other) is type(self):
+            original = self.__dict__ == other.__dict__
+        else:
+            original = False
+        by_string = isinstance(other, str) and other == self.name
+        by_class = other == type(self) and other.__name__ == self.__class__.__name__
+        return original or by_string or by_class
 
     def pretty_print(self):
         rarity_color = self.rarity.lower()
@@ -167,6 +214,10 @@ class Card(Registerable):
         self.upgradeable = upgradeable
         self.removable = True
         self.upgrade_preview = f"{self.name} -> <green>{self.name + '+'}</green> | "
+        self.playable = card_type not in (CardType.STATUS, CardType.CURSE)
+
+    def upgrade(self):
+        raise NotImplementedError("Subclasses must implement this method")
 
     def changed_energy(self):
         return self.base_energy_cost != self.energy_cost
@@ -206,6 +257,7 @@ class Card(Registerable):
             self.block += amount
         self.block_affected_by.append(context)
 
-    def is_upgradeadble(self) -> bool:
+    def is_upgradeable(self) -> bool:
         return not self.upgraded and (self.name == "Burn" or self.type not in (CardType.STATUS, CardType.CURSE))
-bus = MessageBus(debug=True)
+
+bus = MessageBus(debug=False)

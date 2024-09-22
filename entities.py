@@ -14,6 +14,13 @@ from message_bus_tools import Card, Effect, Message, Potion, Registerable, Relic
 ei = helper.ei
 view = helper.view
 
+class Damage:
+    def __init__(self, dmg: int):
+        self.damage = dmg
+    def modify_damage(self, change: int, context: str, *args, **kwargs):
+        new_dmg = self.damage + change
+        ansiprint(f"Damage modified from {self.damage} --> {new_dmg} by {context}.")
+        self.damage = new_dmg
 class Action:
     def __init__(self, name, action, amount):
         self.name = name
@@ -50,6 +57,8 @@ class Action:
 
     def __repr__(self):
         return self.__str__()
+
+
 
 class Player(Registerable):
     """
@@ -165,11 +174,14 @@ class Player(Registerable):
         Uses a card
         Wow!
         """
+        # determine exhaust
         if card.type in (CardType.STATUS, CardType.CURSE) and card.name not in ("Slimed", "Pride"):
             if card.type == CardType.CURSE and items.BlueCandle in self.relics:
                 exhaust = True
             else:
                 return
+
+        # apply the card
         if card.target == TargetType.SINGLE:
             card.apply(origin=self, target=target)
         elif card.target in (TargetType.AREA, TargetType.ANY):
@@ -178,12 +190,10 @@ class Player(Registerable):
             card.apply(origin=self)
         else:
             raise ValueError(f"Invalid target type: {card.target}")
+
         bus.publish(Message.ON_CARD_PLAY, (self, card, target, enemies))
-        if (card.type == CardType.STATUS and items.relics["Medical Kit"] in self.player.relics):
-            exhaust = True
-        elif (card.type == CardType.CURSE and items.relics["Blue Candle"] in self.player.relics):
-            self.take_sourceless_dmg(1)
-            exhaust = True
+
+        # Move the card to the appropriate pile
         if pile is not None:
             if exhaust is True or getattr(card, "exhaust", False) is True:
                 ansiprint(f"{card.name} was <bold>Exhausted</bold>.")
@@ -235,7 +245,7 @@ class Player(Registerable):
             self.health += heal
             self.health = min(self.health, self.max_health)
             ansiprint(f"You heal <green>{min(self.max_health - self.health, heal)}</green> <light-blue>HP</light-blue>")
-            if (self.health >= math.floor(self.health * 0.5) and items.relics["Red Skull"] in self.relics):
+            if (self.health >= math.floor(self.health * 0.5) and any(["Red Skull" in relic.name for relic in self.relics])):
                 ansiprint("<red><bold>Red Skull</bold> deactivates</red>.")
                 self.starting_strength -= 3
         elif heal_type == "max health":
@@ -248,19 +258,19 @@ class Player(Registerable):
         [action] == 'Transform', transform a card into another random card.
         """
         if card_pool is None:
-            card_pool = items.cards
+            card_pool = items.create_all_cards()
         while True:
             if action == "Remove":
                 del subject_card
             elif action == "Transform":
                 # Curse cards can only be transformed into other Curses
-                ansiprint(f"{subject_card['Name']} was <bold>transformed</bold> into ", end="")
+                ansiprint(f"{subject_card.name} was <bold>transformed</bold> into ", end="")
                 if subject_card.get("Type") == "Curse":
-                    options = [valid_card for valid_card in items.cards.values() if valid_card.get("Type") == "Curse" and valid_card.get("Rarity") != "Special"]
+                    options = [valid_card for valid_card in items.create_all_cards() if valid_card.get("Type") == "Curse" and valid_card.get("Rarity") != "Special"]
                 else:
                     options = [
                         valid_card
-                        for valid_card in items.cards.values()
+                        for valid_card in items.create_all_cards()
                         if valid_card.get("Class") == valid_card.get("Class")
                         and valid_card.get("Type") not in ("Status", "Curse", "Special")
                         and valid_card.get("Upgraded") is not True
@@ -270,7 +280,7 @@ class Player(Registerable):
                     new_card = random.choice(options)
                     if new_card == subject_card:
                         continue
-                    ansiprint(f"{new_card['Name']} | <yellow>{new_card['Info']}</yellow>")
+                    ansiprint(f"{new_card.name} | <yellow>{new_card.info}</yellow>")
                     return new_card
 
     def move_card(self, card, move_to, from_location, cost_energy=False, shuffle=False):
@@ -305,7 +315,7 @@ class Player(Registerable):
                 target.health -= dmg
                 ansiprint(f"You dealt {dmg} damage(<light-blue>{target.block} Blocked</light-blue>) to {target.name} with {' | '.join(card.damage_affected_by)}")
                 target.block = 0
-                bus.publish(Message.AFTER_ATTACK, (self, target, card))
+                bus.publish(Message.AFTER_ATTACK, (self, target, dmg))
                 if target.health <= 0:
                     target.die()
                 bus.publish(Message.ON_ATTACKED, (target))
@@ -534,23 +544,19 @@ class Enemy(Registerable):
         Not finished
         """
 
-    def move_spam_check(self, target_move, max_count):
+    def move_spam_check(self, target_move, max_count) -> bool:
         """Returns False if the move occurs [max_count] times in a row. Otherwise returns True"""
-        use_count = 0
-
-        for move in self.past_moves:
-            if move == target_move:
-                use_count += 1
-                if use_count == max_count:
-                    return False
-            else:
-                use_count = 0
-
-        return True
+        enough_moves = len(self.past_moves) >= max_count
+        return not(enough_moves and all(move == target_move for move in self.past_moves[-max_count:]))
 
     def attack(self, dmg: int, times: int, target: Player):
         for _ in range(times):
-            bus.publish(Message.BEFORE_ATTACK, (self, dmg, target.block))
+            if target.state == State.DEAD:
+                ansiprint(f"{self.name} stopped attacking: {target.name} is already dead.")
+                return
+            modifiable_dmg = Damage(dmg)
+            bus.publish(Message.BEFORE_ATTACK, (self, target, modifiable_dmg))  # allows for damage modification from relics/effects
+            dmg = modifiable_dmg.damage
             if dmg <= target.block:
                 target.block -= dmg
                 dmg = 0
@@ -562,7 +568,7 @@ class Enemy(Registerable):
                 target.block = 0
                 target.health -= dmg
                 bus.publish(Message.ON_PLAYER_HEALTH_LOSS, None)
-            bus.publish(Message.AFTER_ATTACK, (self, dmg, target.block))
+            bus.publish(Message.AFTER_ATTACK, (self, target, dmg))
         sleep(1)
 
     def remove_effect(self, effect_name, effect_type):
@@ -574,11 +580,14 @@ class Enemy(Registerable):
         else:
             effect_types[effect_type][effect_name] = False
 
-    def blocking(self, block: int, target: "Enemy" = None):
+    def blocking(self, block: int, target: "Enemy" = None, context: str=None):
         if not target:
             target = self
         target.block += block
-        ansiprint(f"{target.name} gained {block} <blue>Block</blue>")
+        if context:
+            ansiprint(f"{target.name} gained {block} <blue>Block</blue> from {context}")
+        else:
+            ansiprint(f"{target.name} gained {block} <blue>Block</blue>")
         sleep(1)
 
     def status(self, status_card: Card, amount: int, location: str, player: Player):

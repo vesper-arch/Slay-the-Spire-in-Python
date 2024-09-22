@@ -33,7 +33,7 @@ def test_new_combat_basic(monkeypatch):
 
 
     # Patch the input
-    responses = iter("11112e111e21e233e122e31") # Fight sequence for Acid Slime (S) and Jaw Worm
+    responses = iter("11112e111e21e233e12e12") # Fight sequence for Acid Slime (S) and Jaw Worm
     with monkeypatch.context() as m:
         m.setattr('builtins.input', lambda *a, **kw: next(responses))
         m.setattr(helper, 'sleep', lambda _: None)
