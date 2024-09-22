@@ -991,7 +991,7 @@ class BlueCandle(Relic):
 
     def callback(self, message, data):
         if message == Message.ON_CARD_PLAY:
-            player, card, _ = data
+            player, card, target, enemies = data
             if card.type == CardType.CURSE:
                 player.take_sourceless_dmg(1)
 

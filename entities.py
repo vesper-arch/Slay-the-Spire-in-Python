@@ -174,11 +174,14 @@ class Player(Registerable):
         Uses a card
         Wow!
         """
+        # determine exhaust
         if card.type in (CardType.STATUS, CardType.CURSE) and card.name not in ("Slimed", "Pride"):
             if card.type == CardType.CURSE and items.BlueCandle in self.relics:
                 exhaust = True
             else:
                 return
+
+        # apply the card
         if card.target == TargetType.SINGLE:
             card.apply(origin=self, target=target)
         elif card.target in (TargetType.AREA, TargetType.ANY):
@@ -187,12 +190,10 @@ class Player(Registerable):
             card.apply(origin=self)
         else:
             raise ValueError(f"Invalid target type: {card.target}")
+
         bus.publish(Message.ON_CARD_PLAY, (self, card, target, enemies))
-        if (card.type == CardType.STATUS and items.relics["Medical Kit"] in self.player.relics):
-            exhaust = True
-        elif (card.type == CardType.CURSE and items.relics["Blue Candle"] in self.player.relics):
-            self.take_sourceless_dmg(1)
-            exhaust = True
+
+        # Move the card to the appropriate pile
         if pile is not None:
             if exhaust is True or getattr(card, "exhaust", False) is True:
                 ansiprint(f"{card.name} was <bold>Exhausted</bold>.")
