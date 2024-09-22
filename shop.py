@@ -28,8 +28,8 @@ import time
 
 from ansi_tags import ansiprint
 from definitions import CardCategory, Rarity
-from helper import Displayer, get_attribute
-from items import cards, potions, relics
+from helper import Displayer, get_attribute, sleep
+from items import create_all_cards, create_all_potions, create_all_relics
 from message_bus_tools import Relic, Potion, Card
 
 
@@ -68,9 +68,9 @@ def determine_item_category(item):
     name = get_attribute(item, 'Name')
   except KeyError as e:
     raise KeyError(f'The following item has no Name: {item}') from e
-  card_names = [get_attribute(c, 'Name') for c in cards]
-  potion_names = [get_attribute(p, 'Name') for p in potions]
-  relic_names = [get_attribute(r, 'Name') for r in relics]
+  card_names = [c.name for c in create_all_cards()]
+  potion_names = [p.name for p in create_all_potions()]
+  relic_names = [r.name for r in create_all_relics()]
   if name in card_names:
     return CardCategory.CARD
   elif name in potion_names:
@@ -140,7 +140,7 @@ class Shop():
     def initialize_items(self) -> list[SellableItem]:
       # TODO: Make this class-specific and include relics and potions
       items = []
-      all_cards:list[Card] = list(cards)
+      all_cards:list[Card] = create_all_cards()
       attack_cards = [c for c in all_cards if c.type == "Attack" and c.player_class != "Colorless"]
       skill_cards = [c for c in all_cards if c.type == "Skill" and c.player_class != "Colorless"]
       power_cards = [c for c in all_cards if c.type == "Power" and c.player_class != "Colorless"]
@@ -179,7 +179,7 @@ class Shop():
       name = get_attribute(self.items[choice].item, "Name")
       price = self.items[choice].price
       ansiprint(f"<bold>You bought {name} for {price} gold</bold>.")
-      time.sleep(0.5)
+      sleep(0.5)
       input("Press Enter to continue...")
 
     def validator(self, item):

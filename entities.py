@@ -257,7 +257,7 @@ class Player(Registerable):
         [action] == 'Transform', transform a card into another random card.
         """
         if card_pool is None:
-            card_pool = items.cards
+            card_pool = items.create_all_cards()
         while True:
             if action == "Remove":
                 del subject_card
@@ -265,11 +265,11 @@ class Player(Registerable):
                 # Curse cards can only be transformed into other Curses
                 ansiprint(f"{subject_card['Name']} was <bold>transformed</bold> into ", end="")
                 if subject_card.get("Type") == "Curse":
-                    options = [valid_card for valid_card in items.cards.values() if valid_card.get("Type") == "Curse" and valid_card.get("Rarity") != "Special"]
+                    options = [valid_card for valid_card in items.create_all_cards() if valid_card.get("Type") == "Curse" and valid_card.get("Rarity") != "Special"]
                 else:
                     options = [
                         valid_card
-                        for valid_card in items.cards.values()
+                        for valid_card in items.create_all_cards()
                         if valid_card.get("Class") == valid_card.get("Class")
                         and valid_card.get("Type") not in ("Status", "Curse", "Special")
                         and valid_card.get("Upgraded") is not True

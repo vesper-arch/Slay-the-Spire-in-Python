@@ -728,6 +728,7 @@ class InfernalBlade(Card):
         self.energy_cost = 0
 
     def apply(self, origin):
+        cards = create_all_cards()
         attack_cards = [card for card in cards if card.type == CardType.ATTACK]
         origin.hand.append(random.choice(attack_cards).modify_energy_cost(0, "Set", True))
 
@@ -1075,6 +1076,7 @@ class DeadBranch(Relic):
     def callback(self, message, data):
         if message == Message.ON_EXHAUST:
             player, _ = data
+            cards = create_all_cards()
             valid_cards = [card for card in cards if card.player_class == player.player_class and card.type not in (CardType.CURSE, CardType.STATUS) and card.rarity != Rarity.SPECIAL]
             player.hand.append(random.choice(valid_cards))
 
@@ -1120,6 +1122,7 @@ class AttackPotion(Potion):
         self.golden_info = "Add 2 copies of 1 of 3 random <keyword>Attack</keyword> cards to your hand. They cost 0 this turn."
 
     def apply(self, origin):
+        cards = create_all_cards()
         valid_cards = random.choices([card for card in cards if card.type == CardType.ATTACK], k=3)
         chosen_card = view.list_input("Choose a card", valid_cards, view.view_piles)
         for _ in range(self.copies):
@@ -1133,6 +1136,7 @@ class SkillPotion(Potion):
         self.golden_info = "Add 2 copies of 1 of 3 random <keyword>Skill</keyword> cards to your hand. They cost 0 this turn."
 
     def apply(self, origin):
+        cards = create_all_cards()
         valid_cards = random.choices([card for card in cards if card.type == CardType.SKILL], k=3)
         chosen_card = view.list_input("Choose a card", valid_cards, view.view_piles)
         for _ in range(self.copies):
@@ -1146,6 +1150,7 @@ class PowerPotion(Potion):
         self.golden_info = "Add 2 copies of 1 of 3 random <keyword>Power</keyword> cards to your hand. They cost 0 this turn."
 
     def apply(self, origin):
+        cards = create_all_cards()
         valid_cards = random.choices([card for card in cards if card.type == CardType.POWER], k=3)
         chosen_card = view.list_input("Choose a card", valid_cards, view.view_piles)
         for _ in range(self.copies):
@@ -1159,6 +1164,7 @@ class ColorlessPotion(Potion):
         self.golden_info = "Add 2 copies of 1 of 3 random <keyword>Colorless</keyword> cards to your hand. They cost 0 this turn."
 
     def apply(self, origin):
+        cards = create_all_cards()
         valid_cards = random.choices([card for card in cards if card.player_class == PlayerClass.COLORLESS], k=3)
         chosen_card = view.list_input("Choose a card", valid_cards, view.view_piles)
         for _ in range(self.copies):
@@ -1284,6 +1290,7 @@ class EntropicBrew(Potion):
         super().__init__("Entropic Brew", "Fill all your empty potion slots with random potions.", Rarity.RARE, TargetType.YOURSELF)
 
     def apply(self, origin):
+        potions = create_all_potions()
         for _ in range(origin.max_potions - len(origin.potions)):
             origin.potions.append(random.choice(potion for potion in potions if potion.player_class == origin.player_class))
 
@@ -1306,41 +1313,47 @@ class SneckoOil(Potion):
         for card in origin.hand:
             card.modify_energy_cost(random.randint(0, 3), "Set")
 
-relics = DeepCopyTuple(relic() for relic in (
-    # Starter Relics
-    BurningBlood,
-    # Common Relics
-    Akabeko, Anchor, AncientTeaSet, ArtOfWar, BagOfMarbles,
-    # Uncommon Relics
-    BlueCandle, BottledFlame, BottledLighting, BottledTornado, DarkstonePeriapt,
-    # Rare Relics
-    BirdFacedUrn, Calipers, CaptainsWheel, DeadBranch, DuVuDoll,
-    # Event Relics
-    WarpedTongs,
-))
+def create_all_relics() -> list[Relic]:
+    relics = [relic() for relic in (
+        # Starter Relics
+        BurningBlood,
+        # Common Relics
+        Akabeko, Anchor, AncientTeaSet, ArtOfWar, BagOfMarbles,
+        # Uncommon Relics
+        BlueCandle, BottledFlame, BottledLighting, BottledTornado, DarkstonePeriapt,
+        # Rare Relics
+        BirdFacedUrn, Calipers, CaptainsWheel, DeadBranch, DuVuDoll,
+        # Event Relics
+        WarpedTongs,
+    )]
+    return relics
 
-cards = DeepCopyTuple(card() for card in (
-    # ----------IRONCLAD CARDS------------
-    # Starter(basic) cards
-    IroncladStrike, IroncladDefend, Bash,
-    # Common Cards
-    Anger, Armaments, BodySlam, Clash, Cleave, Clothesline, Flex, Havoc,
-    Headbutt, HeavyBlade, IronWave, PerfectedStrike, PommelStrike, ShrugItOff, SwordBoomerang, Thunderclap, TrueGrit, TwinStrike, Warcry, WildStrike,
-    # Uncommon Cards
-    BattleTrance, BloodForBlood, Bloodletting, BurningPact, Carnage, Combust, DarkEmbrace, Disarm, Dropkick, DualWield, Entrench, Evolve, FeelNoPain,
-    FireBreathing, FlameBarrier, GhostlyArmor, Hemokinesis, InfernalBlade, Inflame, Intimidate, Metallicize, PowerThrough, Pummel, Rage,
-    # Rare Cards
-    Barricade, Berzerk, Bludgeon, Brutality, Corruption
-))
+def create_all_cards() -> list[Card]:
+    cards = [card() for card in (
+        # ----------IRONCLAD CARDS------------
+        # Starter(basic) cards
+        IroncladStrike, IroncladDefend, Bash,
+        # Common Cards
+        Anger, Armaments, BodySlam, Clash, Cleave, Clothesline, Flex, Havoc,
+        Headbutt, HeavyBlade, IronWave, PerfectedStrike, PommelStrike, ShrugItOff, SwordBoomerang, Thunderclap, TrueGrit, TwinStrike, Warcry, WildStrike,
+        # Uncommon Cards
+        BattleTrance, BloodForBlood, Bloodletting, BurningPact, Carnage, Combust, DarkEmbrace, Disarm, Dropkick, DualWield, Entrench, Evolve, FeelNoPain,
+        FireBreathing, FlameBarrier, GhostlyArmor, Hemokinesis, InfernalBlade, Inflame, Intimidate, Metallicize, PowerThrough, Pummel, Rage,
+        # Rare Cards
+        Barricade, Berzerk, Bludgeon, Brutality, Corruption
+    )]
+    return cards
 
-potions = DeepCopyTuple(potion() for potion in (
-    # Common Potions
-    BloodPotion, AttackPotion, SkillPotion, PowerPotion, ColorlessPotion, BlessingOfTheForge,
-    # Uncommon Potions
-    Elixir, GamblersBrew, LiquidMemories, DistilledChaos, DuplicationPotion, AncientPotion,
-    # Rare Potions
-    HeartOfIron, FruitJuice, FairyInABottle, CultistPotion, EntropicBrew, SmokeBomb, SneckoOil,
-))
+def create_all_potions() -> list[Potion]:
+    potions = [potion() for potion in (
+        # Common Potions
+        BloodPotion, AttackPotion, SkillPotion, PowerPotion, ColorlessPotion, BlessingOfTheForge,
+        # Uncommon Potions
+        Elixir, GamblersBrew, LiquidMemories, DistilledChaos, DuplicationPotion, AncientPotion,
+        # Rare Potions
+        HeartOfIron, FruitJuice, FairyInABottle, CultistPotion, EntropicBrew, SmokeBomb, SneckoOil,
+    )]
+    return potions
 
 sacred_multi: int = 1
 def activate_sacred_bark():

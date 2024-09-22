@@ -111,7 +111,7 @@ class Game:
                     and (card["Type"] not in ("Status", "Curse") or card.name == "Burn"),
                     "That card is not upgradeable.",
                 )
-                self.player.deck[upgrade_card] = self.player.card_actions(self.player.deck[upgrade_card], "Upgrade", items.cards)
+                self.player.deck[upgrade_card] = self.player.card_actions(self.player.deck[upgrade_card], "Upgrade", items.create_all_cards())
                 break
             if action == "lift":
                 if self.player.girya_charges > 0:
@@ -132,10 +132,10 @@ class Game:
                     lambda card: card.get("Removable") is False,
                     "That card is not removable.",
                 )
-                self.player.deck[option] = self.player.card_actions(self.player.deck[option], "Remove", items.cards)
+                self.player.deck[option] = self.player.card_actions(self.player.deck[option], "Remove", items.create_all_cards())
                 break
             if action == "dig":
-                gen.claim_relics(False, self.player, 1, items.relics, None, False)
+                gen.claim_relics(False, self.player, 1, items.create_all_relics(), None, False)
                 break
         while True:
             ansiprint("<bold>[View Deck]</bold> or <bold>[Leave]</bold>")
@@ -249,11 +249,11 @@ class Combat:
             ansiprint("<green>Combat finished!</green>")
             self.player.gain_gold(random.randint(10, 20))
             if (potion_roll < self.player.potion_dropchance):
-                gen.claim_potions(True, 1, self.player, items.potions)
+                gen.claim_potions(True, 1, self.player, items.create_all_potions())
                 self.player.potion_dropchance -= 10
             else:
                 self.player.potion_dropchance += 10
-            gen.card_rewards(self.tier, True, self.player, items.cards)
+            gen.card_rewards(self.tier, True, self.player, items.create_all_cards())
             view.clear()
         elif escaped is True:
             print("Escaped...")
