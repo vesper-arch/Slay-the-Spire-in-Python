@@ -1035,7 +1035,7 @@ class Angry(Effect):
     def callback(self, message, data: tuple[Player, Enemy, int]):
         if message == Message.AFTER_ATTACK:
             attacker, target, dmg = data
-            if target == self.host:
+            if target == self.host and dmg > 0:
                 ei.apply_effect(self.host, None, Strength, self.amount)
 
 
