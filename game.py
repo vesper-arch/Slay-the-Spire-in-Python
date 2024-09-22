@@ -14,7 +14,7 @@ from enemy_catalog import (
 from entities import Enemy, Player
 from events import choose_event
 from helper import ei, gen, view
-from message_bus_tools import Message, bus
+from message_bus_tools import Message, bus, Card, CardType
 from shop import Shop
 
 
@@ -108,7 +108,7 @@ class Game:
                     self.player.deck,
                     view.view_piles,
                     lambda card: not card.upgraded
-                    and (card["Type"] not in ("Status", "Curse") or card.name == "Burn"),
+                    and (card.type not in (CardType.STATUS, CardType.CURSE) or card.name == "Burn"),
                     "That card is not upgradeable.",
                 )
                 self.player.deck[upgrade_card] = self.player.card_actions(self.player.deck[upgrade_card], "Upgrade", items.create_all_cards())

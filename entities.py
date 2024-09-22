@@ -263,7 +263,7 @@ class Player(Registerable):
                 del subject_card
             elif action == "Transform":
                 # Curse cards can only be transformed into other Curses
-                ansiprint(f"{subject_card['Name']} was <bold>transformed</bold> into ", end="")
+                ansiprint(f"{subject_card.name} was <bold>transformed</bold> into ", end="")
                 if subject_card.get("Type") == "Curse":
                     options = [valid_card for valid_card in items.create_all_cards() if valid_card.get("Type") == "Curse" and valid_card.get("Rarity") != "Special"]
                 else:
@@ -279,7 +279,7 @@ class Player(Registerable):
                     new_card = random.choice(options)
                     if new_card == subject_card:
                         continue
-                    ansiprint(f"{new_card['Name']} | <yellow>{new_card['Info']}</yellow>")
+                    ansiprint(f"{new_card.name} | <yellow>{new_card.info}</yellow>")
                     return new_card
 
     def move_card(self, card, move_to, from_location, cost_energy=False, shuffle=False):

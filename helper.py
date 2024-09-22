@@ -572,7 +572,7 @@ class NoDraw(Effect):
             "You may not draw any more cards this turn.",
         )
 
-    def callback(self, message, data: tuple[Player, PendingAction]):
+    def callback(self, message, data: tuple[Player, Action]):
         if message == Message.BEFORE_DRAW:
             player, action = data
             ansiprint(
@@ -768,7 +768,7 @@ class Barricade(Effect):
         self.end_of_turn_block = None
 
     def callback(
-        self, message, data: tuple[Player, PendingAction] | tuple[Player, list[Enemy]]
+        self, message, data: tuple[Player, Action] | tuple[Player, list[Enemy]]
     ):
         if message == Message.END_OF_TURN:
             player, enemies = data
@@ -935,7 +935,7 @@ class Stunned(Effect):
             amount=amount,
         )
 
-    def callback(self, message, data: PendingAction):
+    def callback(self, message, data: Action):
         if message == Message.AFTER_SET_INTENT:
             print("TBD: Stunned Effect")
 
