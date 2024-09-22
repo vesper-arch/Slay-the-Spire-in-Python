@@ -190,7 +190,7 @@ class Flex(Card):
 
     def apply(self, origin):
         ei.apply_effect(origin, None, helper.Strength, self.strength)
-        ei.apply_effect(origin, None, "Strength Down", self.strength)
+        ei.apply_effect(origin, None, helper.StrengthDown, self.strength)
 
 class Havoc(Card):
     def __init__(self):
