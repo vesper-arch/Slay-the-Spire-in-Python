@@ -159,6 +159,16 @@ class Relic(Registerable):
         self.rarity = rarity
         self.player_class = player_class
 
+    def __eq__(self, other: object) -> bool:
+        '''This is a custom __eq__ method that allows for comparison of relics by name, class, or object.'''
+        if type(other) is type(self):
+            original = self.__dict__ == other.__dict__
+        else:
+            original = False
+        by_string = isinstance(other, str) and other == self.name
+        by_class = other == type(self) and other.__name__ == self.__class__.__name__
+        return original or by_string or by_class
+
     def pretty_print(self):
         rarity_color = self.rarity.lower()
         return f"<{rarity_color}>{self.name}</{rarity_color}> | <yellow>{self.info}</yellow> | <italic><dark-blue>{self.flavor_text}</dark-blue></italic>"
