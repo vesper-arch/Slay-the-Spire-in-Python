@@ -134,8 +134,7 @@ class Effect(Registerable):
         return new_effect
 
     def pretty_print(self):
-        stack_type_colors = {'duration': 'light-blue', 'intensity': 'orange', 'counter': 'magenta', 'no stack': 'white'}
-        return f"<{stack_type_colors[str(self.stack_type)]}>{self.name}</{stack_type_colors[str(self.stack_type)]}>{f' {self.amount}' if self.stack_type != 'none' else ''} | <yellow>{self.info}</yellow>"
+        return f"{self.get_name()} | <yellow>{self.info}</yellow>"
 
     def get_name(self):
         # shorter vars for readability
