@@ -30,8 +30,8 @@ def repeat_check(repeat_catcher, last_return, current_return) -> tuple[int, bool
         return repeat_catcher, True
     return repeat_catcher, False
 
-@pytest.mark.timeout(30)
-@pytest.mark.parametrize("seed", list(range(10)))
+@pytest.mark.timeout(20)
+@pytest.mark.parametrize("seed", list(range(15)))
 def test_e2e(seed, monkeypatch):
     '''Test the game from start to finish
     Plays with (more or less) random inputs to test the game.
