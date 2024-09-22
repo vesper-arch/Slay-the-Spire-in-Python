@@ -111,7 +111,8 @@ class Game:
                     and (card.type not in (CardType.STATUS, CardType.CURSE) or card.name == "Burn"),
                     "That card is not upgradeable.",
                 )
-                self.player.deck[upgrade_card] = self.player.card_actions(self.player.deck[upgrade_card], "Upgrade", items.create_all_cards())
+                if upgrade_card is not None:
+                    self.player.deck[upgrade_card].upgrade()
                 break
             if action == "lift":
                 if self.player.girya_charges > 0:

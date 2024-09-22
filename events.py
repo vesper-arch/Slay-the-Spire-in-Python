@@ -8,6 +8,7 @@ import items
 from ansi_tags import ansiprint
 from definitions import CardType, CombatTier, PlayerClass
 from helper import gen, view
+from entities import Player
 
 
 def event_Neow(player):
@@ -172,7 +173,7 @@ Why do you know the name of all these tools? It doesn't matter, you take a look 
 # Won't add the Match and Keep event because i just don't know how to.
 
 
-def event_OminousForge(player):
+def event_OminousForge(player: Player):
     while True:
         ansiprint("<bold>Ominous Forge</bold>")
         sleep(0.8)
@@ -182,7 +183,8 @@ def event_OminousForge(player):
         option = input('> ').lower()
         if option == 'forge':
             option = view.list_input("What card do you want to upgrade? > ", player.deck, view.upgrade_preview, lambda card: not card.upgraded and (card.name == "Burn" or card.type not in (CardType.CURSE, CardType.STATUS)), "That card is not upgradeable.")
-            player.deck[option] = player.card_actions(player.deck[option], "Upgrade", items.create_all_cards())
+            if option is not None:
+                player.deck[option].upgrade()
             break
         if option == 'rummage':
             ansiprint('''You decide to see if you can find anything of use. After uncovering tarps, looking through boxes, and checking nooks and crannies, you find a dust covered <yellow>relic!</yellow>.
@@ -246,7 +248,7 @@ def event_Transmogrifier(player):
     view.clear()
 
 
-def event_UpgradeShrine(player):
+def event_UpgradeShrine(player: Player):
     while True:
         ansiprint('<bold>Upgrade Shrine</bold>')
         sleep(0.8)
@@ -257,7 +259,8 @@ def event_UpgradeShrine(player):
         if option == 'pray':
             view.upgrade_preview(player.deck)
             upgrade_card = view.list_input('What card do you want to upgrade?', player.deck, view.upgrade_preview, lambda card: not card.upgraded and (card.type not in (CardType.CURSE, CardType.STATUS) or card.name == 'Burn'), "That card is not upgradeable.")
-            player.deck[upgrade_card] = player.card_actions(player.deck[upgrade_card], 'Upgrade', items.create_all_cards())
+            if upgrade_card is not None:
+                player.deck[upgrade_card].upgrade()
             break
         if option == 'leave':
             print('You ignore the shrine.')
