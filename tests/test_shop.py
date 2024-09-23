@@ -5,6 +5,7 @@ import entities
 import items
 from ansi_tags import ansiprint
 from shop import SellableItem, Shop
+import player
 
 
 class TestSellableItems():
@@ -33,10 +34,10 @@ class TestSellableItems():
       ansiprint(sellable.invalid_string())
 
 def test_shop(monkeypatch):
-  player = entities.Player.create_player()
+  test_player = player.Player.create_player()
   all_cards = items.create_all_cards()
   cards = [SellableItem(x) for x in all_cards if x.name in ("Strike","Body Slam","Heavy Blade","Warcry")]
-  shop = Shop(player, cards)
+  shop = Shop(test_player, cards)
   responses = iter(['1', '\n', 'e'])
   with monkeypatch.context() as m:
     m.setattr('builtins.input', lambda *a, **kw: next(responses))

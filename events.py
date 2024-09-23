@@ -7,8 +7,10 @@ from typing import Callable
 import items
 from ansi_tags import ansiprint
 from definitions import CardType, CombatTier, PlayerClass
-from helper import gen, view
-from entities import Player
+import effect_interface as ei
+import generators as gen
+import displayer as view
+from player import Player
 
 
 def event_Neow(player):

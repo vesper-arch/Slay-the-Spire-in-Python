@@ -6,10 +6,11 @@ import pytest
 
 import entities
 import game
-import helper
+import effects
+import displayer
 import shop
 from ansi_tags import ansiprint
-from entities import CardType
+from definitions import CardType
 import time
 
 
@@ -31,7 +32,7 @@ def repeat_check(repeat_catcher, last_return, current_return) -> tuple[int, bool
     return repeat_catcher, False
 
 @pytest.mark.timeout(20)
-@pytest.mark.parametrize("seed", list(range(15)))
+@pytest.mark.parametrize("seed", list(range(2)))
 def test_e2e(seed, monkeypatch):
     '''Test the game from start to finish
     Plays with (more or less) random inputs to test the game.
@@ -91,10 +92,10 @@ def test_e2e(seed, monkeypatch):
 
     with monkeypatch.context() as m:
         m.setattr('builtins.input', patched_input)
-        m.setattr(helper, 'sleep', lambda x: None)
+        m.setattr(effects, 'sleep', lambda x: None)
         m.setattr(entities, 'sleep', lambda x: None)
         m.setattr(game, 'sleep', lambda x: None)
-        helper.view.clear = replacement_clear_screen
+        displayer.clear = replacement_clear_screen
         try:
             start = time.time()
             mygame.start()

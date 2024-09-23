@@ -114,39 +114,6 @@ class Registerable():
             bus.unsubscribe(message, self.uid)
         self.subscribed = False
 
-class Effect(Registerable):
-    def __init__(self, host, name, stack_type: StackType, effect_type, info, amount=0, one_turn=False):
-        self.uid = uuid4()
-        self.subscribed = False
-        self.host = host
-        self.name = name
-        self.stack_type = stack_type
-        self.type = effect_type
-        self.info = info # For convenience purposes, this will be a generalized description of the effect.
-        self.amount = amount
-        self.one_turn = one_turn
-
-    def __add__(self, other):
-        if self.name != other.name:
-            raise ValueError(f"Effects of names {self.name} and {other.name} cannot be merged. Addition only works with the same effect.")
-        new_effect = deepcopy(self)
-        new_effect.amount = self.amount + other.amount
-        return new_effect
-
-    def pretty_print(self):
-        return f"{self.get_name()} | <yellow>{self.info}</yellow>"
-
-    def get_name(self):
-        # shorter vars for readability
-        c = STACK_TYPE_COLOR_MAPPING
-        st = self.stack_type
-        return f"<{c[st]}>{self.name}</{c[st]}>{f' {self.amount}' if self.stack_type is not None else ''}"
-
-    def tick(self):
-        if self.one_turn is True:
-            self.amount = 0
-        elif self.stack_type == StackType.DURATION:
-            self.amount -= 1
 
 class Relic(Registerable):
     def __init__(self, name: str, info: str, flavor_text: str, rarity: Rarity, player_class: PlayerClass=PlayerClass.ANY):

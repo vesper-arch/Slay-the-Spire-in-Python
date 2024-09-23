@@ -1,11 +1,13 @@
-import helper
+import effects
 import items
 import entities
+import displayer
+import player
 
 
 def test_view_piles_on_all_cards(monkeypatch):
   all_cards = items.create_all_cards()
-  entity = entities.Player.create_player()
+  entity = player.Player.create_player()
   entity.energy = 3
   all_conditions = [(lambda card: card.upgraded is True, "Upgraded"),
                     (lambda card: not card.upgraded and card.type not in ("Status", "Curse") or card.name == 'Burn', "Upgradeable"),
@@ -15,14 +17,15 @@ def test_view_piles_on_all_cards(monkeypatch):
 
   with monkeypatch.context() as m:
     # Patch sleeps so it's faster
-    m.setattr(helper, 'sleep', lambda x: None)
+    m.setattr(effects, 'sleep', lambda x: None)
     m.setattr(entities, 'sleep', lambda x: None)
+    m.setattr(displayer, 'sleep', lambda x: None)
 
     for function, condition_name in all_conditions:
       print(f"===== Condition: {condition_name} ======")
-      helper.view.view_piles(pile=all_cards, end=False, validator=function)
+      displayer.view_piles(pile=all_cards, end=False, validator=function)
 
     # Also test the default condition
     print(f"===== Condition: Default ======")
-    helper.view.view_piles(pile=all_cards, end=False)
+    displayer.view_piles(pile=all_cards, end=False)
 
