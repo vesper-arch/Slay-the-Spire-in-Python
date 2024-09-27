@@ -6,7 +6,7 @@ import items
 from ansi_tags import ansiprint
 
 
-local_copy_of_cards = items.create_all_cards()
+local_copy_of_cards = card_catalog.create_all_cards()
 
 @pytest.mark.parametrize("card", local_copy_of_cards, ids=[card.name for card in local_copy_of_cards])
 def test_all_cards_can_upgrade(card):

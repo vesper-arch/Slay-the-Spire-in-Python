@@ -5,7 +5,7 @@ import player
 
 
 def test_view_piles_on_all_cards(monkeypatch):
-  all_cards = items.create_all_cards()
+  all_cards = card_catalog.create_all_cards()
   entity = player.Player.create_player()
   entity.energy = 3
   all_conditions = [(lambda card: card.upgraded is True, "Upgraded"),

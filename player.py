@@ -9,7 +9,8 @@ import effects
 import items
 from ansi_tags import ansiprint
 from definitions import CardType, State, TargetType
-from message_bus_tools import Card, Message, Potion, Registerable, Relic, bus
+from message_bus_tools import Message, Potion, Registerable, Relic, bus
+from card_catalog import Card
 from effects import Effect
 from entities import Action
 
@@ -223,7 +224,7 @@ class Player(Registerable):
         [action] == 'Transform', transform a card into another random card.
         """
         if card_pool is None:
-            card_pool = items.create_all_cards()
+            card_pool = card_catalog.create_all_cards()
         while True:
             if action == "Remove":
                 del subject_card
@@ -231,11 +232,11 @@ class Player(Registerable):
                 # Curse cards can only be transformed into other Curses
                 ansiprint(f"{subject_card.name} was <bold>transformed</bold> into ", end="")
                 if subject_card.get("Type") == "Curse":
-                    options = [valid_card for valid_card in items.create_all_cards() if valid_card.get("Type") == "Curse" and valid_card.get("Rarity") != "Special"]
+                    options = [valid_card for valid_card in card_catalog.create_all_cards() if valid_card.get("Type") == "Curse" and valid_card.get("Rarity") != "Special"]
                 else:
                     options = [
                         valid_card
-                        for valid_card in items.create_all_cards()
+                        for valid_card in card_catalog.create_all_cards()
                         if valid_card.get("Class") == valid_card.get("Class")
                         and valid_card.get("Type") not in ("Status", "Curse", "Special")
                         and valid_card.get("Upgraded") is not True

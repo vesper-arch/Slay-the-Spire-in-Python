@@ -41,7 +41,7 @@ def test_all_attack_cards_with_all_relics(monkeypatch, sleepless):
     '''
     assert issubclass(effects.Vulnerable, effects.Effect)
     game.random.seed(123)
-    all_cards = items.create_all_cards()
+    all_cards = card_catalog.create_all_cards()
     SKIP_CARDS = ['Dual Wield']
     all_cards = [card for card in all_cards if card.name not in SKIP_CARDS]
 

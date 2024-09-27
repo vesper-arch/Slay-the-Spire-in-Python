@@ -30,8 +30,10 @@ import displayer
 from ansi_tags import ansiprint
 from definitions import CardCategory, Rarity
 from effects import get_attribute
-from items import create_all_cards, create_all_potions, create_all_relics
-from message_bus_tools import Card, Potion, Relic
+from card_catalog import create_all_cards
+from items import create_all_potions, create_all_relics
+from message_bus_tools import Potion, Relic
+from card_catalog import Card
 
 
 # Helper functions for displaying cards, potions, and relics.

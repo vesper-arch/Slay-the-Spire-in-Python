@@ -9,7 +9,8 @@ import effect_interface as ei
 from ansi_tags import ansiprint
 from definitions import State
 from entities import Damage
-from message_bus_tools import Card, Message, Registerable, bus
+from message_bus_tools import Message, Registerable, bus
+from card_catalog import Card
 from player import Player
 from effects import Effect
 

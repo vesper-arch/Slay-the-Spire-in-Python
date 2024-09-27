@@ -140,7 +140,7 @@ class Game:
                     lambda card: card.get("Removable") is False,
                     "That card is not removable.",
                 )
-                self.player.deck[option] = self.player.card_actions(self.player.deck[option], "Remove", items.create_all_cards())
+                self.player.deck[option] = self.player.card_actions(self.player.deck[option], "Remove", card_catalog.create_all_cards())
                 break
             if action == "dig":
                 gen.claim_relics(False, self.player, 1, items.create_all_relics(), None, False)
@@ -270,7 +270,7 @@ class Combat:
                 self.player.potion_dropchance -= 10
             else:
                 self.player.potion_dropchance += 10
-            gen.card_rewards(self.tier, True, self.player, items.create_all_cards())
+            gen.card_rewards(self.tier, True, self.player, card_catalog.create_all_cards())
             view.clear()
         elif escaped is True:
             print("Escaped...")

@@ -193,7 +193,7 @@ def event_OminousForge(player: Player):
 
 Taking the relic, you can't shake a sudden feeling of <red>sharp pain</red> as you exit the hut. Maybe you disturbed some sort of spirit?''')
             gen.claim_relics(False, player, 1, items.create_all_relics(), [items.WarpedTongs()])
-            gen.card_rewards(CombatTier.NORMAL, False, player, items.create_all_cards(), [items.Pain()])
+            gen.card_rewards(CombatTier.NORMAL, False, player, card_catalog.create_all_cards(), [items.Pain()])
             break
     input('Press enter to continue > ')
     sleep(1)
@@ -211,7 +211,7 @@ def event_Purifier(player):
         if option == 'pray':
             view.view_piles(player.deck, player, False, 'Removable')
             remove_card = view.list_input('What card do you want to remove?', player.deck, view.view_piles, lambda card: card.get("Removable") is False, "That card is not removable.")
-            player.deck[remove_card] = player.card_actions(player.deck[remove_card], 'Remove', items.create_all_cards())
+            player.deck[remove_card] = player.card_actions(player.deck[remove_card], 'Remove', card_catalog.create_all_cards())
             print('As you kneel in reverence, you feel a weight lifted off your shoulders.')
             break
         if option == 'leave':
@@ -236,7 +236,7 @@ def event_Transmogrifier(player):
         if option == 'pray':
             view.view_piles(player.deck, player, False, 'Removable')
             transform_card = view.list_input('What card would you like to transform?', player.deck, view.view_piles, lambda card: card.get("Removable") is False, "That card is not transformable.")
-            player.deck[transform_card] = player.card_actions(player.deck[transform_card], 'Transform', items.create_all_cards())
+            player.deck[transform_card] = player.card_actions(player.deck[transform_card], 'Transform', card_catalog.create_all_cards())
             print('As the power of the shrine flows through you, your mind feels altered.')
             break
         if option == 'leave':
@@ -439,7 +439,7 @@ What do you do?''')
         print()
         sleep(0.8)
         ansiprint(f'<bold>[Banana]</bold> <green>Heal {math.floor(player.max_health / 3)} HP</green> \n<bold>[Donut]</bold> <green>Max HP +5</green> \n<bold>[Box]</bold> <green>Recieve a relic.</green> <red>Become Cursed: <bold>Regret</bold></red>')
-        ansiprint(f'<keyword>Regret</keyword> | <yellow>{items.create_all_cards()["Regret"]["Info"]}</yellow>') # curse is purple
+        ansiprint(f'<keyword>Regret</keyword> | <yellow>{card_catalog.create_all_cards()["Regret"]["Info"]}</yellow>') # curse is purple
         option = input('> ').lower()
         if option == 'banana':
             ansiprint('You eat the <yellow>banana</yellow>. It is nutritious and slightly <light-blue>magical</light-blue>, healing you.')
@@ -499,7 +499,7 @@ def event_TheCleric(player):
 The creature grins.
 
 <bold>Cleric</bold>: "Cleric talented. Have a good day!"''')
-            player.deck[option] = player.card_actions(player.deck[option], "Remove", items.create_all_cards())
+            player.deck[option] = player.card_actions(player.deck[option], "Remove", card_catalog.create_all_cards())
             break
         if option == 'leave':
             ansiprint("You don't trust this <light-blue>'Cleric'</light-blue>, so you leave.")
@@ -535,7 +535,7 @@ You realize that the floor is slanted downwards as the boulder starts to roll to
                 ansiprint("""<italic>RUUUUUUUUUUUUUUUN!</italic>
 
 You barely leap into a side passageway as the boulder rushes by. Unfortunatly, it feels like you sprained something.""")
-                gen.card_rewards("Normal", False, player, items.create_all_cards(), [items.Injury()])
+                gen.card_rewards("Normal", False, player, card_catalog.create_all_cards(), [items.Injury()])
                 break
             if option == 'smash':
                 player.take_sourceless_dmg(math.floor(player.max_health * 0.25))

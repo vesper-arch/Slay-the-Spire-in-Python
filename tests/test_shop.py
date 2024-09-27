@@ -11,7 +11,7 @@ import player
 class TestSellableItems():
   def test_cards(self):
     '''See that we can make sellable items out of all cards and that they display correctly'''
-    all_sellable_cards = items.create_all_cards()
+    all_sellable_cards = card_catalog.create_all_cards()
     for card in all_sellable_cards:
       sellable = SellableItem(card)
       ansiprint(sellable.valid_string())
@@ -35,7 +35,7 @@ class TestSellableItems():
 
 def test_shop(monkeypatch):
   test_player = player.Player.create_player()
-  all_cards = items.create_all_cards()
+  all_cards = card_catalog.create_all_cards()
   cards = [SellableItem(x) for x in all_cards if x.name in ("Strike","Body Slam","Heavy Blade","Warcry")]
   shop = Shop(test_player, cards)
   responses = iter(['1', '\n', 'e'])
