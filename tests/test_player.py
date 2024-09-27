@@ -2,12 +2,14 @@ from copy import deepcopy
 
 import pytest
 
+import card_catalog
 import displayer
-import effects
+import effect_catalog
 import enemy_catalog
 import game
 import items
 import player
+import relic_catalog
 from ansi_tags import ansiprint
 from tests.fixtures import sleepless
 
@@ -28,10 +30,10 @@ def stats(player, enemy):
 def test_relics_searchable_by_string_and_class(sleepless):
     # Create player with relics
     test_player = player.Player(health=100, block=0, max_energy=100, deck=[])
-    for relic in items.create_all_relics():
+    for relic in relic_catalog.create_all_relics():
       test_player.relics.append(relic)
     assert "Burning Blood" in test_player.relics, "Should be able to find a relic by its string"
-    assert items.BurningBlood in test_player.relics, "Should be able to find a relic by its class"
+    assert relic_catalog.BurningBlood in test_player.relics, "Should be able to find a relic by its class"
 
 
 def test_all_attack_cards_with_all_relics(monkeypatch, sleepless):
@@ -39,7 +41,7 @@ def test_all_attack_cards_with_all_relics(monkeypatch, sleepless):
     relics and play them all against a boss. Sensitive to combat initialization details
     because that logic is not isolated from enemy creation.
     '''
-    assert issubclass(effects.Vulnerable, effects.Effect)
+    assert issubclass(effect_catalog.Vulnerable, effect_catalog.Effect)
     game.random.seed(123)
     all_cards = card_catalog.create_all_cards()
     SKIP_CARDS = ['Dual Wield']
@@ -47,7 +49,7 @@ def test_all_attack_cards_with_all_relics(monkeypatch, sleepless):
 
     # Create uberplayer
     test_player = player.Player(health=1000, block=0, max_energy=100, deck=all_cards)
-    for relic in items.create_all_relics():
+    for relic in relic_catalog.create_all_relics():
       test_player.relics.append(relic)
     test_player.in_combat = True
     test_player.draw_pile = deepcopy(test_player.deck)

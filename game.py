@@ -19,6 +19,9 @@ from events import choose_event
 from message_bus_tools import Message, bus
 from player import Player
 from shop import Shop
+import potion_catalog
+import relic_catalog
+import card_catalog
 
 
 class Game:
@@ -143,7 +146,7 @@ class Game:
                 self.player.deck[option] = self.player.card_actions(self.player.deck[option], "Remove", card_catalog.create_all_cards())
                 break
             if action == "dig":
-                gen.claim_relics(False, self.player, 1, items.create_all_relics(), None, False)
+                gen.claim_relics(False, self.player, 1, relic_catalog.create_all_relics(), None, False)
                 break
         while True:
             ansiprint("<bold>[View Deck]</bold> or <bold>[Leave]</bold>")
@@ -266,7 +269,7 @@ class Combat:
             ansiprint("<green>Combat finished!</green>")
             self.player.gain_gold(random.randint(10, 20))
             if (potion_roll < self.player.potion_dropchance):
-                gen.claim_potions(True, 1, self.player, items.create_all_potions())
+                gen.claim_potions(True, 1, self.player, potion_catalog.create_all_potions())
                 self.player.potion_dropchance -= 10
             else:
                 self.player.potion_dropchance += 10

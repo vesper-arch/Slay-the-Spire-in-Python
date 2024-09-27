@@ -1,7 +1,7 @@
 from copy import deepcopy
 
 import pytest
-
+import card_catalog
 import items
 from ansi_tags import ansiprint
 

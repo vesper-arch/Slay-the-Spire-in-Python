@@ -12,7 +12,7 @@ from entities import Damage
 from message_bus_tools import Message, Registerable, bus
 from card_catalog import Card
 from player import Player
-from effects import Effect
+from effect_catalog import Effect
 
 
 

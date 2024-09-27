@@ -1,19 +1,19 @@
 from __future__ import annotations
 
-import effects
 from ansi_tags import ansiprint
 from definitions import (
     EffectType,
 )
 from message_bus_tools import bus
+import effect_catalog
 
 
 def apply_effect(target, user, effect, amount=0, recursion_tag=False) -> None:
     """recurstion_tag is only meant for internal use to stop infinite loops with Champion Belt."""
     # HACK HACK HACK Dynamically search for the effect class if it's a string. This is icky and should be avoided.
-    if isinstance(effect, str) and effect in globals()["effects"].__dict__:
-        effect = globals()["effects"].__dict__[effect]
-    from effects import Effect
+    if isinstance(effect, str) and effect in globals()["effect_catalog"].__dict__:
+        effect = globals()["effect_catalog"].__dict__[effect]
+    from effect_catalog import Effect
     assert isinstance(
         effect, type(Effect)
     ), f"Effect must be an Effect class. You passed {effect} (type: {type(effect)})."

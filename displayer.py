@@ -11,7 +11,7 @@ from definitions import (
 )
 
 if TYPE_CHECKING:
-    from items import Card
+    from card_catalog import Card
 
 # Displayer module
 # Displays important info to the player during combat
@@ -87,9 +87,9 @@ def display_ui(entity, enemies, combat=True):
         ansiprint(str(entity))
     print()
 
-def list_input(input_string: str, choices: list, displayer: Callable, 
-               validator: Callable = lambda placehold: bool(placehold), 
-               message_when_invalid: str | None = None, 
+def list_input(input_string: str, choices: list, displayer: Callable,
+               validator: Callable = lambda placehold: bool(placehold),
+               message_when_invalid: str | None = None,
                extra_allowables=None) -> int | str | None:
     """Allows the player to choose from a certain list of options. Includes validation."""
     if extra_allowables is None:
@@ -115,9 +115,9 @@ def list_input(input_string: str, choices: list, displayer: Callable,
         break
     return option
 
-def multi_input(input_string: str, choices: list, displayer: Callable, max_choices: int, 
-                strict: bool = False, validator: Callable = lambda placehold: bool(placehold), 
-                message_when_invalid: str | None = None, 
+def multi_input(input_string: str, choices: list, displayer: Callable, max_choices: int,
+                strict: bool = False, validator: Callable = lambda placehold: bool(placehold),
+                message_when_invalid: str | None = None,
                 extra_allowables: list | None = None):
     """Basically the same as view.list_input but you can choose multiple cards one at a time. Mainly used for discarding and Exhausting cards."""
     if not extra_allowables:

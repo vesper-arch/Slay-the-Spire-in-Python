@@ -5,14 +5,17 @@ from copy import deepcopy
 from time import sleep
 from uuid import uuid4
 
-import effects
+import effect_catalog
 import items
 from ansi_tags import ansiprint
 from definitions import CardType, State, TargetType
 from message_bus_tools import Message, Potion, Registerable, Relic, bus
 from card_catalog import Card
-from effects import Effect
+from effect_catalog import Effect
 from entities import Action
+import card_catalog
+import potion_catalog
+import relic_catalog
 
 import displayer as view
 import effect_interface as ei
@@ -103,11 +106,11 @@ class Player(Registerable):
     @classmethod
     def create_player(cls):
         player = cls(health=80, block=0, max_energy=3, deck=[
-            items.IroncladStrike(), items.IroncladStrike(), items.IroncladStrike(), items.IroncladStrike(), items.IroncladStrike(),
-            items.IroncladDefend(), items.IroncladDefend(), items.IroncladDefend(), items.IroncladDefend(),
-            items.Bash()
+            card_catalog.IroncladStrike(), card_catalog.IroncladStrike(), card_catalog.IroncladStrike(), card_catalog.IroncladStrike(), card_catalog.IroncladStrike(),
+            card_catalog.IroncladDefend(), card_catalog.IroncladDefend(), card_catalog.IroncladDefend(), card_catalog.IroncladDefend(),
+            card_catalog.Bash()
         ])
-        player.relics.append(items.BurningBlood())
+        player.relics.append(relic_catalog.BurningBlood())
         return player
 
     def __str__(self):
@@ -143,7 +146,7 @@ class Player(Registerable):
         """
         # determine exhaust
         if card.type in (CardType.STATUS, CardType.CURSE) and card.name not in ("Slimed", "Pride"):
-            if card.type == CardType.CURSE and items.BlueCandle in self.relics:
+            if card.type == CardType.CURSE and relic_catalog.BlueCandle in self.relics:
                 exhaust = True
             else:
                 return
@@ -299,9 +302,9 @@ class Player(Registerable):
     def die(self):
         view.clear()
         self.health = max(self.health, 0)
-        if items.FairyInABottle() in self.potions:
+        if potion_catalog.FairyInABottle() in self.potions:
             try:
-                potion_index = self.potions.index(items.FairyInABottle())
+                potion_index = self.potions.index(potion_catalog.FairyInABottle())
             except ValueError:
                 potion_index = -1
             self.player.health_actions(math.floor(self.player.max_health * self.potions[potion_index].hp_percent), "Heal")

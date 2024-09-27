@@ -4,31 +4,31 @@ import pytest
 
 import enemy_catalog
 import entities
-import effects
+import effect_catalog
 
 from unittest.mock import Mock
 
 
 @pytest.fixture
 def ei():
-  ei = effects.EffectInterface()
+  ei = effect_catalog.EffectInterface()
   return ei
 
 def test_helper_effect_amount_empty():
-  assert effects.effect_amount(effects.Strength, []) == 0
+  assert effect_catalog.effect_amount(effect_catalog.Strength, []) == 0
 
 def test_helper_effect_amount_single():
-  test_effects = [effects.Vulnerable(host=Mock(), amount=5)]
-  assert effects.effect_amount(effects.Strength, test_effects) == 0
-  assert effects.effect_amount(effects.Vulnerable, test_effects) == 5
+  test_effects = [effect_catalog.Vulnerable(host=Mock(), amount=5)]
+  assert effect_catalog.effect_amount(effect_catalog.Strength, test_effects) == 0
+  assert effect_catalog.effect_amount(effect_catalog.Vulnerable, test_effects) == 5
 
 def test_helper_effect_amount_multiple():
-  test_effects = [effects.Vulnerable(host=Mock(), amount=5),
-             effects.Strength(host=Mock(), amount=3),
-             effects.Strength(host=Mock(), amount=2)]
-  assert effects.effect_amount(effects.Weak, test_effects) == 0
-  assert effects.effect_amount(effects.Strength, test_effects) == 5
-  assert effects.effect_amount(effects.Vulnerable, test_effects) == 5
+  test_effects = [effect_catalog.Vulnerable(host=Mock(), amount=5),
+             effect_catalog.Strength(host=Mock(), amount=3),
+             effect_catalog.Strength(host=Mock(), amount=2)]
+  assert effect_catalog.effect_amount(effect_catalog.Weak, test_effects) == 0
+  assert effect_catalog.effect_amount(effect_catalog.Strength, test_effects) == 5
+  assert effect_catalog.effect_amount(effect_catalog.Vulnerable, test_effects) == 5
 
 
 @pytest.mark.skip("init_effects was removed.")

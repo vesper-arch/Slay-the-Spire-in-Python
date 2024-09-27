@@ -1,7 +1,8 @@
 import displayer
-import effects
+import effect_catalog
 import items
 import player
+import card_catalog
 
 
 def test_view_piles_on_all_cards(monkeypatch):

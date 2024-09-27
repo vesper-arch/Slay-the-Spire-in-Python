@@ -4,7 +4,7 @@ from unittest.mock import Mock
 import pytest
 
 import displayer
-import effects
+import effect_catalog
 import enemy_catalog
 import entities
 import game

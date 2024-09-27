@@ -4,7 +4,7 @@ import random
 from copy import deepcopy
 from typing import TYPE_CHECKING, Sequence
 from uuid import uuid4
-import effects
+import effect_catalog
 from ansi_tags import ansiprint
 from definitions import CardType, PlayerClass, Rarity, State, TargetType
 from message_bus_tools import Registerable, Message
@@ -129,7 +129,7 @@ class Bash(Card):
 
     def apply(self, origin, target):
         origin.attack(target, self)
-        ei.apply_effect(target, origin, effects.Vulnerable, self.vulnerable)
+        ei.apply_effect(target, origin, effect_catalog.Vulnerable, self.vulnerable)
 
 class Anger(Card):
     def __init__(self):
@@ -238,7 +238,7 @@ class Clothesline(Card):
 
     def apply(self, origin, target):
         origin.attack(target, self)
-        ei.apply_effect(target, origin, effects.Weak, self.weak)
+        ei.apply_effect(target, origin, effect_catalog.Weak, self.weak)
 
 class Flex(Card):
     def __init__(self):
@@ -252,8 +252,8 @@ class Flex(Card):
         self.info = "Gain 4 <buff>Strength</buff>. At the end of your turn, lose 4 <buff>Strength</buff>."
 
     def apply(self, origin):
-        ei.apply_effect(origin, None, effects.Strength, self.strength)
-        ei.apply_effect(origin, None, effects.StrengthDown, self.strength)
+        ei.apply_effect(origin, None, effect_catalog.Strength, self.strength)
+        ei.apply_effect(origin, None, effect_catalog.StrengthDown, self.strength)
 
 class Havoc(Card):
     def __init__(self):
@@ -306,7 +306,7 @@ class HeavyBlade(Card):
         self.info = "Deal 14 damage. <buff>Strength</buff> affects this card 5 times."
 
     def apply(self, origin: Player, target):
-        player_strength = effects.effect_amount(effects.Strength, origin.buffs)
+        player_strength = effect_catalog.effect_amount(effect_catalog.Strength, origin.buffs)
         self.modify_damage(player_strength * self.strength_multi,
                            f"(+{player_strength * self.strength_multi} dmg from {player_strength} <buff>Strength</buff>)")
         origin.attack(target, self)
@@ -515,7 +515,7 @@ class BattleTrance(Card):
 
     def apply(self, origin):
         origin.draw_cards(cards=self.cards)
-        ei.apply_effect(origin, None, effects.NoDraw)
+        ei.apply_effect(origin, None, effect_catalog.NoDraw)
 
 class BloodForBlood(Card):
     registers = [Message.ON_PLAYER_HEALTH_LOSS]
@@ -646,7 +646,7 @@ class Dropkick(Card):
 
     def apply(self, origin: Player, target: Enemy):
         origin.attack(target, self)
-        if effects.effect_amount(effects.Vulnerable, target.debuffs) >= 1:
+        if effect_catalog.effect_amount(effect_catalog.Vulnerable, target.debuffs) >= 1:
             origin.energy += 1
             origin.draw_cards(cards=1)
 
@@ -957,7 +957,7 @@ class Corruption(Card):
         self.energy_cost = 2
 
     def apply(self, origin):
-        ei.apply_effect(target=origin, user=None, effect=effects.Corruption)
+        ei.apply_effect(target=origin, user=None, effect=effect_catalog.Corruption)
 
 class Slimed(Card):
     def __init__(self):

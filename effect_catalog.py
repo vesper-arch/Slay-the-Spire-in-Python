@@ -18,7 +18,7 @@ from message_bus_tools import Message, Registerable
 if TYPE_CHECKING:
     from enemy import Enemy
     from entities import Action
-    from items import Card
+    from card_catalog import Card
     from player import Player
 
 

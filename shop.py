@@ -29,9 +29,10 @@ from time import sleep
 import displayer
 from ansi_tags import ansiprint
 from definitions import CardCategory, Rarity
-from effects import get_attribute
+from effect_catalog import get_attribute
 from card_catalog import create_all_cards
-from items import create_all_potions, create_all_relics
+from potion_catalog import create_all_potions
+from relic_catalog import create_all_relics
 from message_bus_tools import Potion, Relic
 from card_catalog import Card
 

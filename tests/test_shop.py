@@ -6,6 +6,10 @@ import items
 from ansi_tags import ansiprint
 from shop import SellableItem, Shop
 import player
+import card_catalog
+import potion_catalog
+import relic_catalog
+
 
 
 class TestSellableItems():
@@ -19,7 +23,7 @@ class TestSellableItems():
 
   def test_potions(self):
     '''See that we can make sellable items out of all potions and that they display correctly'''
-    all_sellable_potions = list(items.create_all_potions())
+    all_sellable_potions = list(potion_catalog.create_all_potions())
     for potion in all_sellable_potions:
       sellable = SellableItem(potion)
       ansiprint(sellable.valid_string())
@@ -27,7 +31,7 @@ class TestSellableItems():
 
   def test_relics(self):
     '''See that we can make sellable items out of all relics and that they display correctly'''
-    all_sellable_relics = list(items.create_all_relics())
+    all_sellable_relics = list(relic_catalog.create_all_relics())
     for relic in all_sellable_relics:
       sellable = SellableItem(relic)
       ansiprint(sellable.valid_string())
