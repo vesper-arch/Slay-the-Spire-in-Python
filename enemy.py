@@ -1,26 +1,33 @@
 import math
 import random
-import sys
 from copy import deepcopy
 from time import sleep
 from uuid import uuid4
 
-import effects
-import items
-from ansi_tags import ansiprint
-from definitions import CardType, State, TargetType
-from message_bus_tools import Card, Message, Potion, Registerable, Relic, bus
-from effects import Effect
-
 import displayer as view
 import effect_interface as ei
+from ansi_tags import ansiprint
+from definitions import State
+from entities import Damage
+from message_bus_tools import Card, Message, Registerable, bus
 from player import Player
+from effects import Effect
+
+
+
+class Action():
+    '''A single action that an enemy takes'''
+    def __init__(self, action_type, ) -> None:
+        pass
+
+    def execute(self):
+        pass
 
 class Enemy(Registerable):
     registers = [Message.START_OF_TURN, Message.END_OF_TURN, Message.ON_DEATH_OR_ESCAPE]
     player = None
 
-    def __init__(self, health_range: list, block: int, name: str, powers: dict = None):
+    def __init__(self, health_range: list, block: int, name: str, powers: list[Effect] | None = None):
         self.uid = uuid4()
         if not powers:
             powers = []
@@ -68,7 +75,7 @@ class Enemy(Registerable):
                 display_name, action, parameters = action
             else:
                 action, parameters = action
-            if action in ("Cowardly", "Sleeping", "Stunned") or action not in ("Attack", "Buff", "Debuff", "Status", "Block"):
+            if action not in ("Attack", "Buff", "Debuff", "Remove Effect", "Status", "Block"):
                 self.misc_move(enemies)
                 sleep(1)
                 view.clear()

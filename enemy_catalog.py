@@ -17,6 +17,7 @@ class AcidSlimeL(Enemy):
                 self.next_move, self.intent = [("Split", "Split")], "<yellow>Unknown</yellow>"
             elif move_roll <= 0.3 and self.move_spam_check("Corrosive Spit", 3):
                 self.next_move, self.intent = [("Corrosive Spit", "Attack", (11,)), ("Status", (items.Slimed, 2, "discard pile"))], "<aggresive>Attack</aggresive> Σ11 / <debuff>Debuff</debuff>"
+                                            # Attack("Corrosive Spit", 11), 
             elif 0.3 < move_roll < 0.7 and self.move_spam_check("Tackle", 2):
                 self.next_move, self.intent = [("Tackle", "Attack", (16,))], "<aggresive>Attack</aggresive> Σ16"
             elif 0.7 <= move_roll < 1 and self.move_spam_check("Lick", 2):
@@ -106,7 +107,7 @@ class Cultist(Enemy):
 
     def set_intent(self):
         if self.active_turns == 1:
-            self.next_move, self.intent = [("Incantation", "Buff", ("Ritual", 3))], "<buff>Buff</buff>"
+            self.next_move, self.intent = [("Incantation", "Buff", (effects.Ritual, 3))], "<buff>Buff</buff>"
         else:
             self.next_move, self.intent = [("Dark Strike", "Attack", (6, ))], "<aggresive>Attack</aggresive> Σ6"
 
@@ -326,7 +327,7 @@ class GremlinNob(Enemy):
         while True:
             move_roll = random.random()
             if self.active_turns == 1:
-                self.next_move, self.intent = [("Bellow", "Buff", ("Enrage", 2))], "<buff>Buff</buff>"
+                self.next_move, self.intent = [("Bellow", "Buff", (effects.Enrage, 2))], "<buff>Buff</buff>"
             elif self.active_turns > 1:
                 if move_roll <= 0.33:
                     self.next_move, self.intent = [("Skull Bash", "Attack", (6,)), (effects.Vulnerable, 2)], "<aggresive>Attack</aggresive> 6 / <debuff>Debuff</debuff>"
@@ -351,7 +352,7 @@ class Lagavulin(Enemy):
             self.next_move, self.intent = [("Attack", "Attack", (18,))], "<aggresive>Attack</aggresive> 18"
 
 class Sentry(Enemy):
-    def __init__(self, state):
+    def __init__(self, state = "Beam"):
         self.state = state
         super().__init__([38, 42], 0, "Sentry", [effects.Artifact(1)])
 

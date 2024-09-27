@@ -8,7 +8,7 @@ import game_map
 import generators as gen
 import items
 from ansi_tags import ansiprint
-from definitions import CombatTier, EncounterType, State, TargetType, CardType
+from definitions import CardType, CombatTier, EncounterType, State, TargetType
 from enemy import Enemy
 from enemy_catalog import (
     create_act1_boss,
@@ -25,37 +25,41 @@ class Game:
     def __init__(self, seed=None):
         self.bus = bus
         self.seed = seed
-        self.player = Player.create_player()
-        Enemy.player = self.player
-        self.game_map: list = None
-
-    def start(self):
         if self.seed is not None:
             random.seed(self.seed)
+        self.player = Player.create_player()
         self.game_map = game_map.create_first_map()
+        Enemy.player = self.player
+        self.current_encounter = None
+
+    def start(self):
         self.game_map.pretty_print()
         for encounter in self.game_map:
             self.play(encounter, self.game_map)
             self.player.floors += 1
             self.game_map.pretty_print()
 
-    def play(self, encounter: EncounterType, game_map: game_map.GameMap):
+    def play(self, encounter: game_map.Encounter, the_map: game_map.GameMap):
         if encounter.type == EncounterType.START:
             pass
         elif encounter.type == EncounterType.REST_SITE:
             return self.rest_site()
         elif encounter.type == EncounterType.UNKNOWN:
             return self.unknown(self.game_map)
-        elif encounter.type == EncounterType.BOSS:
-            return Combat(tier=CombatTier.BOSS, player=self.player, game_map=self.game_map).combat(game_map)
-        elif encounter.type == EncounterType.ELITE:
-            return Combat(tier=CombatTier.ELITE, player=self.player, game_map=self.game_map).combat(game_map)
-        elif encounter.type == EncounterType.NORMAL:
-            return Combat(tier=CombatTier.NORMAL, player=self.player, game_map=self.game_map).combat(game_map)
+        elif encounter.type in (EncounterType.BOSS, EncounterType.ELITE, EncounterType.NORMAL):
+            mapping = {
+                EncounterType.BOSS: CombatTier.BOSS,
+                EncounterType.ELITE: CombatTier.ELITE,
+                EncounterType.NORMAL: CombatTier.NORMAL,
+            }
+            self.current_encounter = Combat(tier=mapping[encounter.type], player=self.player, game_map=self.game_map)
+            retval = self.current_encounter.combat()
+            self.current_encounter = None
+            return retval
         elif encounter.type == EncounterType.SHOP:
             return Shop(self.player).loop()
         else:
-            raise game_map.MapError(f"Encounter type {encounter} is not valid.")
+            raise game_map.MapError(f"Encounter type {encounter.type} is not valid.")
 
     def rest_site(self):
         """
@@ -158,7 +162,6 @@ class Game:
             sleep(1.5)
             view.clear()
 
-
     def unknown(self, game_map) -> None:
         # Chances
         normal_combat: float = 0.1
@@ -178,26 +181,36 @@ class Game:
             normal_combat = 0.1
             treasure_room += 0.02
             merchant += 0.03
-            Combat(self.player, CombatTier.NORMAL).combat()
+            self.current_encounter = Combat(player=self.player, tier=CombatTier.NORMAL, game_map=self.game_map)
+            retval = self.current_encounter.combat()
+            self.current_encounter = None
+            return retval
         else:
             # Chooses an event if nothing else is chosen
             ansiprint(self.player)
             chosen_event = choose_event(game_map, self.player)
             chosen_event()
 
+    def pretty_print(self):
+        print(f"{self.game_map.current.type}")
+        if self.current_encounter:
+            print(f"Current encounter: {self.current_encounter}")
 
 class Combat:
-    def __init__(self, tier: CombatTier, player: Player, game_map, all_enemies: list[Enemy] = None):
+    def __init__(self, tier: CombatTier, player: Player, game_map: game_map.GameMap, all_enemies: list[Enemy] | None = None):
         self.tier = tier
         self.player = player
         self.all_enemies = all_enemies if all_enemies else []
-        self.active_enemies = [enemy for enemy in self.all_enemies if enemy.state == State.ALIVE]
         self.previous_enemy_states = ()
         self.death_messages = []
         self.turn = 1
         self.game_map = game_map
 
-    def combat(self, current_map) -> None:
+    @property
+    def active_enemies(self):
+        return [enemy for enemy in self.all_enemies if enemy.state == State.ALIVE]
+
+    def combat(self) -> None:
         """There's too much to say here."""
         self.start_combat()
         # Combat automatically ends when all enemies are dead.
@@ -223,7 +236,7 @@ class Combat:
                     "x": lambda: view.view_piles(self.player.exhaust_pile, end=True),
                     "p": self.play_potion,
                     "f": lambda: ei.full_view(self.player, self.active_enemies),
-                    "m": lambda: view.view_map(current_map),
+                    "m": lambda: view.view_map(self.game_map),
                 }
                 if action.isdigit():
                     option = int(action) - 1
@@ -273,13 +286,12 @@ class Combat:
             view.clear()
         bus.publish(Message.END_OF_COMBAT, (self.tier, self.player))
         self.player.unsubscribe()
-        for enemy in self.active_enemies:
+        for enemy in self.all_enemies:
             enemy.unsubscribe()
 
     def on_player_move(self):
         self.update_death_messages()
         self.previous_enemy_states = tuple(enemy.state for enemy in self.all_enemies)
-        self.active_enemies = [enemy for enemy in self.all_enemies if enemy.state == State.ALIVE]  # Updates the list
 
         def clean_effects(effects):
             for effect in effects:
@@ -315,7 +327,6 @@ class Combat:
             enemy.register(bus=bus)
 
         bus.publish(Message.START_OF_COMBAT, (self.tier, self.active_enemies, self.player))
-        self.active_enemies = [enemy for enemy in self.all_enemies if enemy.state == State.ALIVE]
         self.previous_enemy_states = tuple(enemy.state for enemy in self.all_enemies)
 
     def select_target(self):

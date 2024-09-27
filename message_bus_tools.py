@@ -77,7 +77,7 @@ class MessageBus():
     def unsubscribe(self, event_type, uid):
         if self.lock_count > 0:
             if self.debug:
-                ansiprint(f"<basic>MESSAGEBUS</basic>: Locked. Adding <bold>{self.subscribers[event_type][uid].__qualname__}</bold> to unsubscribe list.")
+                ansiprint(f"<basic>MESSAGEBUS</basic>: Locked. Adding <bold>{event_type} - {uid}</bold> to unsubscribe list.")
             self.unsubscribe_set.add((event_type, uid))
         else:
             if uid in self.subscribers[event_type]:

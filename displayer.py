@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import math
 import random
 from os import name, system
 from time import sleep
@@ -8,29 +7,17 @@ from typing import TYPE_CHECKING, Callable
 
 from ansi_tags import ansiprint, strip
 from definitions import (
-    CardType,
-    CombatTier,
-    EffectType,
-    PlayerClass,
-    Rarity,
-    StackType,
     State,
 )
-from message_bus_tools import Message, bus
-from effects import Effect
 
 if TYPE_CHECKING:
-    from entities import Action
-    from enemy import Enemy
-    from player import Player
     from items import Card
-
 
 # Displayer module
 # Displays important info to the player during combat
 
 
-def view_piles(pile: list[dict], shuffle=False, end=False, validator: Callable = lambda placehold: bool(placehold)):
+def view_piles(pile: list[Card], shuffle=False, end=False, validator: Callable = lambda placehold: bool(placehold)):
     """Prints a numbered list of all the cards in a certain pile."""
     if len(pile) == 0:
         ansiprint("<red>This pile is empty</red>.")
@@ -100,7 +87,10 @@ def display_ui(entity, enemies, combat=True):
         ansiprint(str(entity))
     print()
 
-def list_input(input_string: str, choices: list, displayer: Callable, validator: Callable = lambda placehold: bool(placehold), message_when_invalid: str = None, extra_allowables=None) -> int | None:
+def list_input(input_string: str, choices: list, displayer: Callable, 
+               validator: Callable = lambda placehold: bool(placehold), 
+               message_when_invalid: str | None = None, 
+               extra_allowables=None) -> int | str | None:
     """Allows the player to choose from a certain list of options. Includes validation."""
     if extra_allowables is None:
         extra_allowables = []
@@ -125,7 +115,10 @@ def list_input(input_string: str, choices: list, displayer: Callable, validator:
         break
     return option
 
-def multi_input(input_string: str, choices: list, displayer: Callable, max_choices: int, strict: bool = False, validator: Callable = lambda placehold: bool(placehold), message_when_invalid: str = None, extra_allowables: list=None):
+def multi_input(input_string: str, choices: list, displayer: Callable, max_choices: int, 
+                strict: bool = False, validator: Callable = lambda placehold: bool(placehold), 
+                message_when_invalid: str | None = None, 
+                extra_allowables: list | None = None):
     """Basically the same as view.list_input but you can choose multiple cards one at a time. Mainly used for discarding and Exhausting cards."""
     if not extra_allowables:
         extra_allowables = []

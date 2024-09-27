@@ -2,17 +2,17 @@ from __future__ import annotations
 
 import random
 from copy import deepcopy
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Sequence
 
 import effects
 from ansi_tags import ansiprint
-from definitions import CardType, DeepCopyTuple, PlayerClass, Rarity, State, TargetType
+from definitions import CardType, PlayerClass, Rarity, State, TargetType
 from message_bus_tools import Card, Message, Potion, Relic
 
 if TYPE_CHECKING:
     from enemy import Enemy
-    from player import Player
     from items import Card
+    from player import Player
 
 import displayer as view
 import effect_interface as ei
@@ -895,7 +895,7 @@ class Corruption(Card):
         self.energy_cost = 2
 
     def apply(self, origin):
-        ei.apply_effect(origin, None, "Corruption")
+        ei.apply_effect(target=origin, user=None, effect=effects.Corruption)
 
 class Slimed(Card):
     def __init__(self):
@@ -1302,7 +1302,7 @@ class CultistPotion(Potion):
         self.golden_info = "Gain 2 <buff>Ritual</buff>."
 
     def apply(self, origin):
-        ei.apply_effect(origin, None, "Ritual", self.ritual)
+        ei.apply_effect(target=origin, user=None, effect=effects.Ritual, amount=self.ritual)
 
 class EntropicBrew(Potion):
     def __init__(self):
@@ -1332,7 +1332,7 @@ class SneckoOil(Potion):
         for card in origin.hand:
             card.modify_energy_cost(random.randint(0, 3), "Set")
 
-def create_all_relics() -> list[Relic]:
+def create_all_relics() -> Sequence[Relic]:
     relics = [relic() for relic in (
         # Starter Relics
         BurningBlood,
@@ -1347,7 +1347,7 @@ def create_all_relics() -> list[Relic]:
     )]
     return relics
 
-def create_all_cards() -> list[Card]:
+def create_all_cards() -> Sequence[Card]:
     cards = [card() for card in (
         # ----------IRONCLAD CARDS------------
         # Starter(basic) cards
@@ -1363,7 +1363,7 @@ def create_all_cards() -> list[Card]:
     )]
     return cards
 
-def create_all_potions() -> list[Potion]:
+def create_all_potions() -> Sequence[Potion]:
     potions = [potion() for potion in (
         # Common Potions
         BloodPotion, AttackPotion, SkillPotion, PowerPotion, ColorlessPotion, BlessingOfTheForge,

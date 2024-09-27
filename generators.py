@@ -1,32 +1,18 @@
 from __future__ import annotations
 
-import math
 import random
-from os import name, system
 from time import sleep
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 import displayer as view
-from ansi_tags import ansiprint, strip
+from ansi_tags import ansiprint
 from definitions import (
     CardType,
     CombatTier,
-    EffectType,
     PlayerClass,
     Rarity,
-    StackType,
-    State,
 )
 from message_bus_tools import Message, bus
-from effects import Effect
-
-if TYPE_CHECKING:
-    from entities import Action
-    from enemy import Enemy
-    from player import Player
-
-    from items import Card
-
 
 # Generators module
 # Generates relic_pool, potions, and cards

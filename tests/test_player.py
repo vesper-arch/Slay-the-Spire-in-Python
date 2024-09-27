@@ -1,12 +1,16 @@
-import entities
-import enemy_catalog
-import items
-import displayer
-import pytest
 from copy import deepcopy
+
+import pytest
+
+import displayer
 import effects
-from ansi_tags import ansiprint
+import enemy_catalog
+import game
+import items
 import player
+from ansi_tags import ansiprint
+from tests.fixtures import sleepless
+
 
 def replacement_clear_screen():
     '''Replacement for game.view.clear() so that I can see the test output'''
@@ -21,7 +25,7 @@ def stats(player, enemy):
     ansiprint(f"<red>Enemy has {enemy.health} health, {enemy.block} block</red>")
 
 
-def test_relics_searchable_by_string_and_class():
+def test_relics_searchable_by_string_and_class(sleepless):
     # Create player with relics
     test_player = player.Player(health=100, block=0, max_energy=100, deck=[])
     for relic in items.create_all_relics():
@@ -30,13 +34,13 @@ def test_relics_searchable_by_string_and_class():
     assert items.BurningBlood in test_player.relics, "Should be able to find a relic by its class"
 
 
-def test_all_attack_cards_with_all_relics(monkeypatch):
+def test_all_attack_cards_with_all_relics(monkeypatch, sleepless):
     '''A kind of crazy test that will load up a player with all cards and all
     relics and play them all against a boss. Sensitive to combat initialization details
     because that logic is not isolated from enemy creation.
     '''
     assert issubclass(effects.Vulnerable, effects.Effect)
-    entities.random.seed(123)
+    game.random.seed(123)
     all_cards = items.create_all_cards()
     SKIP_CARDS = ['Dual Wield']
     all_cards = [card for card in all_cards if card.name not in SKIP_CARDS]
@@ -55,8 +59,6 @@ def test_all_attack_cards_with_all_relics(monkeypatch):
     # Patch some side effects
     with monkeypatch.context() as m:
         m.setattr('builtins.input', patched_input)
-        m.setattr(effects, 'sleep', lambda x: None)
-        m.setattr(entities, 'sleep', lambda x: None)
         displayer.clear = replacement_clear_screen
 
         # Let 'er rip!

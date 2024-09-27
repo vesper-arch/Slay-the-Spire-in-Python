@@ -1,31 +1,25 @@
 from __future__ import annotations
 
 import math
-import random
-from os import name, system
-from time import sleep
-from typing import TYPE_CHECKING, Callable
-import effect_interface as ei
-from enum import StrEnum
+from copy import deepcopy
+from typing import TYPE_CHECKING
 from uuid import uuid4
+
 import definitions
+import effect_interface as ei
 from ansi_tags import ansiprint
 from definitions import (
     CardType,
-    CombatTier,
     EffectType,
-    PlayerClass,
-    Rarity,
     StackType,
-    State,
 )
-from message_bus_tools import Message, bus, Registerable
+from message_bus_tools import Message, Registerable
 
 if TYPE_CHECKING:
-    from entities import Action
     from enemy import Enemy
-    from player import Player
+    from entities import Action
     from items import Card
+    from player import Player
 
 
 def get_attribute(item, attribute):
@@ -251,7 +245,7 @@ class Enrage(Effect):
             "Enrage",
             StackType.INTENSITY,
             EffectType.BUFF,
-            "Whenever you play a Skill, gains X  Strength..",
+            f"Whenever you play a Skill, gains {amount} Strength..",
             amount,
         )
 
@@ -259,7 +253,7 @@ class Enrage(Effect):
         if message == Message.ON_CARD_PLAY:
             origin, card, target, enemies = data
             if card.type == CardType.SKILL:
-                ei.apply_effect(origin, None, Strength, self.amount)
+                ei.apply_effect(self.host, None, Strength, self.amount)
 
 
 class Corruption(Effect):
@@ -361,7 +355,7 @@ class Evolve(Effect):
             amount,
         )
 
-    def callback(self, message, data: tuple[Player, Card, Enemy]):
+    def callback(self, message, data: tuple[Player, Card, Enemy, list[Enemy]]):
         if message == Message.ON_CARD_PLAY:
             origin, card, target, enemies = data
             if card.type in (CardType.STATUS, CardType.CURSE):
@@ -449,7 +443,7 @@ class Metallicize(Effect):
     def callback(self, message, data: tuple[Player, list[Enemy]]):
         if message == Message.END_OF_TURN:
             player, enemies = data
-            player.blocking(block=self.amount, context=f"{self.name}{self.amount}")
+            self.host.blocking(block=self.amount, context=f"{self.name}{self.amount}")
 
 
 class Rage(Effect):
@@ -563,16 +557,16 @@ class Split(Effect):
             enemy, enemies = data
             split_into = {
                 "Slime Boss": (
-                    Enemy(self.health, 0, "Acid Slime(L)"),
-                    Enemy(self.health, 0, "Spike Slime (L)"),
+                    Enemy(self.host.health, 0, "Acid Slime(L)"),
+                    Enemy(self.host.health, 0, "Spike Slime (L)"),
                 ),
                 "Acid Slime (L)": (
-                    Enemy(self.health, 0, "Acid Slime(M)"),
-                    Enemy(self.health, 0, "Acid Slime(M)"),
+                    Enemy(self.host.health, 0, "Acid Slime(M)"),
+                    Enemy(self.host.health, 0, "Acid Slime(M)"),
                 ),
                 "Spike Slime (L)": (
-                    Enemy(self.health, 0, "Spike Slime (M)"),
-                    Enemy(self.health, 0, "Spike Slime (M)"),
+                    Enemy(self.host.health, 0, "Spike Slime (M)"),
+                    Enemy(self.host.health, 0, "Spike Slime (M)"),
                 ),
             }
             if enemy.name in split_into:

@@ -1,17 +1,16 @@
 from __future__ import annotations
 
 import random
+import time
 
 import pytest
 
-import entities
-import game
-import effects
+import definitions
 import displayer
-import shop
+import game
 from ansi_tags import ansiprint
 from definitions import CardType
-import time
+from tests.fixtures import sleepless
 
 
 def replacement_clear_screen():
@@ -31,71 +30,85 @@ def repeat_check(repeat_catcher, last_return, current_return) -> tuple[int, bool
         return repeat_catcher, True
     return repeat_catcher, False
 
-@pytest.mark.timeout(20)
-@pytest.mark.parametrize("seed", list(range(2)))
-def test_e2e(seed, monkeypatch):
+def autoplayer(game: game.Game):
+    '''Returns a patched input function that can play the game, maybe.
+
+    Usage: 
+        with monkeypatch.context() as m:
+            m.setattr('builtins.input', autoplayer(game))
+    '''
+    print("Autoplayer starting...")
+    mygame = game
+    repeat_catcher = 0
+    last_return = None
+    def patched_input(*args, **kwargs):
+        nonlocal mygame
+        nonlocal repeat_catcher
+        nonlocal last_return
+        choice = None
+        reason = ""
+        all_possible_choices = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'e',
+                'p', 'm', 'd', 'a', 's', 'x', 'f', 'y', 'n',
+                'rest', 'smith', 'view deck', 'leave', 'exit', 'lift', 'toke', 'dig']
+        # Handle Start Node
+        if mygame.game_map.current.type == definitions.EncounterType.START:
+            choice, reason = str(random.choice(range(1, len(mygame.game_map.current.children)))), "Start node"
+        
+        # Handle dead
+        player = mygame.player
+        if player.state == definitions.State.DEAD:
+            choice, reason = '\n', "Player is dead"
+
+        # Handle shop
+        if mygame.game_map.current.type == definitions.EncounterType.SHOP:
+            # print("Player is in a shop")
+            #tbd
+            pass
+
+        # Handle combat
+        if mygame.current_encounter:
+            possible_cards = [idx+1 for idx,card in enumerate(player.hand) if card.energy_cost <= player.energy and card.type != CardType.STATUS]
+            # Handle no energy
+            if player.energy == 0 and player.in_combat:
+                choice, reason = 'e', "No energy left"
+            # Handle enemy selection
+            elif args and "Choose" in args[0]:
+                choice, reason = str(random.randint(1, len(mygame.current_encounter.active_enemies))), "Enemy selection"
+            # Handle card selection
+            elif len(possible_cards) > 0:
+                choice, reason = str(random.choice(possible_cards)), "Card selection"
+
+        # Default (all options)
+        if choice is None:
+            choice, reason = random.choice(all_possible_choices), "Default"
+
+        repeat_catcher, check = repeat_check(repeat_catcher, last_return, choice)
+        if check:
+            # Pick anything other than the last choice
+            tmp = all_possible_choices.copy()
+            tmp.remove(choice)
+            choice, reason = random.choice(tmp), "Player is stuck in a loop"
+            
+        last_return = choice
+        print(f"AutoPlayer: {choice} ({reason})")
+        return choice
+
+    return patched_input
+
+
+@pytest.mark.timeout(10)
+@pytest.mark.parametrize("seed", list(range(3)))
+def test_e2e(seed, monkeypatch, sleepless):
     '''Test the game from start to finish
     Plays with (more or less) random inputs to test the game.
     Seems to find lots of bugs, but very hard to repeat.
     '''
     ansiprint(f"<red><bold>Seed for this run is: {seed}</bold></red>")
     mygame = game.Game(seed=seed)
-    repeat_catcher = 0
-    last_return = None
-    def patched_input(*args, **kwargs):
-        '''Patch for input that can play the game!
-        '''
-        nonlocal mygame
-        nonlocal repeat_catcher
-        nonlocal last_return
-        random_return = random.choice(
-            ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'e',
-             'p', 'm', 'd', 'a', 's', 'x', 'f', 'y', 'n',
-             'rest', 'smith', 'view deck', 'leave', 'exit', 'lift', 'toke', 'dig'])
-        player = mygame.player
-        if player.state == entities.State.DEAD:
-            return '\n'
-        if args and "Choose" in args[0]:
-            choice = random.randint(1, 10)
-            print(f"Player chose {choice}")
-            return str(choice)
-        possible_cards = [card for card in player.hand if card.energy_cost <= player.energy and card.type != CardType.STATUS]
-        if len(possible_cards) > 0:
-            ret = str(random.randint(1, len(possible_cards)))
-            repeat_catcher, check = repeat_check(repeat_catcher, last_return, ret)
-            if not check:
-                last_return = ret
-                print(f"Player chose {ret}")
-                return ret
-            else:
-                print(f"Player chose {random_return}")
-                last_return = random_return
-                return random_return
-
-        if player.energy == 0 and player.in_combat:
-            print("Player has no energy left.")
-            # from pprint import pprint
-            # pprint(player.__dict__)
-            repeat_catcher, check = repeat_check(repeat_catcher, last_return, 'e')
-            if not check:
-                last_return = 'e'
-                print("Player chose 'e'")
-                return 'e'
-            else:
-                last_return = random_return
-                print(f"Player chose {random_return}")
-                return random_return
-
-        # Default to picking randomly
-        print(f"Player chose {random_return}")
-        return random_return
-
     with monkeypatch.context() as m:
-        m.setattr('builtins.input', patched_input)
-        m.setattr(effects, 'sleep', lambda x: None)
-        m.setattr(entities, 'sleep', lambda x: None)
-        m.setattr(game, 'sleep', lambda x: None)
+        m.setattr('builtins.input', autoplayer(mygame))
         displayer.clear = replacement_clear_screen
+
         try:
             start = time.time()
             mygame.start()

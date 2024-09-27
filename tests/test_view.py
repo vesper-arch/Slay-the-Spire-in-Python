@@ -1,7 +1,6 @@
+import displayer
 import effects
 import items
-import entities
-import displayer
 import player
 
 
@@ -17,8 +16,6 @@ def test_view_piles_on_all_cards(monkeypatch):
 
   with monkeypatch.context() as m:
     # Patch sleeps so it's faster
-    m.setattr(effects, 'sleep', lambda x: None)
-    m.setattr(entities, 'sleep', lambda x: None)
     m.setattr(displayer, 'sleep', lambda x: None)
 
     for function, condition_name in all_conditions:

@@ -11,6 +11,7 @@ import game
 import player
 from ansi_tags import ansiprint
 from definitions import CombatTier
+from tests.fixtures import sleepless
 
 
 def replacement_clear_screen():
@@ -18,8 +19,8 @@ def replacement_clear_screen():
     print("\n--------------------------\n")
 
 
-def test_new_combat_basic(monkeypatch):
-    entities.random.seed(123)
+def test_new_combat_basic(monkeypatch, sleepless):
+    game.random.seed(123)
 
     # Create player
     test_player = player.Player.create_player()
@@ -37,10 +38,8 @@ def test_new_combat_basic(monkeypatch):
     responses = iter("11112e111e21e233e12e12") # Fight sequence for Acid Slime (S) and Jaw Worm
     with monkeypatch.context() as m:
         m.setattr('builtins.input', lambda *a, **kw: next(responses))
-        m.setattr(effects, 'sleep', lambda _: None)
-        m.setattr(entities, 'sleep', lambda _: None)
         m.setattr(game, 'sleep', lambda _: None)
         displayer.clear = replacement_clear_screen
 
         # Run combat
-        combat.combat(game_map)
+        combat.combat()

@@ -109,7 +109,6 @@ class Player(Registerable):
         player.relics.append(items.BurningBlood())
         return player
 
-
     def __str__(self):
         return f"(<italic>Player</italic>)Ironclad(<red>{self.health} / {self.max_health}</red> | <yellow>{self.gold} Gold</yellow> | Deck: {len(self.deck)})"
 
@@ -125,6 +124,16 @@ class Player(Registerable):
             if status == f"\n{self.name} (<red>{self.health} </red>/ <red>{self.max_health}</red> | <light-blue>{self.block} Block</light-blue> | <light-red>{self.energy} / {self.max_energy}</light-red>)"
             else status + "\n"
         )
+
+    def register(self, bus):
+        # Register all relics, effects, and cards
+        for relic in self.relics:
+            relic.register(bus)
+        for effect in self.buffs + self.debuffs:
+            effect.register(bus)
+        for card in self.hand:
+            card.register(bus)
+        return super().register(bus)
 
     def use_card(self, card, exhaust, pile, enemies, target: "Enemy"=None) -> None:
         """
@@ -169,7 +178,6 @@ class Player(Registerable):
         bus.publish(Message.BEFORE_DRAW, (self, action))
         action.execute()
         bus.publish(Message.AFTER_DRAW, (self, action))
-
 
     def _draw_cards(self, num_cards: int):
         # Internal function to draw cards
