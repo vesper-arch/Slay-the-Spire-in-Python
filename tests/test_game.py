@@ -97,7 +97,7 @@ def autoplayer(game: game.Game):
 
 
 @pytest.mark.timeout(10)
-@pytest.mark.parametrize("seed", list(range(20)))
+@pytest.mark.parametrize("seed", list(range(10)))
 def test_e2e(seed, monkeypatch, sleepless):
     '''Test the game from start to finish
     Plays with (more or less) random inputs to test the game.

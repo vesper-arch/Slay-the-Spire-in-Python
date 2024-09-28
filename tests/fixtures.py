@@ -14,6 +14,7 @@ def sleepless(monkeypatch):
     import shop
     import enemy
     import combat
+    import rest_site
     monkeypatch.setattr(displayer, 'sleep', sleep)
     monkeypatch.setattr(events, 'sleep', sleep)
     monkeypatch.setattr(combat, 'sleep', sleep)
@@ -21,3 +22,4 @@ def sleepless(monkeypatch):
     monkeypatch.setattr(player, 'sleep', sleep)
     monkeypatch.setattr(shop, 'sleep', sleep)
     monkeypatch.setattr(enemy, 'sleep', sleep)
+    monkeypatch.setattr(rest_site, 'sleep', sleep)
