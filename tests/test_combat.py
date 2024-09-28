@@ -8,6 +8,7 @@ import effect_catalog
 import enemy_catalog
 import entities
 import game
+import combat
 import player
 from ansi_tags import ansiprint
 from definitions import CombatTier
@@ -31,15 +32,14 @@ def test_new_combat_basic(monkeypatch, sleepless):
 
     # Create combat object
     game_map = Mock()
-    combat = game.Combat(player=test_player, tier=CombatTier.NORMAL, all_enemies=[acidslime, jawworm], game_map=game_map)
+    combat_obj = combat.Combat(player=test_player, tier=CombatTier.NORMAL, all_enemies=[acidslime, jawworm], game_map=game_map)
 
 
     # Patch the input
     responses = iter("11112e111e21e233e12e12") # Fight sequence for Acid Slime (S) and Jaw Worm
     with monkeypatch.context() as m:
         m.setattr('builtins.input', lambda *a, **kw: next(responses))
-        m.setattr(game, 'sleep', lambda _: None)
         displayer.clear = replacement_clear_screen
 
         # Run combat
-        combat.combat()
+        combat_obj.combat()

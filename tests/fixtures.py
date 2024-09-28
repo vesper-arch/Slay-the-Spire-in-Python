@@ -8,15 +8,15 @@ def sleepless(monkeypatch):
     def sleep(seconds):
         pass
     import displayer
-    import game
     import events
     import generators
     import player
     import shop
     import enemy
-    monkeypatch.setattr(game, 'sleep', sleep)
+    import combat
     monkeypatch.setattr(displayer, 'sleep', sleep)
     monkeypatch.setattr(events, 'sleep', sleep)
+    monkeypatch.setattr(combat, 'sleep', sleep)
     monkeypatch.setattr(generators, 'sleep', sleep)
     monkeypatch.setattr(player, 'sleep', sleep)
     monkeypatch.setattr(shop, 'sleep', sleep)
