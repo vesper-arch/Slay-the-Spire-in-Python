@@ -15,6 +15,7 @@ from shop import Shop
 class Game:
     def __init__(self, seed=None):
         self.bus = bus
+        self.bus.reset()
         if seed is not None:
             random.seed(seed)
         self.player = Player.create_player()

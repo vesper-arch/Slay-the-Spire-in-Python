@@ -111,6 +111,7 @@ def test_e2e(seed, monkeypatch, sleepless):
 
         try:
             start = time.time()
+            assert len(mygame.bus.subscribers) == 0
             mygame.start()
         except Exception as e:
             ansiprint(f"<red><bold>Failed with seed: {seed}</bold></red>")

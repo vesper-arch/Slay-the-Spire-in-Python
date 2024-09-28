@@ -39,9 +39,12 @@ class MessageBus():
     registering a callback function that will be called when that message is published.
     '''
     def __init__(self, debug=True):
-        self.subscribers = dict(dict())  # noqa: C408
         self.debug = debug
-        self.death_messages = []  # what is this?
+        self.reset()
+
+    def reset(self):
+        self.subscribers = dict(dict())
+        self.death_messages = []
         self.unsubscribe_set = set()
         self.subscribe_set = set()
         self.lock_count = 0
