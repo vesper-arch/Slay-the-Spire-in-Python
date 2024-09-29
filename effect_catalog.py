@@ -551,10 +551,12 @@ class Split(Effect):
             amount=amount,
         )
 
-    def callback(self, message, data: tuple[Enemy, list[Enemy]]):
+    def callback(self, message, data: Player | Enemy):
         if message == Message.ON_DEATH_OR_ESCAPE:
+            dead_entity = data
+            if dead_entity != self.host:
+                return
             print("Split effect activated")
-            enemy, enemies = data
             split_into = {
                 "Slime Boss": (
                     Enemy(self.host.health, 0, "Acid Slime(L)"),
@@ -569,12 +571,13 @@ class Split(Effect):
                     Enemy(self.host.health, 0, "Spike Slime (M)"),
                 ),
             }
-            if enemy.name in split_into:
-                enemy.health = 0
-                for new_enemy in split_into[enemy.name]:
-                    new_enemy.health = enemy.max_health // 2
-                    enemies.append(new_enemy)
-                del enemies[enemies.index(enemy)]
+            if self.host.name in split_into:
+                self.host.health = 0
+                for new_enemy in split_into[self.host.name]:
+                    new_enemy.health = self.host.max_health // 2
+
+                    # enemies.append(new_enemy)
+                # del enemies[enemies.index(enemy)]
                 ansiprint(f"{self.name} split into 2 {split_into[self.name].name}s")
 
 
@@ -683,8 +686,8 @@ class Dexterity(Effect):
 
 
 class SporeCloud(Effect):
-    # On death, applies X Icon Vulnerable Vulnerable to the player.
-    registers = [Message.ON_DEATH_OR_ESCAPE]
+    # On death, applies X Vulnerable to the player.
+    registers = [Message.START_OF_COMBAT, Message.ON_DEATH_OR_ESCAPE]
 
     def __init__(self, host, amount=2):
         super().__init__(
@@ -692,14 +695,19 @@ class SporeCloud(Effect):
             "Spore Cloud",
             StackType.NONE,
             EffectType.DEBUFF,
-            "On death, applies X Icon Vulnerable Vulnerable to the player.",
+            f"On death, applies {amount} Vulnerable to the player.",
             amount=amount,
         )
+        self.target = None
 
     def callback(self, message, data: tuple[Enemy, list[Enemy]]):
-        if message == Message.ON_DEATH_OR_ESCAPE:
-            player, _ = data
-            ei.apply_effect(player, None, Vulnerable, self.amount)
+        if message == Message.START_OF_COMBAT:
+            tier, enemies, player = data
+            self.target = player
+        elif message == Message.ON_DEATH_OR_ESCAPE:
+            dead_entity = data
+            if dead_entity == self.host and self.target is not None:
+                ei.apply_effect(target=self.target, user=None, effect=Vulnerable, amount=self.amount)
 
 
 class Thievery(Effect):

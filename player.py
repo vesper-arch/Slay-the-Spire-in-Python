@@ -309,9 +309,10 @@ class Player(Registerable):
                 potion_index = -1
             self.player.health_actions(math.floor(self.player.max_health * self.potions[potion_index].hp_percent), "Heal")
             return
+        bus.publish(Message.ON_DEATH_OR_ESCAPE, self)
         ansiprint("<red>You Died</red>")
+        self.state = State.DEAD
         input("Press enter > ")
-        sys.exit()
 
     def callback(self, message, data: tuple):
         if message == Message.START_OF_COMBAT:

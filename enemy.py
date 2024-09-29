@@ -184,6 +184,10 @@ class Enemy(Registerable):
         """
         print(f"{self.name} has died.")
         self.state = State.DEAD
+        for effect in self.buffs + self.debuffs:
+            effect.unsubscribe()
+        bus.publish(Message.ON_DEATH_OR_ESCAPE, (self))
+
 
     def debuff_and_buff_check(self):
         """
@@ -214,6 +218,8 @@ class Enemy(Registerable):
                 target.block = 0
                 target.health -= dmg
                 bus.publish(Message.ON_PLAYER_HEALTH_LOSS, None)
+                if target.health <= 0:
+                    target.die()
             bus.publish(Message.AFTER_ATTACK, (self, target, dmg))
         sleep(1)
 
@@ -279,7 +285,7 @@ class Enemy(Registerable):
                 self.execute_move(player, enemies)
             # Needs to be expanded at some point
         elif message == Message.ON_DEATH_OR_ESCAPE:
-            event, bus = data
-            for effect in self.buffs + self.debuffs:
-                effect.unsubscribe()
-            bus.death_messages.append(event)
+            # This is meant to react to OTHER entities dying, not itself
+            dead_entity = data
+            if dead_entity != self:
+                ansiprint(f"{self.name} observes {dead_entity.name}'s death.")
