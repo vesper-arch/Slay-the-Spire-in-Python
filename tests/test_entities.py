@@ -1,4 +1,4 @@
-from entities import Enemy
+from enemy import Enemy
 
 
 def test_move_spam_check():

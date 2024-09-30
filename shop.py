@@ -24,13 +24,17 @@
 # Woo.... lots of stuff to do here.
 
 import random
-import time
+from time import sleep
 
+import displayer
 from ansi_tags import ansiprint
 from definitions import CardCategory, Rarity
-from helper import Displayer, get_attribute, sleep
-from items import create_all_cards, create_all_potions, create_all_relics
-from message_bus_tools import Relic, Potion, Card
+from effect_catalog import get_attribute
+from card_catalog import create_all_cards
+from potion_catalog import create_all_potions
+from relic_catalog import create_all_relics
+from message_bus_tools import Potion, Relic
+from card_catalog import Card
 
 
 # Helper functions for displaying cards, potions, and relics.
@@ -163,7 +167,7 @@ class Shop():
     def loop(self):
       while True:
         ansiprint(f"Welcome to the shop! You have {self.player.gold} gold.")
-        choice = Displayer().list_input(
+        choice = displayer.list_input(
           input_string="Buy something?",
           choices=self.items,
           displayer=self.view_sellables,

@@ -9,10 +9,12 @@
     "editor.cursorBlinking": "solid",
     "editor.cursorSmoothCaretAnimation": "on",
     "editor.fontFamily": "Consolas, 'Courier New', monospace",
-    "audioCues.lineHasInlineSuggestion": "off",
     "python.testing.pytestArgs": [
         "."
     ],
     "python.testing.unittestEnabled": false,
-    "python.testing.pytestEnabled": true
+    "python.testing.pytestEnabled": true,
+    "accessibility.signals.lineHasInlineSuggestion": {
+        "sound": "off"
+    }
 }

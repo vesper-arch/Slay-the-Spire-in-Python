@@ -1,8 +1,6 @@
 # game_map.py
 from __future__ import annotations
 
-import random
-from enum import StrEnum, auto
 from typing import List
 
 from grandalf.graphs import Edge, Graph, Vertex

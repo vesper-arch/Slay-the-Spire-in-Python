@@ -1,10 +1,18 @@
-import entities
-import enemy_catalog
-import items
-import pytest
 from copy import deepcopy
-import helper
+
+import pytest
+
+import card_catalog
+import displayer
+import effect_catalog
+import enemy_catalog
+import game
+import items
+import player
+import relic_catalog
 from ansi_tags import ansiprint
+from tests.fixtures import sleepless
+
 
 def replacement_clear_screen():
     '''Replacement for game.view.clear() so that I can see the test output'''
@@ -19,48 +27,46 @@ def stats(player, enemy):
     ansiprint(f"<red>Enemy has {enemy.health} health, {enemy.block} block</red>")
 
 
-def test_relics_searchable_by_string_and_class():
+def test_relics_searchable_by_string_and_class(sleepless):
     # Create player with relics
-    player = entities.Player(health=100, block=0, max_energy=100, deck=[])
-    for relic in items.create_all_relics():
-      player.relics.append(relic)
-    assert "Burning Blood" in player.relics, "Should be able to find a relic by its string"
-    assert items.BurningBlood in player.relics, "Should be able to find a relic by its class"
+    test_player = player.Player(health=100, block=0, max_energy=100, deck=[])
+    for relic in relic_catalog.create_all_relics():
+      test_player.relics.append(relic)
+    assert "Burning Blood" in test_player.relics, "Should be able to find a relic by its string"
+    assert relic_catalog.BurningBlood in test_player.relics, "Should be able to find a relic by its class"
 
 
-def test_all_attack_cards_with_all_relics(monkeypatch):
+def test_all_attack_cards_with_all_relics(monkeypatch, sleepless):
     '''A kind of crazy test that will load up a player with all cards and all
     relics and play them all against a boss. Sensitive to combat initialization details
     because that logic is not isolated from enemy creation.
     '''
-    assert issubclass(helper.Vulnerable, helper.Effect)
-    entities.random.seed(123)
-    all_cards = items.create_all_cards()
+    assert issubclass(effect_catalog.Vulnerable, effect_catalog.Effect)
+    game.random.seed(123)
+    all_cards = card_catalog.create_all_cards()
     SKIP_CARDS = ['Dual Wield']
     all_cards = [card for card in all_cards if card.name not in SKIP_CARDS]
 
     # Create uberplayer
-    player = entities.Player(health=1000, block=0, max_energy=100, deck=all_cards)
-    for relic in items.create_all_relics():
-      player.relics.append(relic)
-    player.in_combat = True
-    player.draw_pile = deepcopy(player.deck)
+    test_player = player.Player(health=1000, block=0, max_energy=100, deck=all_cards)
+    for relic in relic_catalog.create_all_relics():
+      test_player.relics.append(relic)
+    test_player.in_combat = True
+    test_player.draw_pile = deepcopy(test_player.deck)
 
     # Create boss
     boss = enemy_catalog.SlimeBoss(health_range=[1000,1000])
-    # helper.active_enemies.append(boss)
+    # effects.active_enemies.append(boss)
 
     # Patch some side effects
     with monkeypatch.context() as m:
         m.setattr('builtins.input', patched_input)
-        m.setattr(helper, 'sleep', lambda x: None)
-        m.setattr(entities, 'sleep', lambda x: None)
-        helper.view.clear = replacement_clear_screen
+        displayer.clear = replacement_clear_screen
 
         # Let 'er rip!
-        initial_size = len(player.draw_pile)
-        for idx, card in enumerate(player.draw_pile):
-          stats(player, boss)
+        initial_size = len(test_player.draw_pile)
+        for idx, card in enumerate(test_player.draw_pile):
+          stats(test_player, boss)
           print(f"Playing card {idx} of {initial_size} - {card.name}")
-          player.use_card(card=card, enemies=[boss], target=boss, exhaust=True, pile=player.draw_pile)
+          test_player.use_card(card=card, enemies=[boss], target=boss, exhaust=True, pile=test_player.draw_pile)
 

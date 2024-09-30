@@ -77,7 +77,7 @@ class MessageBus():
     def unsubscribe(self, event_type, uid):
         if self.lock_count > 0:
             if self.debug:
-                ansiprint(f"<basic>MESSAGEBUS</basic>: Locked. Adding <bold>{self.subscribers[event_type][uid].__qualname__}</bold> to unsubscribe list.")
+                ansiprint(f"<basic>MESSAGEBUS</basic>: Locked. Adding <bold>{event_type} - {uid}</bold> to unsubscribe list.")
             self.unsubscribe_set.add((event_type, uid))
         else:
             if uid in self.subscribers[event_type]:
@@ -114,39 +114,6 @@ class Registerable():
             bus.unsubscribe(message, self.uid)
         self.subscribed = False
 
-class Effect(Registerable):
-    def __init__(self, host, name, stack_type: StackType, effect_type, info, amount=0, one_turn=False):
-        self.uid = uuid4()
-        self.subscribed = False
-        self.host = host
-        self.name = name
-        self.stack_type = stack_type
-        self.type = effect_type
-        self.info = info # For convenience purposes, this will be a generalized description of the effect.
-        self.amount = amount
-        self.one_turn = one_turn
-
-    def __add__(self, other):
-        if self.name != other.name:
-            raise ValueError(f"Effects of names {self.name} and {other.name} cannot be merged. Addition only works with the same effect.")
-        new_effect = deepcopy(self)
-        new_effect.amount = self.amount + other.amount
-        return new_effect
-
-    def pretty_print(self):
-        return f"{self.get_name()} | <yellow>{self.info}</yellow>"
-
-    def get_name(self):
-        # shorter vars for readability
-        c = STACK_TYPE_COLOR_MAPPING
-        st = self.stack_type
-        return f"<{c[st]}>{self.name}</{c[st]}>{f' {self.amount}' if self.stack_type is not None else ''}"
-
-    def tick(self):
-        if self.one_turn is True:
-            self.amount = 0
-        elif self.stack_type == StackType.DURATION:
-            self.amount -= 1
 
 class Relic(Registerable):
     def __init__(self, name: str, info: str, flavor_text: str, rarity: Rarity, player_class: PlayerClass=PlayerClass.ANY):
@@ -197,67 +164,5 @@ class Potion(Registerable):
                 self.info = self.golden_info
                 for stat in self.golden_stats:
                     stat *= 2
-
-class Card(Registerable):
-    def __init__(self, name: str, info: str, rarity: Rarity, player_class: PlayerClass, card_type: CardType, target='Nothing', energy_cost=-1, upgradeable=True):
-        self.uid = uuid4()
-        self.name = name
-        self.info = info
-        self.rarity = rarity
-        self.player_class = player_class
-        self.type = card_type
-        self.base_energy_cost = energy_cost
-        self.energy_cost = energy_cost
-        self.reset_energy_next_turn = False
-        self.target = target
-        self.upgraded = False
-        self.upgradeable = upgradeable
-        self.removable = True
-        self.upgrade_preview = f"{self.name} -> <green>{self.name + '+'}</green> | "
-        self.playable = card_type not in (CardType.STATUS, CardType.CURSE)
-
-    def upgrade(self):
-        raise NotImplementedError("Subclasses must implement this method")
-
-    def changed_energy(self):
-        return self.base_energy_cost != self.energy_cost
-
-    def pretty_print(self):
-        type_color = self.type.lower()
-        return f"""<{self.rarity.lower()}>{self.name}</{self.rarity.lower()}> | <{type_color}>{self.type}</{type_color}>{f' | <light-red>{"<green>" if self.base_energy_cost != self.energy_cost else ""}{self.energy_cost}{"</green>" if self.base_energy_cost != self.energy_cost else ""} Energy</light-red>' if self.energy_cost > -1 else ''} | <yellow>{self.info}</yellow>"""
-
-    def upgrade_markers(self):
-        self.info += '<green>+</green>'
-        self.upgraded = True
-
-    def modify_energy_cost(self, amount, modify_type='Adjust', one_turn=False):
-        if not (modify_type == 'Set' and amount != self.energy_cost) or not (modify_type == 'Adjust' and amount != 0):
-            pass
-        if modify_type == 'Adjust':
-            self.energy_cost += amount
-            ansiprint(f"{self.name} got its energy {'reduced' if amount < 0 else 'increased'} by {amount:+d}")
-        elif modify_type == 'Set':
-            self.energy_cost = amount
-            ansiprint(f"{self.name} got its energy set to {amount}.")
-        if one_turn:
-            self.reset_energy_next_turn = True
-
-    def modify_damage(self, amount, context: str, permanent=False):
-        if permanent:
-            self.base_damage += amount
-        else:
-            self.damage += amount
-        self.damage_affected_by.append(context)
-        ansiprint(f"{self.name} had its damage modified by {amount} from {context}.")
-
-    def modify_block(self, amount, context: str, permanent=False):
-        if permanent:
-            self.base_block += amount
-        else:
-            self.block += amount
-        self.block_affected_by.append(context)
-
-    def is_upgradeable(self) -> bool:
-        return not self.upgraded and (self.name == "Burn" or self.type not in (CardType.STATUS, CardType.CURSE))
 
 bus = MessageBus(debug=False)

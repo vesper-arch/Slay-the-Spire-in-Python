@@ -3,13 +3,16 @@ from unittest.mock import Mock
 
 import pytest
 
+import displayer
+import effect_catalog
 import enemy_catalog
 import entities
 import game
-import helper
-import items
+import combat
+import player
 from ansi_tags import ansiprint
 from definitions import CombatTier
+from tests.fixtures import sleepless
 
 
 def replacement_clear_screen():
@@ -17,11 +20,11 @@ def replacement_clear_screen():
     print("\n--------------------------\n")
 
 
-def test_new_combat_basic(monkeypatch):
-    entities.random.seed(123)
+def test_new_combat_basic(monkeypatch, sleepless):
+    game.random.seed(123)
 
     # Create player
-    player = entities.Player.create_player()
+    test_player = player.Player.create_player()
 
     # Create bad guys
     acidslime = enemy_catalog.AcidSlimeS()
@@ -29,17 +32,14 @@ def test_new_combat_basic(monkeypatch):
 
     # Create combat object
     game_map = Mock()
-    combat = game.Combat(player=player, tier=CombatTier.NORMAL, all_enemies=[acidslime, jawworm], game_map=game_map)
+    combat_obj = combat.Combat(player=test_player, tier=CombatTier.NORMAL, all_enemies=[acidslime, jawworm], game_map=game_map)
 
 
     # Patch the input
     responses = iter("11112e111e21e233e12e12") # Fight sequence for Acid Slime (S) and Jaw Worm
     with monkeypatch.context() as m:
         m.setattr('builtins.input', lambda *a, **kw: next(responses))
-        m.setattr(helper, 'sleep', lambda _: None)
-        m.setattr(entities, 'sleep', lambda _: None)
-        m.setattr(game, 'sleep', lambda _: None)
-        helper.view.clear = replacement_clear_screen
+        displayer.clear = replacement_clear_screen
 
         # Run combat
-        combat.combat(game_map)
+        combat_obj.combat()
