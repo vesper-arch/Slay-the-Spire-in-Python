@@ -43,7 +43,7 @@ class MessageBus():
         self.reset()
 
     def reset(self):
-        self.subscribers = dict(dict())
+        self.subscribers: dict[Message, dict[callable, int]] = dict(dict())
         self.death_messages = []
         self.unsubscribe_set = set()
         self.subscribe_set = set()
@@ -52,28 +52,32 @@ class MessageBus():
     def _clear_subscribes(self):
         if self.lock_count > 0:
             return
-        for event_type, callback, uid in self.subscribe_set:
-            self.subscribe(event_type, callback, uid)
+        for event_type, callback, uid, priority in self.subscribe_set:
+            self.subscribe(event_type, callback, uid, priority)
         self.subscribe_set.clear()
 
-    def subscribe(self, event_type: Message, callback, uid):
+    def subscribe(self, event_type: Message, callback, uid, priority=50):
+        '''Subscribes a callback to a message. The callback will be called when the message is published.
+        Priority is a number from 1 to 100, with 1 being the highest priority and 100 being the lowest.
+        '''
+        assert 1 <= priority <= 100, "Priority must be between 1 and 100"
         if self.lock_count > 0:
             if self.debug:
                 ansiprint(f"<basic>MESSAGEBUS</basic>: <blue>{event_type}</blue> | Locked. Adding <bold>{callback.__qualname__}</bold> to subscribe list.")
-            self.subscribe_set.add((event_type, callback, uid))
+            self.subscribe_set.add((event_type, callback, uid, priority))
         else:
             if event_type not in self.subscribers:
                 self.subscribers[event_type] = {}
-            self.subscribers[event_type][uid] = callback
+            self.subscribers[event_type][uid] = (callback, priority)
             if self.debug:
-                ansiprint(f"<basic>MESSAGEBUS</basic>: <blue>{event_type}</blue> | Subscribed <bold>{callback.__qualname__}</bold>")
+                ansiprint(f"<basic>MESSAGEBUS</basic>: <blue>{event_type}</blue> | Subscribed <bold>{callback.__qualname__}</bold> with priority <bold>{priority}</bold>")
 
     def _clear_unsubscribes(self):
         if self.lock_count > 0:
             return
         for event_type, uid in self.unsubscribe_set:
             if self.debug:
-                ansiprint(f"<basic>MESSAGEBUS</basic>: Unsubscribing <bold>{self.subscribers[event_type][uid].__qualname__}</bold> from {', '.join(event_type).replace(', ', '')}")
+                ansiprint(f"<basic>MESSAGEBUS</basic>: Unsubscribing <bold>{self.subscribers[event_type][uid][0].__qualname__}</bold> from {', '.join(event_type).replace(', ', '')}")
             self.unsubscribe(event_type, uid)
         self.unsubscribe_set.clear()
 
@@ -83,18 +87,18 @@ class MessageBus():
                 ansiprint(f"<basic>MESSAGEBUS</basic>: Locked. Adding <bold>{event_type} - {uid}</bold> to unsubscribe list.")
             self.unsubscribe_set.add((event_type, uid))
         else:
-            if uid in self.subscribers[event_type]:
+            if event_type in self.subscribers and uid in self.subscribers[event_type]:
                 if self.debug:
-                    ansiprint(f"<basic>MESSAGEBUS</basic>: Unsubscribed <bold>{self.subscribers[event_type][uid].__qualname__}</bold> from {', '.join(event_type).replace(', ', '')}")
+                    ansiprint(f"<basic>MESSAGEBUS</basic>: Unsubscribed <bold>{self.subscribers[event_type][uid][0].__qualname__}</bold> from {', '.join(event_type).replace(', ', '')}")
                 del self.subscribers[event_type][uid]
 
     def publish(self, event_type: Message, data):
         self.lock_count += 1
         if event_type in self.subscribers:
-            for uid, callback in self.subscribers[event_type].items():
-                _ = uid
+            sorted_callbacks = sorted([(x[1][0], x[1][1]) for x in self.subscribers[event_type].items()], key=lambda x: x[1])
+            for callback, priority in sorted_callbacks:
                 if self.debug:
-                    ansiprint(f"<basic>MESSAGEBUS</basic>: <blue>{event_type}</blue> | Calling <bold>{callback.__qualname__}</bold>")
+                    ansiprint(f"<basic>MESSAGEBUS</basic>: <blue>{event_type}</blue> | Calling <bold>{callback.__qualname__}</bold> with priority <bold>{priority}</bold>")
                 callback(event_type, data)
         self.lock_count -= 1
         self._clear_subscribes()
@@ -103,10 +107,16 @@ class MessageBus():
 
 class Registerable():
     registers = []
+    priorities = []
 
     def register(self, bus):
-        for message in self.registers:
-            bus.subscribe(message, self.callback, self.uid)
+        if self.priorities:
+            assert len(self.registers) == len(self.priorities), "Registers and priorities must be the same length."
+            for message, priority in zip(self.registers, self.priorities):
+                bus.subscribe(message, self.callback, self.uid, priority)
+        else:
+            for message in self.registers:
+                bus.subscribe(message, self.callback, self.uid)
         self.subscribed = True
 
     def unsubscribe(self, event_types: list[Message]=None):
