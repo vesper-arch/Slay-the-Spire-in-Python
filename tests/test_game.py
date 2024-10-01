@@ -11,6 +11,7 @@ import game
 from ansi_tags import ansiprint
 from definitions import CardType
 from tests.fixtures import sleepless
+import effect_interface
 
 
 def replacement_clear_screen():
@@ -97,7 +98,7 @@ def autoplayer(game: game.Game):
 
 
 @pytest.mark.timeout(10)
-@pytest.mark.parametrize("seed", list(range(10)))
+@pytest.mark.parametrize("seed", list(range(30)))
 def test_e2e(seed, monkeypatch, sleepless):
     '''Test the game from start to finish
     Plays with (more or less) random inputs to test the game.
@@ -105,13 +106,13 @@ def test_e2e(seed, monkeypatch, sleepless):
     '''
     ansiprint(f"<red><bold>Seed for this run is: {seed}</bold></red>")
     mygame = game.Game(seed=seed)
+    effect_interface.apply_effect(mygame.player, None, "Invulnerable", 1)   # IDDQD
     with monkeypatch.context() as m:
         m.setattr('builtins.input', autoplayer(mygame))
         displayer.clear = replacement_clear_screen
 
         try:
             start = time.time()
-            assert len(mygame.bus.subscribers) == 0
             mygame.start()
         except Exception as e:
             ansiprint(f"<red><bold>Failed with seed: {seed}</bold></red>")

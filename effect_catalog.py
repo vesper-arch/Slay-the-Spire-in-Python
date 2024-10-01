@@ -71,6 +71,30 @@ class Effect(Registerable):
             self.amount -= 1
 
 
+class Invulnerable(Effect):
+    '''Prevents all damage. Great for testing!'''
+    registers = [Message.BEFORE_ATTACK]
+    priorities = [100]   # Called last so it can cancel all other effects.
+
+    def __init__(self, host, amount):
+        super().__init__(
+            host,
+            "Invulnerable",
+            StackType.DURATION_AND_INTENSITY,
+            EffectType.BUFF,
+            "Prevents all damage.",
+            amount,
+        )
+
+    def callback(self, message, data):
+        if message == Message.BEFORE_ATTACK:
+            attacker, target, damage_dealer = data
+            if self.host == target:
+                damage_dealer.set_damage(0, "<buff>,.-~*´¨¯¨`*·~-.¸-INVULNERABLE-,.-~*´¨¯¨`*·~-.¸</buff>")
+            else:
+                pass
+
+
 class Strength(Effect):
     registers = [Message.BEFORE_ATTACK]
 
