@@ -448,15 +448,19 @@ class TrueGrit(Card):
         self.base_block, self.block = 9, 9
         self.info = "Gain 9 <keyword>Block</keyword>. <keyword>Exhaust</keyword> a card in your hand."
 
-    def apply(self, origin):
+    def apply(self, origin: Player):
         origin.blocking(card=self)
         if self.upgraded is True:
             chosen_card = view.list_input("Choose a card to <keyword>Exhaust</keyword>", origin.hand, view.view_piles, lambda card: card.upgradeable is True and card.upgraded is False, "That card is either not upgradeable or is already upgraded.")
             if chosen_card is not None:
                 origin.move_card(origin.hand[chosen_card], origin.exhaust_pile, origin.hand, False)
         else:
-            random_card = random.choice([card for card in origin.hand if card.upgradeable is True and card.upgraded is False])
-            origin.move_card(random_card, origin.exhaust_pile, origin.hand, False)
+            cards_to_choose = [card for card in origin.hand if card.upgradeable is True and card.upgraded is False]
+            if len(cards_to_choose) > 0:
+                random_card = random.choice(cards_to_choose)
+                origin.move_card(random_card, origin.exhaust_pile, origin.hand, False)
+            else:
+                print("You have no upgradeable cards to exhaust.")
 
 class TwinStrike(Card):
     def __init__(self):
