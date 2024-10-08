@@ -381,7 +381,7 @@ class PommelStrike(Card):
 
     def apply(self, origin, target):
         origin.attack(target, self)
-        origin.draw_cards(self.cards)
+        origin.draw_cards(self.cards, clear_hand=False)
 
 class ShrugItOff(Card):
     def __init__(self):
@@ -398,7 +398,7 @@ class ShrugItOff(Card):
 
     def apply(self, origin):
         origin.blocking(card=self)
-        origin.draw_cards(1)
+        origin.draw_cards(1, clear_hand=False)
 
 class SwordBoomerang(Card):
     def __init__(self):
@@ -491,7 +491,7 @@ class Warcry(Card):
         self.info = "Draw 2 cards. Put a card from your hand on top of your draw pile. <keyword>Exhaust</keyword>."
 
     def apply(self, origin):
-        origin.draw_cards(self.cards)
+        origin.draw_cards(self.cards, clear_hand=False)
         chosen_card = view.list_input("Choose a card to put on top of your draw pile", origin.hand, view.view_piles)
         if chosen_card is not None:
             origin.move_card(origin.hand[chosen_card], origin.draw_pile, origin.hand, False)
@@ -525,7 +525,7 @@ class BattleTrance(Card):
         self.info = "Draw 4 cards. You can't draw additional cards this turn."
 
     def apply(self, origin):
-        origin.draw_cards(cards=self.cards)
+        origin.draw_cards(cards=self.cards, clear_hand=False)
         ei.apply_effect(origin, None, effect_catalog.NoDraw)
 
 class BloodForBlood(Card):
@@ -563,7 +563,7 @@ class Bloodletting(Card):
 
     def apply(self, origin):
         origin.take_sourceless_dmg(3)
-        origin.draw_cards(cards=self.cards)
+        origin.draw_cards(cards=self.cards, clear_hand=False)
 
 class BurningPact(Card):
     def __init__(self):
@@ -580,7 +580,7 @@ class BurningPact(Card):
         chosen_card = view.list_input("Choose a card to <keyword>Exhaust</keyword>", origin.hand, view.view_piles)
         if chosen_card is not None:
             origin.move_card(origin.hand[chosen_card], origin.exhaust_pile, origin.hand, False)
-            origin.draw_cards(cards=self.cards)
+            origin.draw_cards(cards=self.cards, clear_hand=False)
 
 class Carnage(Card):
     def __init__(self):
@@ -659,7 +659,7 @@ class Dropkick(Card):
         origin.attack(target, self)
         if effect_catalog.effect_amount(effect_catalog.Vulnerable, target.debuffs) >= 1:
             origin.energy += 1
-            origin.draw_cards(cards=1)
+            origin.draw_cards(cards=1, clear_hand=False)
 
     def callback(self, message, data):
         # Unnecessary. We can modify the energy and draw a card directly in the apply method

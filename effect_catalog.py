@@ -361,9 +361,9 @@ class DarkEmbrace(Effect):
         )
 
     def callback(self, message, data: tuple[Player, Card]):
-        if message == Message.END_OF_TURN:
-            player, card = data
-            player.draw_cards(self.amount)
+        player, card = data
+        if message == Message.ON_EXHAUST:
+            player.draw_cards(self.amount, clear_hand=False)
 
 
 class Evolve(Effect):
@@ -383,7 +383,7 @@ class Evolve(Effect):
         if message == Message.ON_CARD_PLAY:
             origin, card, target, enemies = data
             if card.type in (CardType.STATUS, CardType.CURSE):
-                origin.draw_cards(1)
+                origin.draw_cards(1, clear_hand=False)
 
 
 class FeelNoPain(Effect):
@@ -558,7 +558,7 @@ class Brutality(Effect):
         if message == Message.START_OF_TURN:
             turn, player = data
             player.take_sourceless_dmg(1)
-            player.draw_cards(1)
+            player.draw_cards(1, clear_hand=False)
 
 
 class Split(Effect):

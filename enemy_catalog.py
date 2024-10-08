@@ -1,10 +1,9 @@
 import math
 import random
 
-import effect_catalog
 import card_catalog
+import effect_catalog
 from enemy import Enemy
-from message_bus_tools import Message
 
 
 class AcidSlimeL(Enemy):
