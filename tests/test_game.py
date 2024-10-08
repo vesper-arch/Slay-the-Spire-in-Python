@@ -68,7 +68,7 @@ def autoplayer(game: game.Game):
 
         # Handle combat
         if mygame.current_encounter:
-            possible_cards = [idx+1 for idx,card in enumerate(player.hand) if card.energy_cost <= player.energy and card.type != CardType.STATUS]
+            possible_cards = [idx+1 for idx,card in enumerate(player.hand) if card.energy_cost <= player.energy and card.playable]
             # Handle no energy
             if player.energy == 0 and player.in_combat:
                 choice, reason = 'e', "No energy left"
@@ -78,6 +78,8 @@ def autoplayer(game: game.Game):
             # Handle card selection
             elif len(possible_cards) > 0:
                 choice, reason = str(random.choice(possible_cards)), "Card selection"
+            elif len(possible_cards) == 0:
+                choice, reason = 'e', "No cards to play"
 
         # Default (all options)
         if choice is None:
