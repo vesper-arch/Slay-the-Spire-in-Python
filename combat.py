@@ -85,7 +85,9 @@ class Combat:
         """There's too much to say here."""
         self.start_combat()
         while not self.end_conditions():
-            assert self.player.health > 0, "Player is dead."
+            assert self.player.health > 0, "Player's death undetected."
+            for enemy in self.active_enemies:
+                assert enemy.health > 0, f"Enemy {enemy.name}'s death undetected."
             bus.publish(Message.START_OF_TURN, (self.turn, self.player))
             killed, escaped, robbed = self.take_turn()
             bus.publish(Message.END_OF_TURN, data=(self.player, self.all_enemies))
