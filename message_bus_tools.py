@@ -95,7 +95,6 @@ class MessageBus():
     def publish(self, event_type: Message, data):
         self.lock_count += 1
         if event_type in self.subscribers:
-
             sorted_callbacks = sorted([(x[1][0], x[1][1]) for x in self.subscribers[event_type].items()], key=lambda x: x[1])
             for callback, priority in sorted_callbacks:
                 if self.debug:
