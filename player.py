@@ -151,6 +151,10 @@ class Player(Registerable):
             else:
                 return
 
+        # If the card is in a pile, remove it from the pile (prevents recursion)
+        if pile is not None and card in pile:
+            pile.remove(card)
+
         # apply the card
         if card.target == TargetType.SINGLE:
             card.apply(origin=self, target=target)
@@ -167,10 +171,9 @@ class Player(Registerable):
         if pile is not None:
             if exhaust is True or getattr(card, "exhaust", False) is True:
                 ansiprint(f"{card.name} was <bold>Exhausted</bold>.")
-                self.move_card(card=card, move_to=self.exhaust_pile, from_location=pile, cost_energy=True)
-                bus.publish(Message.ON_EXHAUST, (self, card))
+                self.move_card(card=card, move_to=self.exhaust_pile, from_location=None, cost_energy=True)
             else:
-                self.move_card(card=card, move_to=self.discard_pile, from_location=pile, cost_energy=True)
+                self.move_card(card=card, move_to=self.discard_pile, from_location=None, cost_energy=True)
         sleep(0.5)
         view.clear()
 
@@ -255,7 +258,9 @@ class Player(Registerable):
     def move_card(self, card, move_to, from_location, cost_energy=False, shuffle=False):
         if cost_energy is True:
             self.energy -= max(card.energy_cost, 0)
-        if card in from_location:
+        if from_location is None:
+            pass    # Ignore when card is "floating" between piles
+        elif card in from_location:
             from_location.remove(card)
         else:
             ansiprint(f"WARNING: {card.name} was not found in `from_location` in `move_card()` function.")
