@@ -218,8 +218,8 @@ class Enemy(Registerable):
                 target.block = 0
                 target.health -= dmg
                 bus.publish(Message.ON_PLAYER_HEALTH_LOSS, None)
-                if target.health <= 0:
-                    target.die()
+            if target.health <= 0:
+                target.die()
             bus.publish(Message.AFTER_ATTACK, (self, target, dmg))
         sleep(1)
 
