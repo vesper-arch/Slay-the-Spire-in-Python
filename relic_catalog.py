@@ -13,6 +13,7 @@ from card_catalog import create_all_cards
 if TYPE_CHECKING:
     from enemy import Enemy
     from player import Player
+    from card_catalog import Card
 
 import displayer as view
 import effect_interface as ei
@@ -179,7 +180,7 @@ class DeadBranch(Relic):
     def __init__(self):
         super().__init__("Dead Branch", "Whenever you <keyword>Exhaust</keyword> a card, add a random card into your hand.", "The branch of a tree from a forgotten era.", Rarity.RARE)
 
-    def callback(self, message, data):
+    def callback(self, message, data: tuple[Player, Card]):
         if message == Message.ON_EXHAUST:
             player, _ = data
             cards = create_all_cards()
