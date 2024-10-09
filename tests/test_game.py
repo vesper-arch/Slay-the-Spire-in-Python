@@ -33,7 +33,7 @@ def repeat_check(repeat_catcher, last_return, current_return) -> tuple[int, bool
 def autoplayer(game: game.Game):
     '''Returns a patched input function that can play the game, maybe.
 
-    Usage: 
+    Usage:
         with monkeypatch.context() as m:
             m.setattr('builtins.input', autoplayer(game))
     '''
@@ -53,7 +53,7 @@ def autoplayer(game: game.Game):
         # Handle Start Node
         if mygame.game_map.current.type == definitions.EncounterType.START:
             choice, reason = str(random.choice(range(1, len(mygame.game_map.current.children)))), "Start node"
-        
+
         # Handle dead
         player = mygame.player
         if player.state == definitions.State.DEAD:
@@ -88,7 +88,7 @@ def autoplayer(game: game.Game):
             tmp = all_possible_choices.copy()
             tmp.remove(choice)
             choice, reason = random.choice(tmp), "Player is stuck in a loop"
-            
+
         last_return = choice
         print(f"AutoPlayer: {choice} ({reason})")
         return choice
@@ -97,7 +97,7 @@ def autoplayer(game: game.Game):
 
 
 @pytest.mark.timeout(10)
-@pytest.mark.parametrize("seed", list(range(3)))
+@pytest.mark.parametrize("seed", list(range(20)))
 def test_e2e(seed, monkeypatch, sleepless):
     '''Test the game from start to finish
     Plays with (more or less) random inputs to test the game.
