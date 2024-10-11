@@ -112,7 +112,7 @@ class TestMessageBus:
       bus.publish(Message.BEFORE_ATTACK, "second time")
 
       assert callbackA.call_count == 2, "Callback A should have been called twice"
-      callbackB.assert_called_once_with(Message.BEFORE_ATTACK, "second time") 
+      callbackB.assert_called_once_with(Message.BEFORE_ATTACK, "second time")
 
 
   def test_can_unsubscribe_during_publish(self):
@@ -134,7 +134,7 @@ class TestMessageBus:
 
       callbackA.assert_called_once_with(Message.BEFORE_ATTACK, "data")
       assert callbackB.call_count == 2, "Callback B should have been called twice"
-     
+
   def test_can_unsubscribe_during_nested_publish(self):
       # What happens when you try to unsubscribe from a nested publish?
       bus = MessageBus(debug=True)
@@ -143,9 +143,9 @@ class TestMessageBus:
         bus.publish(Message.AFTER_ATTACK, "calls B")
         bus.unsubscribe(Message.BEFORE_ATTACK, 1)
       callbackA = MagicMock(__qualname__="callbackA", side_effect=side_effect_A)
-      
+
       def side_effect_B(*args, **kwargs):
-        print("B called.")  
+        print("B called.")
         bus.unsubscribe(Message.AFTER_ATTACK, 2)
       callbackB = MagicMock(__qualname__="callbackB", side_effect=side_effect_B)
 
@@ -160,5 +160,25 @@ class TestMessageBus:
       bus.publish(Message.BEFORE_ATTACK, "data")
 
       # No additional calls should be made (i.e. unsubscribe was successful)
-      callbackA.assert_called_once() 
+      callbackA.assert_called_once()
       callbackB.assert_called_once()
+
+  def test_priority_calls_are_respected(self):
+      bus = MessageBus(debug=True)
+      ordering = []
+      def callbackA(_, data):
+          ordering.append("A")
+      def callbackB(_, data):
+          ordering.append("B")
+      def callbackC(_, data):
+          ordering.append("C")
+
+      bus.subscribe(Message.BEFORE_ATTACK, callbackC, uid=1, priority=100)
+      bus.subscribe(Message.BEFORE_ATTACK, callbackA, uid=2, priority=50)
+      bus.subscribe(Message.BEFORE_ATTACK, callbackB, uid=3, priority=1)
+
+      bus.publish(Message.BEFORE_ATTACK, "data")
+
+      # Need to assert that the order is correct
+      assert ordering == ["B", "A", "C"], "Callbacks should be called in order of priority"
+
