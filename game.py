@@ -15,9 +15,8 @@ from shop import Shop
 class Game:
     def __init__(self, seed=None):
         self.bus = bus
-        self.seed = seed
-        if self.seed is not None:
-            random.seed(self.seed)
+        if seed is not None:
+            random.seed(seed)
         self.player = Player.create_player()
         self.game_map = game_map.create_first_map()
         Enemy.player = self.player
