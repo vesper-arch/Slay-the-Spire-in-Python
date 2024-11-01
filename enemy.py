@@ -195,27 +195,25 @@ class Enemy(Registerable):
         enough_moves = len(self.past_moves) >= max_count
         return not(enough_moves and all(move == target_move for move in self.past_moves[-max_count:]))
 
-    def attack(self, dmg: int, times: int, target: Player):
+    def attack(self, dmg: int, times: int, player: Player):
         for _ in range(times):
-            if target.state == State.DEAD:
-                ansiprint(f"{self.name} stopped attacking: {target.name} is already dead.")
+            if player.state == State.DEAD:
+                ansiprint(f"{self.name} stopped attacking: {player.name} is already dead.")
                 return
             modifiable_dmg = Damage(dmg)
-            bus.publish(Message.BEFORE_ATTACK, (self, target, modifiable_dmg))  # allows for damage modification from relics/effects
+            bus.publish(Message.BEFORE_ATTACK, (self, player, modifiable_dmg))  # allows for damage modification from relics/effects
             dmg = modifiable_dmg.damage
-            if dmg <= target.block:
-                target.block -= dmg
+            if dmg <= player.block:
+                player.block -= dmg
                 dmg = 0
                 ansiprint("<light-blue>Blocked</light-blue>")
-            elif dmg > target.block:
-                dmg -= target.block
-                dmg = max(0, dmg)
-                ansiprint(f"{self.name} dealt {dmg}(<light-blue>{target.block} Blocked</light-blue>) damage to you.")
-                target.block = 0
-                target.health -= dmg
+            else: # dmg > player.block
+                dmg -= player.block
+                ansiprint(f"{self.name} dealt {dmg}(<light-blue>{player.block} Blocked</light-blue>) damage to you.")
+                player.block = 0
+                player.health -= dmg
                 bus.publish(Message.ON_PLAYER_HEALTH_LOSS, None)
-            bus.publish(Message.AFTER_ATTACK, (self, target, dmg))
-        sleep(1)
+            bus.publish(Message.AFTER_ATTACK, (self, player, dmg))
 
     def remove_effect(self, effect_name, effect_type):
         if effect_name not in ei.ALL_EFFECTS:
