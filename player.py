@@ -330,7 +330,7 @@ class Player(Registerable):
                 if effect.subscribed is False:
                     effect.register(bus)
             ansiprint(f"<underline><bold>{self.name}</bold></underline>:")
-            self.energy += self.energy_gain
+            self.energy = min(self.energy + self.energy_gain, self.max_energy)
             # INFO: Both Barricade and Calipers are not accounted for here and will be added later.
             self.block = 0
             self.draw_cards()
