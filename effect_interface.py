@@ -28,6 +28,7 @@ def apply_effect(target, user, effect, amount=0, recursion_tag=False) -> None:
         ansiprint(f"{target.name} is dead and cannot be affected by {effect.name}.")
         return
     effect_type = EffectType.DEBUFF if effect.amount < 0 else effect.type
+    # Turnip Relic can use Message Bus
     if str(user) == "Player" and effect in ("Weak", "Frail"):
         if "Turnip" in current_relic_pool and effect.name == "Frail":
             ansiprint(
@@ -36,6 +37,7 @@ def apply_effect(target, user, effect, amount=0, recursion_tag=False) -> None:
         elif "Ginger" in current_relic_pool and effect.name == "Weak":
             ansiprint("<debuff>Weak</debuff> was blocked by <bold>Ginger</bold>")
         return
+    # Artifact Relic can use Message Bus
     if (
         effect_type == EffectType.DEBUFF and "Artifact" in current_relic_pool
     ):  # TODO: Make Artifact buff.
