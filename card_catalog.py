@@ -270,13 +270,11 @@ class Havoc(Card):
         self.energy_cost = 0
 
     def apply(self, origin, enemies):
+        if len(origin.draw_pile) == 0:
+            print("You have no cards in your draw pile.")
+            return
         top_card = origin.draw_pile[-1]
-        if top_card.target in (TargetType.SINGLE, TargetType.YOURSELF):
-            origin.use_card(top_card, True, origin.draw_pile, random.choice(enemies))
-        elif top_card.target in (TargetType.AREA, TargetType.ANY):
-            origin.use_card(top_card, True, origin.draw_pile, enemies)
-        else:
-            origin.use_card(top_card, True, origin.draw_pile, random.choice(enemies))
+        origin.use_card(card=top_card, exhaust=True, pile=origin.draw_pile, enemies=enemies, target=random.choice(enemies))
 
 class Headbutt(Card):
     def __init__(self):
