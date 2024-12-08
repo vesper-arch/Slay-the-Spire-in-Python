@@ -4,6 +4,7 @@ import random
 import effect_catalog
 import card_catalog
 from enemy import Enemy
+from message_bus_tools import Message
 
 
 class AcidSlimeL(Enemy):
@@ -392,33 +393,35 @@ class SlimeBoss(Enemy):
             self.next_move, self.intent = [("Slam", "Attack", (35,))], "<aggresive>Attack</aggresive> 35"
 
 class Guardian(Enemy):
-    def __init__(self, ):
+    def __init__(self):
+        super().__init__([240, 240], 0, "Guardian", powers=[effect_catalog.ModeShift(self, 30)])
         self.mode = "Offensive"
-        self.offensive_turns = 1
-        self.defensive_turns = 1
-        self.mode_shift_base = 30
-        super().__init__([240, 240], 0, "Guardian")
+        self.offensive_turns = 0
+        self.defensive_turns = 0
 
     def set_intent(self):
         if self.mode == 'Offensive':
-            self.offensive_turns = 1
-            if self.offensive_turns in list(range(1, 50, 4)):
+            self.offensive_turns += 1
+            if self.offensive_turns % 4 == 1:
                 self.next_move, self.intent = [("Charging Up", "Block", (9,))], "<light-blue>Block</light-blue>"
-            elif self.offensive_turns in list(range(2, 50, 4)):
+            elif self.offensive_turns % 4 == 2:
                 self.next_move, self.intent = [("Fierce Bash", "Attack", (32,))], "<aggresive>Attack</aggresive> Σ32"
-            elif self.offensive_turns in list(range(3, 50, 4)):
+            elif self.offensive_turns % 4 == 3:
                 self.next_move, self.intent = [("Vent Steam", "Debuff", (effect_catalog.Vulnerable, 2)), ("Debuff", (effect_catalog.Weak, 2))], "<debuff>Debuff</debuff>"
-            elif self.offensive_turns in list(range(4, 50, 4)):
+            elif self.offensive_turns % 4 == 0:
                 self.next_move, self.intent = [("Whirlwind", "Attack", (5, 4))], "<aggresive>Attack</aggresive> Σ5x4"
+
         elif self.mode == 'Defensive':
-            self.defensive_turns = 1
-            if self.defensive_turns in list(range(1, 50, 3)):
-                self.next_move, self.intent = [("Defensive Mode", "Buff", ("Sharp Hide", 3))], "<buff>Buff</buff>"
-            elif self.defensive_turns in list(range(2, 50, 3)):
+            self.defensive_turns += 1
+            if self.defensive_turns % 3 == 1:
+                self.next_move, self.intent = [("Defensive Mode", "Buff", (effect_catalog.SharpHide, 3))], "<buff>Buff</buff>"
+            elif self.defensive_turns % 3 == 2:
                 self.next_move, self.intent = [("Roll Attack", "Attack", (9,))], "<aggresive>Attack</aggresive> 9"
-            elif self.defensive_turns in list(range(3, 50, 3)):
-                self.mode_shift_base += 10
-                self.next_move, self.intent = [("Twin Slam", "Attack", (8, 2)), ("Remove Effect", ("Sharp Hide", "Buffs")), ("Buff", ("Mode Shift", self.mode_shift_base))], "<aggresive>Attack</aggresive> 8x2 / <buff>Buff</buff>"
+            elif self.defensive_turns % 3 == 0:
+                self.mode = "Offensive"
+                self.next_move, self.intent = [("Twin Slam", "Attack", (8, 2))], "<aggresive>Attack</aggresive> 8x2"
+
+
 
 class Hexaghost(Enemy):
     def __init__(self, ):
