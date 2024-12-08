@@ -147,16 +147,10 @@ class DistilledChaos(Potion):
         self.golden_stats = [self.cards]
         self.golden_info = "Play the top 6 cards of your draw pile."
 
-    def apply(self, origin, enemies):
+    def apply(self, origin: Player, enemies):
         # Literally Havoc but multiple cards
-        for i in range(-1, -self.cards, -1):
-            card = origin.draw_pile[i]
-            if card.target in (TargetType.SINGLE, TargetType.YOURSELF):
-                origin.use_card(card, True, origin.draw_pile, random.choice(enemies))
-            elif card.target in (TargetType.AREA, TargetType.ANY):
-                origin.use_card(card, True, origin.draw_pile, enemies)
-            else:
-                origin.use_card(card, True, origin.draw_pile, random.choice(enemies))
+        for card in reversed(origin.draw_pile[-self.cards:]):
+            origin.use_card(card=card, exhaust=True, pile=origin.draw_pile, enemies=enemies, target=random.choice(enemies))
 
 class DuplicationPotion(Potion):
     def __init__(self):
