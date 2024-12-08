@@ -428,7 +428,7 @@ class Hexaghost(Enemy):
         self.flames = 0
         self.upgrade_burn = False
         self.divider_dmg = (self.player.health // 12) + 1
-        super().__init__([250, 250], 0, "Hexaghost", )
+        super().__init__([250, 250], 0, "Hexaghost")
 
     def set_intent(self):
         if self.active_turns == 1:
@@ -498,4 +498,4 @@ def create_act1_elites():
     return [random.choice([gremlin_nob, sentries, lagavulin])() for _ in range(4)]
 
 def create_act1_boss():
-    return [[random.choice([SlimeBoss(), Hexaghost(), Guardian()])]]
+    return [[random.choice([SlimeBoss, Hexaghost, Guardian])()]]
