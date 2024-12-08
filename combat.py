@@ -96,6 +96,7 @@ class Combat:
         if killed_enemies is True:
             potion_roll = random.random()
             ansiprint("<green>Combat finished!</green>")
+            self.player.in_combat = False
             self.player.gain_gold(random.randint(10, 20))
             if (potion_roll < self.player.potion_dropchance):
                 gen.claim_potions(True, 1, self.player, potion_catalog.create_all_potions())
