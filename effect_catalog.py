@@ -395,14 +395,14 @@ class FeelNoPain(Effect):
             "Feel No Pain",
             StackType.INTENSITY,
             EffectType.BUFF,
-            "Whenever you play a Skill, gain X <keyword>Block</keyword>.",
+            f"Whenever you play a Skill, gain {amount} <keyword>Block</keyword>.",
             amount,
         )
 
     def callback(self, message, data):
         if message == Message.ON_CARD_PLAY:
             origin, card, target, enemies = data
-            if card.type == CardType.SKILL:
+            if card.type == CardType.SKILL and origin == self.host:
                 origin.blocking(block=self.amount, context=self.name)
 
 
@@ -608,12 +608,12 @@ class Split(Effect):
 class Artifact(Effect):
     """Artifact is a buff that will negate the next Debuff on that unit.
 
-    Each stack of Icon Artifact Artifact can block 1 application of a Debuff. For example:
+    Each stack of  Artifact can block 1 application of a Debuff. For example:
 
-    Bouncing Flask will remove 1 Icon Artifact Artifact with each bounce.
-    Envenom will remove 1 Icon Artifact Artifact with each unblocked Attack damage.
-    Shockwave and Crippling Cloud will remove up to 2 Icon Artifact Artifacts from each enemy, since they inflict 2 Debuffs.
-    Effects that apply multiple Debuffs will do so in the order listed on the card. For instance, if an enemy has 1 Icon Artifact Artifact and is hit by Shockwave, the card will apply Icon Weak Weak then apply Icon Vulnerable Vulnerable as per its description, and the enemy will lose 1 Icon Artifact Artifact to negate Icon Weak Weak and only has Icon Vulnerable Vulnerable inflicted on it."""
+    Bouncing Flask will remove 1  Artifact with each bounce.
+    Envenom will remove 1  Artifact with each unblocked Attack damage.
+    Shockwave and Crippling Cloud will remove up to 2  Artifacts from each enemy, since they inflict 2 Debuffs.
+    Effects that apply multiple Debuffs will do so in the order listed on the card. For instance, if an enemy has 1  Artifact and is hit by Shockwave, the card will apply  Weak then apply  Vulnerable as per its description, and the enemy will lose 1  Artifact to negate  Weak and only has  Vulnerable inflicted on it."""
 
     registers = [Message.BEFORE_APPLY_EFFECT]
 
@@ -642,7 +642,7 @@ class Artifact(Effect):
 
 
 class Asleep(Effect):
-    # The Lagavulin will start with the unique debuff "Asleep", as well as a Icon Metallicize Metallicize buff, preventing it from taking any action, but granting it 8 Icon Block Block at the start of every turn. The Lagavulin will awake at the end of its 3rd turn or when any HP damage is taken through the Icon Block Block, and will lose its Icon Metallicize Metallicize buff in the process.
+    # The Lagavulin will start with the unique debuff "Asleep", as well as a Metallicize buff, preventing it from taking any action, but granting it 8 Block at the start of every turn. The Lagavulin will awake at the end of its 3rd turn or when any HP damage is taken through the  Block, and will lose its  Metallicize buff in the process.
     # When the Lagavulin wakes up by being attacked, it will be stunned for one turn. If the Lagavulin is left unharmed for three turns, it will wake up on its own and begin the fourth turn unstunned.
     registers = [Message.START_OF_TURN, Message.ON_ATTACKED]
 
@@ -808,4 +808,70 @@ class Duplication(Effect):
             if self.amount > 0:
                 self.amount -= 1
                 player.use_card(card=card, exhaust=False, target=target, pile=None, enemies=enemies)
+
+class ModeShift(Effect):
+    '''Mode Shift status reduces in number equal to health it has lost. Once it reaches 0, it will shift into Defensive Mode, interrupting any previous intentions and instantly changing its intent to Defensive Mode.
+    In addition, shifting back to Offensive Mode will add 10 to Mode Shift.
+    Immediately gains 20  Block when shifting to Defensive Mode
+    Will lose Sharp Hide when switching to Offensive Mode.
+    '''
+    registers = [Message.AFTER_ATTACK]
+
+    def __init__(self, host, amount=0):
+        super().__init__(
+            host,
+            "Mode Shift",
+            StackType.NONE,
+            EffectType.BUFF,
+            "Reduces in number equal to health it has lost. Once it reaches 0, it will shift into Defensive Mode, interrupting any previous intentions and instantly changing its intent to Defensive Mode.",
+            amount=amount,
+        )
+        self.base = amount
+
+    def switch_mode(self):
+        if self.host.mode == "Offensive":
+            self.host.mode = "Defensive"
+            self.amount = self.base
+            self.host.blocking(20, context="Defensive Mode")
+            ansiprint(f"{self.host.name} shifted to Defensive Mode.")
+        else:
+            self.host.mode = "Offensive"
+            self.base = self.base + 10
+            self.amount = self.base
+            self.host.remove_effect("Sharp Hide", "Buffs")
+            ansiprint(f"{self.host.name} shifted to Offensive Mode.Mode Shift increased to: {self.amount}")
+
+    def callback(self, message, data):
+        if message == Message.AFTER_ATTACK:
+            attacker, target, dmg = data
+            if target == self.host:
+                self.amount -= dmg
+                if self.amount <= 0 and self.host.mode == "Offensive":
+                    self.switch_mode()
+                else:
+                    ansiprint(f"{self.host.name} has {self.amount} Mode Shift remaining.")
+
+        elif message == Message.START_OF_TURN:
+            if self.host.defensive_turns % 3 == 0:
+                self.switch_mode()
+
+class SharpHide(Effect):
+    '''Sharp Hide works similarly to Icon Thorns Thorns, except it activates when you play attack cards, not when you hit the enemy.'''
+    registers = [Message.ON_CARD_PLAY]
+
+    def __init__(self, host, amount=3):
+        super().__init__(
+            host,
+            "Sharp Hide",
+            StackType.INTENSITY,
+            EffectType.BUFF,
+            f"Deals {amount} damage to the attacker when an attack Card is played.",
+            amount=amount,
+        )
+
+    def callback(self, message, data: tuple[Player, Card, Enemy, list[Enemy]]):
+        if message == Message.ON_CARD_PLAY:
+            player, card, target, enemies = data
+            if card.type == CardType.ATTACK and target == self.host:
+                target.attack(self.amount, 1, player)  # not sure if sourceless damage is more appropriate here
 
