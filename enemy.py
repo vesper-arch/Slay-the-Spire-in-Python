@@ -91,11 +91,12 @@ class Enemy(Registerable):
                 buff = parameters[0]
                 amount = parameters[1] if len(parameters) > 1 else 1
                 target = parameters[2] if len(parameters) > 2 else self
-                ei.apply_effect(target, self, buff, amount)
+                ei.apply_effect(self, self, buff, amount)
             elif action == "Debuff":
                 debuff = parameters[0]
                 amount = parameters[1] if len(parameters) > 1 else 1
-                ei.apply_effect(self, self, debuff, amount)
+                target = parameters[2] if len(parameters) > 2 else player
+                ei.apply_effect(target, self, debuff, amount)
             elif action == "Remove Effect":
                 effect_name = parameters[0]
                 effect_type = parameters[1]
