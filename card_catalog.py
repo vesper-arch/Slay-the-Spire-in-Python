@@ -269,11 +269,12 @@ class Havoc(Card):
         self.upgrade_markers()
         self.energy_cost = 0
 
-    def apply(self, origin, enemies):
+    def apply(self, origin: Player, enemies):
         if len(origin.draw_pile) == 0:
             print("You have no cards in your draw pile.")
             return
         top_card = origin.draw_pile[-1]
+        top_card.modify_energy_cost(0, 'Set', True)
         origin.use_card(card=top_card, exhaust=True, pile=origin.draw_pile, enemies=enemies, target=random.choice(enemies))
 
 class Headbutt(Card):
