@@ -198,6 +198,8 @@ class Combat:
             ansiprint("<red>You have no potions.</red>")
             return
         chosen_potion = view.list_input("Choose a potion to play", self.player.potions, view.view_potions, lambda potion: potion.playable, "That potion is not playable.")
+        if chosen_potion is None:
+            return
         potion = self.player.potions.pop(chosen_potion)
         if potion.target == TargetType.YOURSELF:
             potion.apply(self.player)

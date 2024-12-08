@@ -48,6 +48,7 @@ class Card(Registerable):
     def upgrade_markers(self):
         self.info += '<green>+</green>'
         self.upgraded = True
+        return self
 
     def modify_energy_cost(self, amount, modify_type='Adjust', one_turn=False):
         if not (modify_type == 'Set' and amount != self.energy_cost) or not (modify_type == 'Adjust' and amount != 0):
@@ -60,6 +61,7 @@ class Card(Registerable):
             ansiprint(f"{self.name} got its energy set to {amount}.")
         if one_turn:
             self.reset_energy_next_turn = True
+        return self
 
     def modify_damage(self, amount, context: str, permanent=False):
         if permanent:
@@ -68,6 +70,7 @@ class Card(Registerable):
             self.damage += amount
         self.damage_affected_by.append(context)
         ansiprint(f"{self.name} had its damage modified by {amount} from {context}.")
+        return self
 
     def modify_block(self, amount, context: str, permanent=False):
         if permanent:
@@ -75,6 +78,7 @@ class Card(Registerable):
         else:
             self.block += amount
         self.block_affected_by.append(context)
+        return self
 
     def is_upgradeable(self) -> bool:
         return not self.upgraded and (self.name == "Burn" or self.type not in (CardType.STATUS, CardType.CURSE))
@@ -164,7 +168,8 @@ class Armaments(Card):
         origin.blocking(card=self)
         if not self.upgraded and len(origin.hand) > 0:
             chosen_card = view.list_input("Choose a card to upgrade", origin.hand, view.view_piles, lambda card: card.is_upgradeable(), "That card is not upgradeable.")
-            origin.hand[chosen_card].upgrade()
+            if chosen_card is not None:
+                origin.hand[chosen_card].upgrade()
         else:
             for card in (card for card in origin.hand if card.is_upgradeable()):
                 card.upgrade()
@@ -289,7 +294,8 @@ class Headbutt(Card):
     def apply(self, origin, target):
         origin.attack(target, self)
         chosen_card = view.list_input("Choose a card to put on top of your draw pile", origin.discard_pile, view.view_piles)
-        origin.draw_pile.append(origin.discard_pile.pop(chosen_card))
+        if chosen_card is not None:
+            origin.draw_pile.append(origin.discard_pile.pop(chosen_card))
 
 class HeavyBlade(Card):
     def __init__(self):
@@ -447,7 +453,8 @@ class TrueGrit(Card):
         origin.blocking(card=self)
         if self.upgraded is True:
             chosen_card = view.list_input("Choose a card to <keyword>Exhaust</keyword>", origin.hand, view.view_piles, lambda card: card.upgradeable is True and card.upgraded is False, "That card is either not upgradeable or is already upgraded.")
-            origin.move_card(origin.hand[chosen_card], origin.exhaust_pile, origin.hand, False)
+            if chosen_card is not None:
+                origin.move_card(origin.hand[chosen_card], origin.exhaust_pile, origin.hand, False)
         else:
             random_card = random.choice([card for card in origin.hand if card.upgradeable is True and card.upgraded is False])
             origin.move_card(random_card, origin.exhaust_pile, origin.hand, False)
@@ -483,7 +490,8 @@ class Warcry(Card):
     def apply(self, origin):
         origin.draw_cards(self.cards)
         chosen_card = view.list_input("Choose a card to put on top of your draw pile", origin.hand, view.view_piles)
-        origin.move_card(origin.hand[chosen_card], origin.draw_pile, origin.hand, False)
+        if chosen_card is not None:
+            origin.move_card(origin.hand[chosen_card], origin.draw_pile, origin.hand, False)
 
 class WildStrike(Card):
     def __init__(self):
@@ -673,8 +681,9 @@ class DualWield(Card):
                                       view.view_piles,
                                       validator=lambda card: card.type in (CardType.ATTACK, CardType.POWER),
                                       message_when_invalid="That card is neither an Attack or a Power.")
-        for _ in range(self.copies):
-            origin.hand.insert(chosen_card, origin.hand[chosen_card])
+        if chosen_card is not None:
+            for _ in range(self.copies):
+                origin.hand.insert(chosen_card, origin.hand[chosen_card])
 
 class Entrench(Card):
     def __init__(self):

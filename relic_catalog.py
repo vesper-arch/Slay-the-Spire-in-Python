@@ -108,7 +108,8 @@ class BottledFlame(Relic):
             player, _ = data
             if any(card.type == CardType.ATTACK for card in player.deck):
                 chosen_card = view.list_input("Choose an <keyword>Attack</keyword> to bottle", player.deck, view.view_piles, lambda card: card.type == CardType.ATTACK, "That card is not an <keyword>Attack</keyword>.")
-                player.deck[chosen_card].bottled = True
+                if chosen_card is not None:
+                    player.deck[chosen_card].bottled = True
 
 class BottledLighting(Relic):
     registers = [Message.ON_RELIC_ADD]
@@ -120,7 +121,8 @@ class BottledLighting(Relic):
             player, _ = data
             if any(card.type == CardType.SKILL for card in player.deck):
                 chosen_card = view.list_input("Choose a <keyword>Skill</keyword> to bottle", player.deck, view.view_piles, lambda card: card.type == CardType.SKILL, "That card is not a <keyword>Skill</keyword>.")
-                player.deck[chosen_card].bottled = True
+                if chosen_card is not None:
+                    player.deck[chosen_card].bottled = True
 
 class BottledTornado(Relic):
     registers = [Message.ON_RELIC_ADD]
@@ -132,7 +134,8 @@ class BottledTornado(Relic):
             player, _ = data
             if any(card.type == CardType.POWER for card in player.deck):
                 chosen_card = view.list_input("Choose a <keyword>Power</keyword> to bottle", player.deck, view.view_piles, lambda card: card.type == CardType.POWER, "That card is not a <keyword>Power</keyword>.")
-                player.deck[chosen_card].bottled = True
+                if chosen_card is not None:
+                    player.deck[chosen_card].bottled = True
 
 class DarkstonePeriapt(Relic):
     registers = [Message.ON_CARD_ADD]

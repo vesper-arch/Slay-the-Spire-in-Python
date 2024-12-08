@@ -142,6 +142,10 @@ def claim_potions(choice: bool, potion_amount: int, entity, potion_pool: dict, r
         print()
         print("Potion reward(s):")
         option = view.list_input("Choose a potion", rewards, lambda potion_pool, validator: view.view_potions(potion_pool, True, validator=validator))
+        if option is None:
+            sleep(1)
+            view.clear()
+            continue
         if len(potion_pool) == entity.max_potions:
             ansiprint("<red>Potion bag full!</red>")
             sleep(0.5)
