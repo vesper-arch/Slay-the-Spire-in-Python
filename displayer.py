@@ -98,6 +98,11 @@ def list_input(input_string: str, choices: list, displayer: Callable,
     if len(choices) + len(extra_allowables) == 0:
         ansiprint("<red>There are no valid choices.</red>")
         return None
+    # Automatically choose the only option if there is only one
+    if len(choices) + len(extra_allowables) == 1:
+        if len(choices) == 1:
+            return 0
+        return extra_allowables[0]
     while True:
         try:
             displayer(choices, validator=validator)
