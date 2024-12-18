@@ -121,7 +121,7 @@ class GamblersBrew(Potion):
         if chosen_cards is not None:
             for i in chosen_cards:
                 origin.move_card(origin.hand[i], origin.discard_pile, origin.hand)
-            origin.draw_cards(cards=len(chosen_cards))
+            origin.draw_cards(cards=len(chosen_cards), clear_hand=False)
 
 class LiquidMemories(Potion):
     def __init__(self):
@@ -147,16 +147,10 @@ class DistilledChaos(Potion):
         self.golden_stats = [self.cards]
         self.golden_info = "Play the top 6 cards of your draw pile."
 
-    def apply(self, origin, enemies):
+    def apply(self, origin: Player, enemies):
         # Literally Havoc but multiple cards
-        for i in range(-1, -self.cards, -1):
-            card = origin.draw_pile[i]
-            if card.target in (TargetType.SINGLE, TargetType.YOURSELF):
-                origin.use_card(card, True, origin.draw_pile, random.choice(enemies))
-            elif card.target in (TargetType.AREA, TargetType.ANY):
-                origin.use_card(card, True, origin.draw_pile, enemies)
-            else:
-                origin.use_card(card, True, origin.draw_pile, random.choice(enemies))
+        for card in reversed(origin.draw_pile[-self.cards:]):
+            origin.use_card(card=card, exhaust=True, pile=origin.draw_pile, enemies=enemies, target=random.choice(enemies))
 
 class DuplicationPotion(Potion):
     def __init__(self):
@@ -239,7 +233,7 @@ class SneckoOil(Potion):
         self.golden_info = "Draw 10 cards. Randomize the costs of all cards in your hand for the rest of combat."
 
     def apply(self, origin):
-        origin.draw_cards(cards=self.cards)
+        origin.draw_cards(cards=self.cards, clear_hand=False)
         for card in origin.hand:
             card.modify_energy_cost(random.randint(0, 3), "Set")
 

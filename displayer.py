@@ -70,6 +70,7 @@ def view_map(game_map):
     input("Press enter to leave > ")
 
 def display_ui(entity, enemies, combat=True):
+    assert all(x is not None for x in entity.hand)
     # Repeats for every card in the entity's hand
     ansiprint("<bold>Relics: </bold>")
     view_relics(entity.relics)
@@ -94,6 +95,15 @@ def list_input(input_string: str, choices: list, displayer: Callable,
     """Allows the player to choose from a certain list of options. Includes validation."""
     if extra_allowables is None:
         extra_allowables = []
+    valid_choices = [choice for choice in choices if validator(choice)] + extra_allowables
+    if len(valid_choices) == 0:
+        ansiprint("<red>There are no valid choices.</red>")
+        return None
+    # Automatically choose the only option if there is only one
+    if len(choices) + len(extra_allowables) == 1:
+        if len(choices) == 1:
+            return 0
+        return extra_allowables[0]
     while True:
         try:
             displayer(choices, validator=validator)

@@ -91,11 +91,12 @@ class Enemy(Registerable):
                 buff = parameters[0]
                 amount = parameters[1] if len(parameters) > 1 else 1
                 target = parameters[2] if len(parameters) > 2 else self
-                ei.apply_effect(target, self, buff, amount)
+                ei.apply_effect(self, self, buff, amount)
             elif action == "Debuff":
                 debuff = parameters[0]
                 amount = parameters[1] if len(parameters) > 1 else 1
-                ei.apply_effect(self, self, debuff, amount)
+                target = parameters[2] if len(parameters) > 2 else player
+                ei.apply_effect(target, self, debuff, amount)
             elif action == "Remove Effect":
                 effect_name = parameters[0]
                 effect_type = parameters[1]
@@ -184,6 +185,9 @@ class Enemy(Registerable):
         """
         print(f"{self.name} has died.")
         self.state = State.DEAD
+        for effect in self.buffs + self.debuffs:
+            effect.unsubscribe()
+        bus.publish(Message.ON_DEATH_OR_ESCAPE, (self))
 
     def debuff_and_buff_check(self):
         """
@@ -214,6 +218,8 @@ class Enemy(Registerable):
                 target.block = 0
                 target.health -= dmg
                 bus.publish(Message.ON_PLAYER_HEALTH_LOSS, None)
+            if target.health <= 0:
+                target.die()
             bus.publish(Message.AFTER_ATTACK, (self, target, dmg))
         sleep(1)
 
@@ -259,27 +265,32 @@ class Enemy(Registerable):
             enemies.append(chosen_enemy)
             ansiprint(f"<bold>{chosen_enemy.name}</bold> summoned!")
 
+    def start_turn(self):
+        ansiprint(f"{self.name}'s current state: {self.state}")
+        if self.state == State.ALIVE:
+            for effect in self.buffs + self.debuffs:
+                if effect.subscribed is False:
+                    effect.register(bus)
+            ansiprint(f"<underline><bold>{self.name}</bold></underline>:")
+            if "Block" not in self.intent:  # Checks the last move(its intent hasn't been updated yet) used to see if the enemy Blocked last turn
+                self.block = 0
+            ei.tick_effects(self)
+            print()
+            self.set_intent()
+
+    def take_turn(self, player: Player, enemies: list["Enemy"]):
+        if self.state == State.ALIVE:
+            self.execute_move(player, enemies)
+
     def callback(self, message, data):
         global bus
         if message == Message.START_OF_TURN:
-            ansiprint(f"{self.name}'s current state: {self.state}")
-            if self.state == State.ALIVE:
-                for effect in self.buffs + self.debuffs:
-                    if effect.subscribed is False:
-                        effect.register(bus)
-                ansiprint(f"<underline><bold>{self.name}</bold></underline>:")
-                if "Block" not in self.intent:  # Checks the last move(its intent hasn't been updated yet) used to see if the enemy Blocked last turn
-                    self.block = 0
-                ei.tick_effects(self)
-                print()
-                self.set_intent()
+            self.start_turn()
         elif message == Message.END_OF_TURN:
             player, enemies = data
-            if self.state == State.ALIVE:
-                self.execute_move(player, enemies)
-            # Needs to be expanded at some point
+            self.take_turn(player, enemies)
         elif message == Message.ON_DEATH_OR_ESCAPE:
-            event, bus = data
-            for effect in self.buffs + self.debuffs:
-                effect.unsubscribe()
-            bus.death_messages.append(event)
+            # This is meant to react to OTHER entities dying, not itself
+            dead_entity = data
+            if dead_entity != self:
+                ansiprint(f"{self.name} observes {dead_entity.name}'s death.")

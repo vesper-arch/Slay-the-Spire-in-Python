@@ -33,60 +33,72 @@ class Combat:
     def active_enemies(self):
         return [enemy for enemy in self.all_enemies if enemy.state == State.ALIVE]
 
-    def combat(self) -> None:
-        """There's too much to say here."""
-        self.start_combat()
-        # Combat automatically ends when all enemies are dead.
-        while len(self.active_enemies) > 0:
-            bus.publish(Message.START_OF_TURN, (self.turn, self.player))
-            while True:
-                self.on_player_move()
-                if all((enemy.state == State.DEAD for enemy in self.all_enemies)):
-                    self.end_combat(killed_enemies=True)
-                    break
+    def end_conditions(self) -> bool:
+        '''Returns True if the combat should end, False otherwise.'''
+        return len(self.active_enemies) <= 0 or \
+               self.player.state == State.DEAD
 
-                print(f"Turn {self.turn}: ")
-                # Shows the player's potions, cards(in hand), amount of cards in discard and draw pile, and shows the status for you and the enemies.
-                view.display_ui(self.player, self.active_enemies)
-                print("1-0: Play card, P: Play Potion, M: View Map, D: View Deck, A: View Draw Pile, S: View Discard Pile, X: View Exhaust Pile, E: End Turn, F: View Debuffs and Buffs")
-                action = input("> ").lower()
-                other_options = {
-                    "d": lambda: view.view_piles(self.player.deck, end=True),
-                    "a": lambda: view.view_piles(
-                        self.player.draw_pile, shuffle=True, end=True
-                    ),
-                    "s": lambda: view.view_piles(self.player.discard_pile, end=True),
-                    "x": lambda: view.view_piles(self.player.exhaust_pile, end=True),
-                    "p": self.play_potion,
-                    "f": lambda: ei.full_view(self.player, self.active_enemies),
-                    "m": lambda: view.view_map(self.game_map),
-                }
-                if action.isdigit():
-                    option = int(action) - 1
-                    if option + 1 in range(len(self.player.hand) + 1):
-                        self.play_new_card(self.player.hand[option])
-                    else:
-                        view.clear()
-                        continue
-                elif action in other_options:
-                    other_options[action]()
-                elif action == "e":
-                    view.clear()
-                    break
+    def take_turn(self):
+        killed, escaped, robbed = False, False, False
+        while True:
+            self.on_player_move()
+            killed = all((enemy.state == State.DEAD for enemy in self.all_enemies))
+            escaped = self.player.state == State.ESCAPED
+            if any([killed, escaped, robbed]):
+                return killed, escaped, robbed
+            print(f"Turn {self.turn}: ")
+            # Shows the player's potions, cards(in hand), amount of cards in discard and draw pile, and shows the status for you and the enemies.
+            view.display_ui(self.player, self.active_enemies)
+            print("1-0: Play card, P: Play Potion, M: View Map, D: View Deck, A: View Draw Pile, S: View Discard Pile, X: View Exhaust Pile, E: End Turn, F: View Debuffs and Buffs")
+            action = input("> ").lower()
+            other_options = {
+                "d": lambda: view.view_piles(self.player.deck, end=True),
+                "a": lambda: view.view_piles(
+                    self.player.draw_pile, shuffle=True, end=True
+                ),
+                "s": lambda: view.view_piles(self.player.discard_pile, end=True),
+                "x": lambda: view.view_piles(self.player.exhaust_pile, end=True),
+                "p": self.play_potion,
+                "f": lambda: ei.full_view(self.player, self.active_enemies),
+                "m": lambda: view.view_map(self.game_map),
+            }
+            if action.isdigit():
+                option = int(action) - 1
+                if option + 1 in range(len(self.player.hand) + 1):
+                    self.play_new_card(self.player.hand[option])
                 else:
                     view.clear()
                     continue
-                sleep(1)
+            elif action in other_options:
+                other_options[action]()
+            elif action == "e":
                 view.clear()
-            if self.player.state == State.ESCAPED:
-                self.end_combat(self, escaped=True)
+                break
+            else:
+                view.clear()
+                continue
+            sleep(1)
+            view.clear()
+        return killed, escaped, robbed
+
+    def combat(self) -> None:
+        """There's too much to say here."""
+        self.start_combat()
+        while not self.end_conditions():
+            assert self.player.health > 0, "Player's death undetected."
+            for enemy in self.active_enemies:
+                assert enemy.health > 0, f"Enemy {enemy.name}'s death undetected."
+            bus.publish(Message.START_OF_TURN, (self.turn, self.player))
+            killed, escaped, robbed = self.take_turn()
             bus.publish(Message.END_OF_TURN, data=(self.player, self.all_enemies))
             self.turn += 1
+        self.end_combat(killed_enemies=killed, escaped=escaped, robbed=robbed)
 
     def end_combat(self, killed_enemies=False, escaped=False, robbed=False):
         if killed_enemies is True:
             potion_roll = random.random()
             ansiprint("<green>Combat finished!</green>")
+            self.player.in_combat = False
             self.player.gain_gold(random.randint(10, 20))
             if (potion_roll < self.player.potion_dropchance):
                 gen.claim_potions(True, 1, self.player, potion_catalog.create_all_potions())
@@ -198,6 +210,8 @@ class Combat:
             ansiprint("<red>You have no potions.</red>")
             return
         chosen_potion = view.list_input("Choose a potion to play", self.player.potions, view.view_potions, lambda potion: potion.playable, "That potion is not playable.")
+        if chosen_potion is None:
+            return
         potion = self.player.potions.pop(chosen_potion)
         if potion.target == TargetType.YOURSELF:
             potion.apply(self.player)

@@ -48,6 +48,7 @@ class Card(Registerable):
     def upgrade_markers(self):
         self.info += '<green>+</green>'
         self.upgraded = True
+        return self
 
     def modify_energy_cost(self, amount, modify_type='Adjust', one_turn=False):
         if not (modify_type == 'Set' and amount != self.energy_cost) or not (modify_type == 'Adjust' and amount != 0):
@@ -60,6 +61,7 @@ class Card(Registerable):
             ansiprint(f"{self.name} got its energy set to {amount}.")
         if one_turn:
             self.reset_energy_next_turn = True
+        return self
 
     def modify_damage(self, amount, context: str, permanent=False):
         if permanent:
@@ -68,6 +70,7 @@ class Card(Registerable):
             self.damage += amount
         self.damage_affected_by.append(context)
         ansiprint(f"{self.name} had its damage modified by {amount} from {context}.")
+        return self
 
     def modify_block(self, amount, context: str, permanent=False):
         if permanent:
@@ -75,6 +78,7 @@ class Card(Registerable):
         else:
             self.block += amount
         self.block_affected_by.append(context)
+        return self
 
     def is_upgradeable(self) -> bool:
         return not self.upgraded and (self.name == "Burn" or self.type not in (CardType.STATUS, CardType.CURSE))
@@ -164,7 +168,8 @@ class Armaments(Card):
         origin.blocking(card=self)
         if not self.upgraded and len(origin.hand) > 0:
             chosen_card = view.list_input("Choose a card to upgrade", origin.hand, view.view_piles, lambda card: card.is_upgradeable(), "That card is not upgradeable.")
-            origin.hand[chosen_card].upgrade()
+            if chosen_card is not None:
+                origin.hand[chosen_card].upgrade()
         else:
             for card in (card for card in origin.hand if card.is_upgradeable()):
                 card.upgrade()
@@ -264,14 +269,13 @@ class Havoc(Card):
         self.upgrade_markers()
         self.energy_cost = 0
 
-    def apply(self, origin, enemies):
+    def apply(self, origin: Player, enemies):
+        if len(origin.draw_pile) == 0:
+            print("You have no cards in your draw pile.")
+            return
         top_card = origin.draw_pile[-1]
-        if top_card.target in (TargetType.SINGLE, TargetType.YOURSELF):
-            origin.use_card(top_card, True, origin.draw_pile, random.choice(enemies))
-        elif top_card.target in (TargetType.AREA, TargetType.ANY):
-            origin.use_card(top_card, True, origin.draw_pile, enemies)
-        else:
-            origin.use_card(top_card, True, origin.draw_pile, random.choice(enemies))
+        top_card.modify_energy_cost(0, 'Set', True)
+        origin.use_card(card=top_card, exhaust=True, pile=origin.draw_pile, enemies=enemies, target=random.choice(enemies))
 
 class Headbutt(Card):
     def __init__(self):
@@ -289,7 +293,8 @@ class Headbutt(Card):
     def apply(self, origin, target):
         origin.attack(target, self)
         chosen_card = view.list_input("Choose a card to put on top of your draw pile", origin.discard_pile, view.view_piles)
-        origin.draw_pile.append(origin.discard_pile.pop(chosen_card))
+        if chosen_card is not None:
+            origin.draw_pile.append(origin.discard_pile.pop(chosen_card))
 
 class HeavyBlade(Card):
     def __init__(self):
@@ -376,7 +381,7 @@ class PommelStrike(Card):
 
     def apply(self, origin, target):
         origin.attack(target, self)
-        origin.draw_cards(self.cards)
+        origin.draw_cards(self.cards, clear_hand=False)
 
 class ShrugItOff(Card):
     def __init__(self):
@@ -393,7 +398,7 @@ class ShrugItOff(Card):
 
     def apply(self, origin):
         origin.blocking(card=self)
-        origin.draw_cards(1)
+        origin.draw_cards(1, clear_hand=False)
 
 class SwordBoomerang(Card):
     def __init__(self):
@@ -443,14 +448,19 @@ class TrueGrit(Card):
         self.base_block, self.block = 9, 9
         self.info = "Gain 9 <keyword>Block</keyword>. <keyword>Exhaust</keyword> a card in your hand."
 
-    def apply(self, origin):
+    def apply(self, origin: Player):
         origin.blocking(card=self)
         if self.upgraded is True:
             chosen_card = view.list_input("Choose a card to <keyword>Exhaust</keyword>", origin.hand, view.view_piles, lambda card: card.upgradeable is True and card.upgraded is False, "That card is either not upgradeable or is already upgraded.")
-            origin.move_card(origin.hand[chosen_card], origin.exhaust_pile, origin.hand, False)
+            if chosen_card is not None:
+                origin.move_card(origin.hand[chosen_card], origin.exhaust_pile, origin.hand, False)
         else:
-            random_card = random.choice([card for card in origin.hand if card.upgradeable is True and card.upgraded is False])
-            origin.move_card(random_card, origin.exhaust_pile, origin.hand, False)
+            cards_to_choose = [card for card in origin.hand if card.upgradeable is True and card.upgraded is False]
+            if len(cards_to_choose) > 0:
+                random_card = random.choice(cards_to_choose)
+                origin.move_card(random_card, origin.exhaust_pile, origin.hand, False)
+            else:
+                print("You have no upgradeable cards to exhaust.")
 
 class TwinStrike(Card):
     def __init__(self):
@@ -481,9 +491,10 @@ class Warcry(Card):
         self.info = "Draw 2 cards. Put a card from your hand on top of your draw pile. <keyword>Exhaust</keyword>."
 
     def apply(self, origin):
-        origin.draw_cards(self.cards)
+        origin.draw_cards(self.cards, clear_hand=False)
         chosen_card = view.list_input("Choose a card to put on top of your draw pile", origin.hand, view.view_piles)
-        origin.move_card(origin.hand[chosen_card], origin.draw_pile, origin.hand, False)
+        if chosen_card is not None:
+            origin.move_card(origin.hand[chosen_card], origin.draw_pile, origin.hand, False)
 
 class WildStrike(Card):
     def __init__(self):
@@ -514,7 +525,7 @@ class BattleTrance(Card):
         self.info = "Draw 4 cards. You can't draw additional cards this turn."
 
     def apply(self, origin):
-        origin.draw_cards(cards=self.cards)
+        origin.draw_cards(cards=self.cards, clear_hand=False)
         ei.apply_effect(origin, None, effect_catalog.NoDraw)
 
 class BloodForBlood(Card):
@@ -552,7 +563,7 @@ class Bloodletting(Card):
 
     def apply(self, origin):
         origin.take_sourceless_dmg(3)
-        origin.draw_cards(cards=self.cards)
+        origin.draw_cards(cards=self.cards, clear_hand=False)
 
 class BurningPact(Card):
     def __init__(self):
@@ -569,7 +580,7 @@ class BurningPact(Card):
         chosen_card = view.list_input("Choose a card to <keyword>Exhaust</keyword>", origin.hand, view.view_piles)
         if chosen_card is not None:
             origin.move_card(origin.hand[chosen_card], origin.exhaust_pile, origin.hand, False)
-            origin.draw_cards(cards=self.cards)
+            origin.draw_cards(cards=self.cards, clear_hand=False)
 
 class Carnage(Card):
     def __init__(self):
@@ -648,7 +659,7 @@ class Dropkick(Card):
         origin.attack(target, self)
         if effect_catalog.effect_amount(effect_catalog.Vulnerable, target.debuffs) >= 1:
             origin.energy += 1
-            origin.draw_cards(cards=1)
+            origin.draw_cards(cards=1, clear_hand=False)
 
     def callback(self, message, data):
         # Unnecessary. We can modify the energy and draw a card directly in the apply method
@@ -673,8 +684,9 @@ class DualWield(Card):
                                       view.view_piles,
                                       validator=lambda card: card.type in (CardType.ATTACK, CardType.POWER),
                                       message_when_invalid="That card is neither an Attack or a Power.")
-        for _ in range(self.copies):
-            origin.hand.insert(chosen_card, origin.hand[chosen_card])
+        if chosen_card is not None:
+            for _ in range(self.copies):
+                origin.hand.insert(chosen_card, origin.hand[chosen_card])
 
 class Entrench(Card):
     def __init__(self):

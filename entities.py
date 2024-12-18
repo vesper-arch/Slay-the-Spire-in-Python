@@ -9,6 +9,10 @@ class Damage:
         new_dmg = self.damage + change
         ansiprint(f"Damage modified from {self.damage} --> {new_dmg} by {context}.")
         self.damage = new_dmg
+    def set_damage(self, new_dmg: int, context: str, *args, **kwargs):
+        ansiprint(f"Damage modified from {self.damage} --> {new_dmg} by {context}.")
+        self.damage = new_dmg
+
 
 class Action:
     def __init__(self, name, action, amount):

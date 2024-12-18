@@ -3,7 +3,7 @@ import random
 import game_map
 from ansi_tags import ansiprint
 from combat import Combat
-from definitions import CombatTier, EncounterType
+from definitions import CombatTier, EncounterType, State
 from enemy import Enemy
 from events import choose_event
 from message_bus_tools import bus
@@ -15,6 +15,7 @@ from shop import Shop
 class Game:
     def __init__(self, seed=None):
         self.bus = bus
+        self.bus.reset()
         if seed is not None:
             random.seed(seed)
         self.player = Player.create_player()
@@ -26,6 +27,8 @@ class Game:
         self.game_map.pretty_print()
         for encounter in self.game_map:
             self.play(encounter, self.game_map)
+            if self.player.state == State.DEAD:
+                break
             self.player.floors += 1
             self.game_map.pretty_print()
 

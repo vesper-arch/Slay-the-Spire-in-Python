@@ -16,6 +16,7 @@ from entities import Action
 import card_catalog
 import potion_catalog
 import relic_catalog
+from functools import partial
 
 import displayer as view
 import effect_interface as ei
@@ -151,6 +152,10 @@ class Player(Registerable):
             else:
                 return
 
+        # If the card is in a pile, remove it from the pile (prevents recursion)
+        if pile is not None and card in pile:
+            pile.remove(card)
+
         # apply the card
         if card.target == TargetType.SINGLE:
             card.apply(origin=self, target=target)
@@ -167,26 +172,28 @@ class Player(Registerable):
         if pile is not None:
             if exhaust is True or getattr(card, "exhaust", False) is True:
                 ansiprint(f"{card.name} was <bold>Exhausted</bold>.")
-                self.move_card(card=card, move_to=self.exhaust_pile, from_location=pile, cost_energy=True)
-                bus.publish(Message.ON_EXHAUST, (self, card))
+                self.move_card(card=card, move_to=self.exhaust_pile, from_location=None, cost_energy=True)
             else:
-                self.move_card(card=card, move_to=self.discard_pile, from_location=pile, cost_energy=True)
+                self.move_card(card=card, move_to=self.discard_pile, from_location=None, cost_energy=True)
         sleep(0.5)
         view.clear()
 
-    def draw_cards(self, cards: int = None):
+    def draw_cards(self, cards: int | None = None, clear_hand: bool = False):
         """Draws [cards] cards."""
         if cards is None:
             cards = self.draw_strength
-        action = Action(self, self._draw_cards, cards)
+        draw_cards_with_clear_hand_arg = partial(self._draw_cards, clear_hand=clear_hand)
+        action = Action(self, draw_cards_with_clear_hand_arg, cards)
         bus.publish(Message.BEFORE_DRAW, (self, action))
         action.execute()
         bus.publish(Message.AFTER_DRAW, (self, action))
 
-    def _draw_cards(self, num_cards: int):
+    def _draw_cards(self, num_cards: int, clear_hand: bool):
         # Internal function to draw cards
-        self.discard_pile.extend(self.hand)
-        self.hand.clear()
+        if clear_hand is True:
+            self.discard_pile.extend(self.hand)
+            self.hand.clear()
+
         if len(self.draw_pile) < num_cards:
             self.draw_pile.extend(random.sample(self.discard_pile, len(self.discard_pile)))
             self.discard_pile = []
@@ -255,7 +262,9 @@ class Player(Registerable):
     def move_card(self, card, move_to, from_location, cost_energy=False, shuffle=False):
         if cost_energy is True:
             self.energy -= max(card.energy_cost, 0)
-        if card in from_location:
+        if from_location is None:
+            pass    # Ignore when card is "floating" between piles
+        elif card in from_location:
             from_location.remove(card)
         else:
             ansiprint(f"WARNING: {card.name} was not found in `from_location` in `move_card()` function.")
@@ -264,7 +273,7 @@ class Player(Registerable):
         else:
             move_to.append(card)
         if move_to == self.exhaust_pile:
-            bus.publish(Message.ON_EXHAUST, (card))
+            bus.publish(Message.ON_EXHAUST, (self, card))
 
     def attack(self, target: "Enemy", card: Card=None, dmg=-1):
         # Check if already dead and skip if so
@@ -298,6 +307,7 @@ class Player(Registerable):
     def take_sourceless_dmg(self, dmg):
         self.health -= dmg
         ansiprint(f"<light-red>You lost {dmg} health.</light-red>")
+        bus.publish(Message.ON_PLAYER_HEALTH_LOSS, None)
 
     def die(self):
         view.clear()
@@ -309,9 +319,10 @@ class Player(Registerable):
                 potion_index = -1
             self.player.health_actions(math.floor(self.player.max_health * self.potions[potion_index].hp_percent), "Heal")
             return
+        bus.publish(Message.ON_DEATH_OR_ESCAPE, self)
         ansiprint("<red>You Died</red>")
+        self.state = State.DEAD
         input("Press enter > ")
-        sys.exit()
 
     def callback(self, message, data: tuple):
         if message == Message.START_OF_COMBAT:
@@ -329,10 +340,10 @@ class Player(Registerable):
                 if effect.subscribed is False:
                     effect.register(bus)
             ansiprint(f"<underline><bold>{self.name}</bold></underline>:")
-            self.energy += self.energy_gain
+            self.energy = min(self.energy + self.energy_gain, self.max_energy)
             # INFO: Both Barricade and Calipers are not accounted for here and will be added later.
             self.block = 0
-            self.draw_cards()
+            self.draw_cards(clear_hand=True)
             self.plays_this_turn = 0
             ei.tick_effects(self)
             self.fresh_effects.clear()
